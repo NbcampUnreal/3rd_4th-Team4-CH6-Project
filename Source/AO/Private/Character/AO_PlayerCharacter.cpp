@@ -30,6 +30,12 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	
+	// For Crouching
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
+	SpringArm->bEnableCameraLag = true;
+	SpringArm->CameraLagSpeed = 10.f;
 }
 
 void AAO_PlayerCharacter::BeginPlay()
@@ -59,6 +65,7 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
+		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 	}
 }
 
@@ -103,5 +110,25 @@ void AAO_PlayerCharacter::StopSprint()
 	if (GetCharacterMovement())
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	}
+}
+
+void AAO_PlayerCharacter::HandleCrouch()
+{
+	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
+	if (!CharacterMovementComponent || CharacterMovementComponent->IsFalling())
+	{
+		return;
+	}
+
+	if (IsCrouched())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Uncrouch"));
+		UnCrouch();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Crouch"));
+		Crouch();
 	}
 }
