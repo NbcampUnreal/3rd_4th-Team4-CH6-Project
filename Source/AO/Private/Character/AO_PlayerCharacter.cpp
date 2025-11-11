@@ -20,6 +20,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = true;
@@ -93,7 +94,7 @@ void AAO_PlayerCharacter::StartSprint()
 {
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 	}
 }
 
@@ -101,6 +102,6 @@ void AAO_PlayerCharacter::StopSprint()
 {
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+		GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	}
 }
