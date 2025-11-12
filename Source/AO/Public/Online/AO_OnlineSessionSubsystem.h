@@ -125,16 +125,31 @@ private:
 	bool bPendingInviteJoin = false;
 	FOnlineSessionSearchResult CachedInviteResult;
 
-	/* 로비 맵 이름 */
+	/* 로비/메인메뉴 맵 이름 */
 	static FName GetLobbyMapName()
 	{
 		return FName(TEXT("/Game/AVaOut/Maps/Test/AO_JSH_Test_Lobby"));
 	}
 
+	static FName GetMainMenuMapName()
+	{
+		return FName(TEXT("/Game/AVaOut/Maps/Test/AO_JSH_Test_MainMenu"));
+	}
+
 	static FString ToMD5(const FString& In);
+
+	/* 호스트/클라이언트 분기용 */
+	bool IsLocalHost() const;
+
+	/* 네트워크 연결 실패 에러 */
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
+	FDelegateHandle NetFailHandle;
 
 private:
 	/* ====== 최소 안정화 상태 ====== */
 	bool bFinding = false;       // Find 진행 여부
 	bool bOpInProgress = false;  // Host/Join/Destroy 작업 재진입 가드
+
+	/* Destroy 후 동작 제어 */
+	bool bPendingReturnToMenu = false; // 호스트: Destroy 완료 후 메인 메뉴 복귀
 };

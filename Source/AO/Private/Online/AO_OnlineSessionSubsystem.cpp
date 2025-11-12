@@ -4,9 +4,12 @@
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/OnlineSessionNames.h"
 #include "Misc/SecureHash.h"
+#include "Engine/Engine.h"
+#include "Engine/EngineBaseTypes.h"
 
 namespace
 {
@@ -36,6 +39,11 @@ void UAO_OnlineSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection
 			FOnSessionUserInviteAcceptedDelegate::CreateUObject(
 				this, &ThisClass::OnSessionUserInviteAccepted));
 	}
+
+	if (GEngine && !NetFailHandle.IsValid())
+	{
+		NetFailHandle = GEngine->OnNetworkFailure().AddUObject(this, &ThisClass::HandleNetworkFailure);
+	}
 }
 
 void UAO_OnlineSessionSubsystem::Deinitialize()
@@ -48,6 +56,13 @@ void UAO_OnlineSessionSubsystem::Deinitialize()
 			InviteAcceptedHandle.Reset();
 		}
 	}
+
+	if (GEngine && NetFailHandle.IsValid())
+	{
+		GEngine->OnNetworkFailure().Remove(NetFailHandle);
+		NetFailHandle.Reset();
+	}
+	
 	Super::Deinitialize();
 }
 
@@ -64,6 +79,60 @@ IOnlineSessionPtr UAO_OnlineSessionSubsystem::GetSessionInterface() const
 		return OSS->GetSessionInterface();
 	}
 	return nullptr;
+}
+
+bool UAO_OnlineSessionSubsystem::IsLocalHost() const
+{
+	if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
+	{
+		if (const FNamedOnlineSession* NS = S->GetNamedSession(NAME_GameSession))
+		{
+			if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+			{
+				if (IOnlineIdentityPtr Identity = OSS->GetIdentityInterface(); Identity.IsValid())
+				{
+					TSharedPtr<const FUniqueNetId> LocalId = Identity->GetUniquePlayerId(0);
+					if (LocalId.IsValid() && NS->OwningUserId.IsValid())
+					{
+						return *NS->OwningUserId == *LocalId;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
+void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
+	UWorld* World, UNetDriver* NetDriver,
+	ENetworkFailure::Type FailureType, const FString& ErrorString)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
+		static_cast<int32>(FailureType), *ErrorString);
+
+	// 세션 정리: 이후 조인/호스트 재시도 꼬임 방지
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (Session->GetNamedSession(NAME_GameSession) != nullptr)
+		{
+			Session->DestroySession(NAME_GameSession); // 콜백 대기 불필요
+		}
+	}
+
+	// 내부 상태 리셋
+	bFinding = false;
+	bOpInProgress = false;
+	bPendingRehost = false;
+	bPendingInviteJoin = false;
+
+	// 델리게이트 핸들 해제
+	if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
+	{
+		if (CreateHandle.IsValid())  { S->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);  CreateHandle.Reset(); }
+		if (FindHandle.IsValid())    { S->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);    FindHandle.Reset(); }
+		if (JoinHandle.IsValid())    { S->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);      JoinHandle.Reset(); }
+		if (DestroyHandle.IsValid()) { S->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);DestroyHandle.Reset(); }
+	}
 }
 
 /* ==================== Host ==================== */
@@ -191,7 +260,7 @@ void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
 	LastSearch->bIsLanQuery = bIsLAN;
 
 	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-	
+
 	if (FindHandle.IsValid())
 	{
 		Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
@@ -248,22 +317,22 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
-	
+
 	LastSearchResults = LastSearch->SearchResults;
-	
+
 	{
 		TSet<FString> SeenIds;
 		LastSearchResults.RemoveAll([&SeenIds](const FOnlineSessionSearchResult& R)
 		{
 			const FString Id = R.GetSessionIdStr();
-			if(SeenIds.Contains(Id))
+			if (SeenIds.Contains(Id))
 			{
 				return true;
 			}
 			SeenIds.Add(Id);
-			
+
 			const auto& S = R.Session;
-			bool bLobbyTag=false;
+			bool bLobbyTag = false;
 			S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
 
 			FString RoomName;
@@ -280,7 +349,6 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 
 	OnFindSessionsCompleteEvent.Broadcast(true);
 }
-
 
 /* ==================== Join ==================== */
 void UAO_OnlineSessionSubsystem::JoinSessionByIndex(int32 Index)
@@ -354,7 +422,7 @@ void UAO_OnlineSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoi
 	bOpInProgress = false;
 }
 
-/* ==================== Destroy ==================== */
+/* ==================== Destroy (호스트/클라 분리) ==================== */
 void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 {
 	if (bOpInProgress)
@@ -367,22 +435,46 @@ void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 	if (!Session.IsValid())
 	{
 		bOpInProgress = false;
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
 		return;
 	}
 
-	if (DestroyHandle.IsValid())
-	{
-		Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
-		DestroyHandle.Reset();
-	}
-	DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
-		FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
+	const bool bIsHost = IsLocalHost();
 
-	if (!Session->DestroySession(NAME_GameSession))
+	if (bIsHost)
 	{
-		Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
-		DestroyHandle.Reset();
+		/* 호스트: 세션 파괴 완료 콜백에서 메인 메뉴 복귀 */
+		bPendingReturnToMenu = true;
+
+		if (DestroyHandle.IsValid())
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
+
+		if (!Session->DestroySession(NAME_GameSession))
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+			bPendingReturnToMenu = false;
+			bOpInProgress = false;
+		}
+	}
+	else
+	{
+		/* 클라이언트: 로컬 세션 파괴 요청 후 즉시 메인 메뉴로 이동 (콜백 기다리지 않음) */
+		Session->DestroySession(NAME_GameSession);
 		bOpInProgress = false;
+
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
 	}
 }
 
@@ -396,7 +488,20 @@ void UAO_OnlineSessionSubsystem::OnDestroyThenRecreateSession(FName SessionName,
 			DestroyHandle.Reset();
 		}
 	}
+	
+	if (bWasSuccessful && bPendingReturnToMenu)
+	{
+		bPendingReturnToMenu = false;
+		bOpInProgress = false;
 
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
+		return;
+	}
+
+	/* 1) 재호스트 */
 	if (bWasSuccessful && bPendingRehost)
 	{
 		bPendingRehost = false;
@@ -409,6 +514,7 @@ void UAO_OnlineSessionSubsystem::OnDestroyThenRecreateSession(FName SessionName,
 		HostSessionEx(ReNum, ReLAN, ReName, RePw);
 		return;
 	}
+	/* 2) 초대 합류 */
 	else if (bWasSuccessful && bPendingInviteJoin)
 	{
 		bPendingInviteJoin = false;
