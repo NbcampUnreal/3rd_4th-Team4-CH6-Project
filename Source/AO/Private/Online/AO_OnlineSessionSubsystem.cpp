@@ -258,12 +258,25 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 		LastSearchResults.RemoveAll([&SeenIds](const FOnlineSessionSearchResult& R)
 		{
 			const FString Id = R.GetSessionIdStr();
-			if (SeenIds.Contains(Id))
+			if(SeenIds.Contains(Id))
 			{
 				return true;
 			}
 			SeenIds.Add(Id);
-			return false;
+			
+			const auto& S = R.Session;
+			bool bLobbyTag=false;
+			S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
+
+			FString RoomName;
+			const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
+
+			const bool bBad =
+				!bLobbyTag ||
+				!bHasName || RoomName.IsEmpty() ||
+				S.OwningUserName.IsEmpty();
+
+			return bBad;
 		});
 	}
 

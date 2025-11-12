@@ -27,6 +27,18 @@ protected:
 	UFUNCTION() void OnClicked_Cancel();
 	UFUNCTION() void OnClicked_Backdrop();
 
-	/* 모달 입력 적용 (커서만 표시, 포커스 없음) */
+	/* 입력 변화 콜백 (실시간 버튼 상태 갱신) */
+	UFUNCTION() void OnRoomNameChanged(const FText& Text);
+	UFUNCTION() void OnRoomNameCommitted(const FText& Text, ETextCommit::Type Method);
+
+	/* 모달 입력 적용 (커서만 표시, 포커스: 방 이름 상자) */
 	void ApplyModalInput();
+
+	/* 버튼 활성화/비활성 갱신 */
+	void UpdateCreateButtonState();
+
+	/* 유효성 검사/정규화 */
+	bool IsValidRoomName(const FString& Name) const;
+	FString GetTrimmedRoomName() const;
+	FString GetTrimmedPassword() const;
 };
