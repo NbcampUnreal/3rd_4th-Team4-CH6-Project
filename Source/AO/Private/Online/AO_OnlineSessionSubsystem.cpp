@@ -187,7 +187,7 @@ void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
 		return;
 	}
 
-	LastSearch = MakeShareable(new FOnlineSessionSearch());
+	LastSearch = MakeShared<FOnlineSessionSearch>();
 	LastSearch->MaxSearchResults = MaxResults;
 	LastSearch->bIsLanQuery = bIsLAN;
 
