@@ -102,7 +102,7 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 			DestroyHandle.Reset();
 		}
 		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
-			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete));
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
 
 		if (!Session->DestroySession(NAME_GameSession))
 		{
@@ -378,7 +378,7 @@ void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 		DestroyHandle.Reset();
 	}
 	DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
-		FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete));
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
 
 	if (!Session->DestroySession(NAME_GameSession))
 	{
@@ -388,7 +388,7 @@ void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 	}
 }
 
-void UAO_OnlineSessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
+void UAO_OnlineSessionSubsystem::OnDestroyThenRecreateSession(FName SessionName, bool bWasSuccessful)
 {
 	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
 	{
@@ -536,7 +536,7 @@ void UAO_OnlineSessionSubsystem::OnSessionUserInviteAccepted(
 			DestroyHandle.Reset();
 		}
 		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
-			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete));
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
 
 		if (!Session->DestroySession(NAME_GameSession))
 		{
