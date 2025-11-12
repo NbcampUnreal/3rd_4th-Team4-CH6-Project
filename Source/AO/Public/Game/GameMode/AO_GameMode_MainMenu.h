@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "AO_MainMenuGameMode.generated.h"
+#include "AO_GameMode_MainMenu.generated.h"
 
 UCLASS()
-class AO_API AAO_MainMenuGameMode : public AGameModeBase
+class AO_API AAO_GameMode_MainMenu : public AGameModeBase
 {
 	GENERATED_BODY()
 
 public:
-	AAO_MainMenuGameMode();
+	AAO_GameMode_MainMenu();
 };

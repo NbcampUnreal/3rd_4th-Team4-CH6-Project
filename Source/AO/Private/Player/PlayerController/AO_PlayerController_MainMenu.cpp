@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Player/PlayerController/AO_MainMenuPlayerController.h"
+#include "Player/PlayerController/AO_PlayerController_MainMenu.h"
 #include "UI/Widget/AO_MainMenuWidget.h"
 #include "Kismet/GameplayStatics.h"
 
-void AAO_MainMenuPlayerController::BeginPlay()
+void AAO_PlayerController_MainMenu::BeginPlay()
 {
 	Super::BeginPlay();
 

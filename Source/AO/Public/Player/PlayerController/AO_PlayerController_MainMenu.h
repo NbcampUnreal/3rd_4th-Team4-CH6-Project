@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "AO_MainMenuPlayerController.generated.h"
+#include "AO_PlayerController_MainMenu.generated.h"
 
 class UAO_MainMenuWidget;
 
 UCLASS()
-class AO_API AAO_MainMenuPlayerController : public APlayerController
+class AO_API AAO_PlayerController_MainMenu : public APlayerController
 {
 	GENERATED_BODY()
 
