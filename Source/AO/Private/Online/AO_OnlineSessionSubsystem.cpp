@@ -127,8 +127,7 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_PASSWORD_MD5, ToMD5(Password), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
-	// ★ Find 필터와 매칭되도록 광고 키 추가
-	Settings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(SEARCH_LOBBIES, true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 	if (CreateHandle.IsValid())
 	{
@@ -191,9 +190,8 @@ void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
 	LastSearch->MaxSearchResults = MaxResults;
 	LastSearch->bIsLanQuery = bIsLAN;
 
-	LastSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-	LastSearch->QuerySettings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineComparisonOp::Equals);
-
+	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	
 	if (FindHandle.IsValid())
 	{
 		Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
