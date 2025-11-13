@@ -11,7 +11,12 @@ UAO_GameplayAbility_Interact::UAO_GameplayAbility_Interact()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 	
-	AbilityTags.AddTag(AO_InteractionTags::Ability_Action_AbilityInteract);
+	if (HasAnyFlags(RF_ClassDefaultObject))
+	{
+		FGameplayTagContainer Tags;
+		Tags.AddTag(AO_InteractionTags::Ability_Action_AbilityInteract);
+		SetAssetTags(Tags);
+	}
 }
 
 void UAO_GameplayAbility_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

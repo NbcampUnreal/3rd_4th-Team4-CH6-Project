@@ -21,11 +21,17 @@ UAO_GameplayAbility_Interact_Execute::UAO_GameplayAbility_Interact_Execute()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
 	ReplicationPolicy = EGameplayAbilityReplicationPolicy::ReplicateYes;
 	
-	AbilityTags.AddTag(AO_InteractionTags::Ability_Action_AbilityInteract_Execute);
-	ActivationOwnedTags.AddTag(AO_InteractionTags::Status_Action_AbilityInteract);
-
 	if (HasAnyFlags(RF_ClassDefaultObject))
 	{
+		// AbilityTags
+		FGameplayTagContainer Tags;
+		Tags.AddTag(AO_InteractionTags::Ability_Action_AbilityInteract_Execute);
+		SetAssetTags(Tags);
+        
+		// ActivationOwnedTags
+		ActivationOwnedTags.AddTag(AO_InteractionTags::Status_Action_AbilityInteract);
+        
+		// AbilityTriggers
 		FAbilityTriggerData TriggerData;
 		TriggerData.TriggerTag = AO_InteractionTags::Ability_Action_AbilityInteract_Execute;
 		TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
