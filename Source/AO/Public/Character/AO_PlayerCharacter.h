@@ -37,8 +37,6 @@ class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInter
 public:
 	AAO_PlayerCharacter();
 
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -47,6 +45,7 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void Landed(const FHitResult& Hit) override;
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
@@ -55,30 +54,24 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
 
 	// 승조 : ASC
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-
 	// 승조 : 상호작용 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Move;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Look;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Jump;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Sprint;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
