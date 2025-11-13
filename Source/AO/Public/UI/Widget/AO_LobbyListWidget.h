@@ -76,7 +76,7 @@ private:
 	UAO_OnlineSessionSubsystem* GetSub() const;
 
 	/* ---------- 상태 ---------- */
-	static constexpr int32 kItemsPerPage = 5;
+	static constexpr int32 NumSessionsPerPage = 5;
 
 	UPROPERTY() FString CurrentSearch = TEXT("");
 	UPROPERTY() int32 PageIndex = 0;

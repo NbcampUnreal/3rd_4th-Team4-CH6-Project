@@ -213,7 +213,7 @@ int32 UAO_LobbyListWidget::GetTotalPages() const
 	{
 		return 0;
 	}
-	return (N + kItemsPerPage - 1) / kItemsPerPage;
+	return (N + NumSessionsPerPage - 1) / NumSessionsPerPage;
 }
 
 void UAO_LobbyListWidget::UpdatePageUI()
@@ -249,8 +249,8 @@ void UAO_LobbyListWidget::RebuildList()
 
 	if(UAO_OnlineSessionSubsystem* Sub = GetSub())
 	{
-		const int32 Start = PageIndex * kItemsPerPage;
-		const int32 EndExclusive = FMath::Min(Start + kItemsPerPage, FilteredIndices.Num());
+		const int32 Start = PageIndex * NumSessionsPerPage;
+		const int32 EndExclusive = FMath::Min(Start + NumSessionsPerPage, FilteredIndices.Num());
 
 		for(int32 k = Start; k < EndExclusive; ++k)
 		{
