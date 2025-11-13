@@ -41,4 +41,5 @@ protected:
 	FName Key_TargetActor = TEXT("TargetActor");
 	FName Key_LastSeenLocation = TEXT("LastSeenLocation");
 	FName Key_HasLineOfSight = TEXT("HasLineOfSight");
+	FName Key_IsSearching = TEXT("IsSearching");
 };

@@ -27,6 +27,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector HasLineOfSightKey;
 	
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector LastSeenLocationKey;
+	
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector IsSearchingKey;
+	
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float MaxTargetDistance = 5000.0f;
 };

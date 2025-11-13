@@ -22,6 +22,16 @@ UAO_BTS_UpdateTarget::UAO_BTS_UpdateTarget()
 		GET_MEMBER_NAME_CHECKED(UAO_BTS_UpdateTarget, HasLineOfSightKey)
 	);
 
+	LastSeenLocationKey.AddVectorFilter(
+		this,
+		GET_MEMBER_NAME_CHECKED(UAO_BTS_UpdateTarget, LastSeenLocationKey)
+	);
+
+	IsSearchingKey.AddBoolFilter(
+		this,
+		GET_MEMBER_NAME_CHECKED(UAO_BTS_UpdateTarget, IsSearchingKey)
+	);
+
 	Interval = 0.2f;
 	RandomDeviation = 0.05f;
 }
@@ -54,6 +64,15 @@ void UAO_BTS_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp,
 	if(!World)
 	{
 		return;
+	}
+	
+	AActor* PrevTarget =
+		Cast<AActor>(BlackboardComp->GetValueAsObject(TargetActorKey.SelectedKeyName));
+
+	bool bPrevHasLOS = false;
+	if(HasLineOfSightKey.SelectedKeyName.IsValid())
+	{
+		bPrevHasLOS = BlackboardComp->GetValueAsBool(HasLineOfSightKey.SelectedKeyName);
 	}
 
 	const FVector SelfLocation = AIPawn->GetActorLocation();
@@ -92,8 +111,10 @@ void UAO_BTS_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp,
 		BestTarget = OtherPawn;
 		BestDistSq = DistSq;
 	}
-
-	if(BestTarget)
+	
+	const bool bHasNewTarget = (BestTarget != nullptr);
+	
+	if(bHasNewTarget)
 	{
 		BlackboardComp->SetValueAsObject(TargetActorKey.SelectedKeyName, BestTarget);
 
@@ -101,14 +122,29 @@ void UAO_BTS_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp,
 		{
 			BlackboardComp->SetValueAsBool(HasLineOfSightKey.SelectedKeyName, true);
 		}
+		
+		if(IsSearchingKey.SelectedKeyName.IsValid())
+		{
+			BlackboardComp->SetValueAsBool(IsSearchingKey.SelectedKeyName, false);
+		}
 	}
 	else
 	{
-		BlackboardComp->ClearValue(TargetActorKey.SelectedKeyName);
-
 		if(HasLineOfSightKey.SelectedKeyName.IsValid())
 		{
 			BlackboardComp->SetValueAsBool(HasLineOfSightKey.SelectedKeyName, false);
 		}
+		
+	}
+	
+	if(bPrevHasLOS && !bHasNewTarget &&
+	   LastSeenLocationKey.SelectedKeyName.IsValid() &&
+	   IsSearchingKey.SelectedKeyName.IsValid() &&
+	   PrevTarget != nullptr)
+	{
+		const FVector LastSeenLocation = PrevTarget->GetActorLocation();
+
+		BlackboardComp->SetValueAsVector(LastSeenLocationKey.SelectedKeyName, LastSeenLocation);
+		BlackboardComp->SetValueAsBool(IsSearchingKey.SelectedKeyName, true);
 	}
 }
