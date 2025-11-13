@@ -31,6 +31,11 @@ public:
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 
 protected:
+	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
+	
+	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
+	void OnInteractionSuccess_BP(AActor* Interactor);
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
@@ -43,9 +48,4 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
-
-	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
-	void OnInteractionSuccess_BP(AActor* Interactor);
-
-	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
 };
