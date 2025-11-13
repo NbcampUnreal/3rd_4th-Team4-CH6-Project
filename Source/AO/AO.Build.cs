@@ -17,13 +17,25 @@ public class AO : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"UMG",
+			
+			// Session
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
 			
+			// Pose Search
+			"PoseSearch",
+			
+			// GAS
+			"GameplayTags",
+			"GameplayAbilities",
+			"GameplayTasks",
+			
+			// 카오스 디스트럭션
+			"ChaosCaching",
+			"GeometryCollectionEngine",
+			
 			// AI
 			"AIModule",
-			"GameplayTags",
-			"GameplayTasks",
 			"NavigationSystem",
 		});
 
@@ -34,6 +46,6 @@ public class AO : ModuleRules
 			"OnlineSubsystemSteam"
 		});
 
-		PublicIncludePaths.AddRange(new string[] { "AO/Public" });
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
 	}
 }

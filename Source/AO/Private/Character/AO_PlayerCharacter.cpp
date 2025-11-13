@@ -7,6 +7,10 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Net/UnrealNetwork.h"
+#include "AbilitySystemComponent.h"
+#include "GameFramework/PlayerState.h"
+#include "Interaction/Component/AO_InteractionComponent.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -29,11 +33,37 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	
+	// For Crouching
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
+	SpringArm->bEnableCameraLag = true;
+	SpringArm->CameraLagSpeed = 10.f;
+
+	// 승조 : AbilitySystemComponent 생성
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// 승조 : InteractionComponent 생성
+	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
+}
+
+UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }
 
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 승조 : ASC 초기화
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 
 	if (IsLocallyControlled())
 	{
@@ -58,6 +88,52 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
+		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
+		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
+	}
+	
+	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
+	if (InteractionComponent)
+	{
+		InteractionComponent->SetupInputBinding(PlayerInputComponent);
+	}
+}
+
+void AAO_PlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	
+	Super::EndPlay(EndPlayReason);
+}
+
+void AAO_PlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AAO_PlayerCharacter, Gait);
+	DOREPLIFETIME(AAO_PlayerCharacter, LandVelocity);
+	DOREPLIFETIME(AAO_PlayerCharacter, bJustLanded);
+}
+
+void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	if (HasAuthority())
+	{
+		LandVelocity = GetCharacterMovement()->Velocity;
+		bJustLanded = true;
+
+		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
+		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+		{
+			bJustLanded = false;
+		}, 0.3f, false);
 	}
 }
 
@@ -91,16 +167,100 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 
 void AAO_PlayerCharacter::StartSprint()
 {
-	if (GetCharacterMovement())
+	CharacterInputState.bWantsToSprint = true;
+	CharacterInputState.bWantsToWalk = false;
+	SetCurrentGait();
+
+	if (!HasAuthority())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
 	}
 }
 
 void AAO_PlayerCharacter::StopSprint()
 {
-	if (GetCharacterMovement())
+	CharacterInputState.bWantsToSprint = false;
+	CharacterInputState.bWantsToWalk = false;
+	SetCurrentGait();
+	
+	if (!HasAuthority())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
+}
+
+void AAO_PlayerCharacter::HandleWalk()
+{
+	if (CharacterInputState.bWantsToSprint)
+	{
+		return;
+	}
+
+	CharacterInputState.bWantsToWalk = !CharacterInputState.bWantsToWalk;
+	SetCurrentGait();
+	
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
+}
+
+void AAO_PlayerCharacter::HandleCrouch()
+{
+	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
+	if (!CharacterMovementComponent || CharacterMovementComponent->IsFalling())
+	{
+		return;
+	}
+
+	if (IsCrouched())
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Crouch();
+	}
+}
+
+void AAO_PlayerCharacter::SetCurrentGait()
+{
+	if (CharacterInputState.bWantsToSprint)
+	{
+		Gait = EGait::Sprint;
+	}
+	else if (CharacterInputState.bWantsToWalk)
+	{
+		Gait = EGait::Walk;
+	}
+	else
+	{
+		Gait = EGait::Run;
+	}
+
+	OnRep_Gait();
+}
+
+void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
+{
+	CharacterInputState.bWantsToSprint = bWantsToSprint;
+	CharacterInputState.bWantsToWalk = bWantsToWalk;
+
+	SetCurrentGait();
+}
+
+void AAO_PlayerCharacter::OnRep_Gait()
+{
+	switch (Gait)
+	{
+	case EGait::Walk:
+		GetCharacterMovement()->MaxWalkSpeed = 200.f;
+		break;
+	case EGait::Run:
+		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		break;
+	case EGait::Sprint:
+		GetCharacterMovement()->MaxWalkSpeed = 800.f;
+		break;
 	}
 }
