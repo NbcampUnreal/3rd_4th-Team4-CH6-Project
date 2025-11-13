@@ -11,13 +11,25 @@ public class AO : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			// Initial Dependencies
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
-			
-			
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"EnhancedInput", 
+			"UMG",
+			"GameplayTags", 
+			"GameplayAbilities", 
+			"GameplayTasks", 
+			"ChaosCaching", 
+			"GeometryCollectionEngine",
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Slate",
+			"SlateCore",
+		});
 
-		PublicIncludePaths.AddRange(new string[] { "AO/Public" });
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
 	}
 }
