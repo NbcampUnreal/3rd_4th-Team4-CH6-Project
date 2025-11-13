@@ -39,4 +39,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
 	void DropItem();
+
+	UFUNCTION(Server, Reliable)
+	void ServerGrabItem(AAO_TestPickupItem* Item);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropItem();
 };

@@ -19,6 +19,8 @@ public class AO : ModuleRules
 			"UMG",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			
+			// AI
 			"AIModule",
 			"GameplayTags",
 			"GameplayTasks",

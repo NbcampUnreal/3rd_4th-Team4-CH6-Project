@@ -19,7 +19,7 @@ AAO_TestPickupItem::AAO_TestPickupItem()
 
     // ── Replication ──────────────────────────────────────────────
     bReplicates = true;
-    SetReplicateMovement(true);
+    SetReplicateMovement(false);
     MeshComponent->SetIsReplicated(true);
     
     MeshComponent->SetCanEverAffectNavigation(false);
@@ -96,9 +96,9 @@ void AAO_TestPickupItem::Drop()
     {
         return;
     }
-
-    bIsPickedUp = false;
     HolderActor = nullptr;
+    bIsPickedUp = false;
+    
 
     ApplyDroppedVisuals();
 }
@@ -106,7 +106,7 @@ void AAO_TestPickupItem::Drop()
 // ── RepNotifies ─────────────────────────────────────────────────
 void AAO_TestPickupItem::OnRep_Holder()
 {
-    if (bIsPickedUp)
+    if (HolderActor && bIsPickedUp)
     {
         ApplyPickedUpVisuals();
     }

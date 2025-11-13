@@ -1,5 +1,7 @@
 // AO_Enemy_HumanBasic.h
 
+#pragma once
+
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"

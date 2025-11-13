@@ -36,17 +36,12 @@ void AAO_Enemy_Crab::GrabItem(AAO_TestPickupItem* Item)
 {
 	if (!HasAuthority())
 	{
-		return;
-	}
-	if (HeldItem != nullptr || Item == nullptr)
-	{
+		ServerGrabItem(Item);
 		return;
 	}
 
-	if (!GetMesh()->DoesSocketExist(PickupSocketName))
-	{
+	if (HeldItem != nullptr || Item == nullptr)
 		return;
-	}
 
 	Item->Pickup(GetMesh(), PickupSocketName);
 
@@ -61,16 +56,27 @@ void AAO_Enemy_Crab::DropItem()
 {
 	if (!HasAuthority())
 	{
+		ServerDropItem();
 		return;
 	}
-	if (HeldItem != nullptr)
-	{
+
+	if (HeldItem == nullptr)
 		return;
-	}
 
 	HeldItem->Drop();
 	HeldItem = nullptr;
 }
+
+void AAO_Enemy_Crab::ServerGrabItem_Implementation(AAO_TestPickupItem* Item)
+{
+	GrabItem(Item);
+}
+
+void AAO_Enemy_Crab::ServerDropItem_Implementation()
+{
+	DropItem();
+}
+
 
 
 
