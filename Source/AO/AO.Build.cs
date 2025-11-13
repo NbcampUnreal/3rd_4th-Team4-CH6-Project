@@ -24,6 +24,15 @@ public class AO : ModuleRules
 			
 			// Pose Search
 			"PoseSearch",
+			
+			// GAS
+			"GameplayTags",
+			"GameplayAbilities",
+			"GameplayTasks",
+			
+			// 카오스 디스트럭션
+			"ChaosCaching",
+			"GeometryCollectionEngine"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -33,8 +42,6 @@ public class AO : ModuleRules
 			"OnlineSubsystemSteam"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
-
-		PublicIncludePaths.AddRange(new string[] { "AO/Public" });
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
 	}
 }

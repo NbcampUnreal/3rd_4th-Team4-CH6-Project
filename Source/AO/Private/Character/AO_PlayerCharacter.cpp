@@ -8,6 +8,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystemComponent.h"
+#include "GameFramework/PlayerState.h"
+#include "Interaction/Component/AO_InteractionComponent.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -21,7 +24,6 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = true;
@@ -38,11 +40,30 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
+
+	// 승조 : AbilitySystemComponent 생성
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// 승조 : InteractionComponent 생성
+	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
+}
+
+UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }
 
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 승조 : ASC 초기화
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 
 	if (IsLocallyControlled())
 	{
@@ -69,6 +90,12 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
+	}
+	
+	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
+	if (InteractionComponent)
+	{
+		InteractionComponent->SetupInputBinding(PlayerInputComponent);
 	}
 }
 
