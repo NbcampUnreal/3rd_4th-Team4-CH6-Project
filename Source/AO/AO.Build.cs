@@ -19,9 +19,13 @@ public class AO : ModuleRules
 			"UMG",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			
+			// GAS
 			"GameplayTags",
 			"GameplayAbilities",
 			"GameplayTasks",
+			
+			// 카오스 디스트럭션
 			"ChaosCaching",
 			"GeometryCollectionEngine"
 		});
