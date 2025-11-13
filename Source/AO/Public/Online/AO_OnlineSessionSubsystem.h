@@ -50,10 +50,7 @@ public:
 
 	/* ==================== 조회용 ==================== */
 	UFUNCTION(BlueprintPure, Category="AO|Online")
-	int32 GetNumSearchResults() const
-	{
-		return LastSearchResults.Num();
-	}
+	int32 GetNumSearchResults() const { return LastSearchResults.Num();	}
 
 	UFUNCTION(BlueprintPure, Category="AO|Online")
 	FString GetSessionOwnerNameByIndex(int32 Index) const;
@@ -74,10 +71,7 @@ public:
 	bool VerifyPasswordAgainstIndex(int32 Index, const FString& PlainPassword) const;
 
 	UFUNCTION(BlueprintPure, Category="AO|Online")
-	bool IsFinding() const
-	{
-		return bFinding;
-	}
+	bool IsFinding() const { return bFinding; }
 
 	/* 세션 검색 완료 알림 (UI용) */
 	UPROPERTY(BlueprintAssignable, Category="AO|Online")
