@@ -18,6 +18,6 @@ public class AO : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
-		PublicIncludePaths.AddRange(new string[] { "AO/Public" });
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
 	}
 }
