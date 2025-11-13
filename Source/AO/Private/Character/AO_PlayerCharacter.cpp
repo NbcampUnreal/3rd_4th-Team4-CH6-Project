@@ -7,6 +7,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "AbilitySystemComponent.h"
+#include "GameFramework/PlayerState.h"
+#include "Interaction/Component/AO_InteractionComponent.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -29,11 +32,30 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	// 승조 : AbilitySystemComponent 생성
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// 승조 : InteractionComponent 생성
+	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
+}
+
+UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }
 
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 승조 : ASC 초기화
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 
 	if (IsLocallyControlled())
 	{
@@ -58,6 +80,12 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
+	}
+
+	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
+	if (InteractionComponent)
+	{
+		InteractionComponent->SetupInputBinding(PlayerInputComponent);
 	}
 }
 

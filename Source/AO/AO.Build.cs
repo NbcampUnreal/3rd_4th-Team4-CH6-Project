@@ -18,7 +18,16 @@ public class AO : ModuleRules
 			"EnhancedInput",
 			"UMG",
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			
+			// GAS
+			"GameplayTags",
+			"GameplayAbilities",
+			"GameplayTasks",
+			
+			// 카오스 디스트럭션
+			"ChaosCaching",
+			"GeometryCollectionEngine"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -28,6 +37,6 @@ public class AO : ModuleRules
 			"OnlineSubsystemSteam"
 		});
 
-		PublicIncludePaths.AddRange(new string[] { "AO/Public" });
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
 	}
 }
