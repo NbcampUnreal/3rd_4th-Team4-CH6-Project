@@ -7,6 +7,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Net/UnrealNetwork.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -83,19 +84,30 @@ void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void AAO_PlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AAO_PlayerCharacter, Gait);
+	DOREPLIFETIME(AAO_PlayerCharacter, LandVelocity);
+	DOREPLIFETIME(AAO_PlayerCharacter, bJustLanded);
+}
+
 void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
-	LandVelocity = GetCharacterMovement()->Velocity;
-	bJustLanded = true;
-
-	GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
-
-	GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+	if (HasAuthority())
 	{
-		bJustLanded = false;
-	}, 0.3f, false);
+		LandVelocity = GetCharacterMovement()->Velocity;
+		bJustLanded = true;
+
+		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
+		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+		{
+			bJustLanded = false;
+		}, 0.3f, false);
+	}
 }
 
 void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
@@ -131,6 +143,11 @@ void AAO_PlayerCharacter::StartSprint()
 	CharacterInputState.bWantsToSprint = true;
 	CharacterInputState.bWantsToWalk = false;
 	SetCurrentGait();
+
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
 }
 
 void AAO_PlayerCharacter::StopSprint()
@@ -138,6 +155,11 @@ void AAO_PlayerCharacter::StopSprint()
 	CharacterInputState.bWantsToSprint = false;
 	CharacterInputState.bWantsToWalk = false;
 	SetCurrentGait();
+	
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
 }
 
 void AAO_PlayerCharacter::HandleWalk()
@@ -149,6 +171,11 @@ void AAO_PlayerCharacter::HandleWalk()
 
 	CharacterInputState.bWantsToWalk = !CharacterInputState.bWantsToWalk;
 	SetCurrentGait();
+	
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
 }
 
 void AAO_PlayerCharacter::HandleCrouch()
@@ -174,16 +201,39 @@ void AAO_PlayerCharacter::SetCurrentGait()
 	if (CharacterInputState.bWantsToSprint)
 	{
 		Gait = EGait::Sprint;
-		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 	}
 	else if (CharacterInputState.bWantsToWalk)
 	{
 		Gait = EGait::Walk;
-		GetCharacterMovement()->MaxWalkSpeed = 200.f;
 	}
 	else
 	{
 		Gait = EGait::Run;
+	}
+
+	OnRep_Gait();
+}
+
+void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
+{
+	CharacterInputState.bWantsToSprint = bWantsToSprint;
+	CharacterInputState.bWantsToWalk = bWantsToWalk;
+
+	SetCurrentGait();
+}
+
+void AAO_PlayerCharacter::OnRep_Gait()
+{
+	switch (Gait)
+	{
+	case EGait::Walk:
+		GetCharacterMovement()->MaxWalkSpeed = 200.f;
+		break;
+	case EGait::Run:
 		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		break;
+	case EGait::Sprint:
+		GetCharacterMovement()->MaxWalkSpeed = 800.f;
+		break;
 	}
 }

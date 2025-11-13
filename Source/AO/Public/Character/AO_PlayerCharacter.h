@@ -19,10 +19,10 @@ struct FCharacterInputState
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Input")
 	bool bWantsToSprint = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Input")
 	bool bWantsToWalk = false;
 };
 
@@ -39,6 +39,7 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void Landed(const FHitResult& Hit) override;
 
@@ -68,15 +69,21 @@ protected:
 	TObjectPtr<UInputAction> IA_Walk;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Input")
+	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Movement")
+	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_Gait, Category = "PlayerCharacter|Movement")
 	EGait Gait = EGait::Run;
-	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacter|Movement")
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "PlayerCharacter|Movement")
 	FVector LandVelocity;
-	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacter|Movement")
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "PlayerCharacter|Movement")
 	bool bJustLanded = false;
 
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetInputState(bool bWantsToSprint, bool bWantsToWalk);
+	UFUNCTION()
+	void OnRep_Gait();
+	
 private:
 	FTimerHandle TimerHandle_JustLanded;
 	
