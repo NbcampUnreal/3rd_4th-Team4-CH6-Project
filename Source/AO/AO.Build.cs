@@ -17,8 +17,13 @@ public class AO : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"UMG",
+			
+			// Session
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			
+			// Pose Search
+			"PoseSearch",
 			
 			// GAS
 			"GameplayTags",
