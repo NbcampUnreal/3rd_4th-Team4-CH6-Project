@@ -10,7 +10,7 @@
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
 	bUseControllerRotationPitch = false;
@@ -69,6 +69,35 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	}
 }
 
+void AAO_PlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	SetCurrentGait();
+}
+
+void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	
+	Super::EndPlay(EndPlayReason);
+}
+
+void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	LandVelocity = GetCharacterMovement()->Velocity;
+	bJustLanded = true;
+
+	GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
+
+	GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+	{
+		bJustLanded = false;
+	}, 0.3f, false);
+}
+
 void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
 {
 	FVector2D InputValue = Value.Get<FVector2D>();
@@ -123,12 +152,26 @@ void AAO_PlayerCharacter::HandleCrouch()
 
 	if (IsCrouched())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Uncrouch"));
 		UnCrouch();
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Crouch"));
 		Crouch();
+	}
+}
+
+void AAO_PlayerCharacter::SetCurrentGait()
+{
+	if (CharacterInputState.bWantsToSprint)
+	{
+		Gait = EGait::Sprint;
+	}
+	else if (CharacterInputState.bWantsToWalk)
+	{
+		Gait = EGait::Walk;
+	}
+	else
+	{
+		Gait = EGait::Run;
 	}
 }

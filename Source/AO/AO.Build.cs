@@ -13,7 +13,8 @@ public class AO : ModuleRules
 			// Initial Dependencies
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			
-			
+			// Pose Search
+			"PoseSearch",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
