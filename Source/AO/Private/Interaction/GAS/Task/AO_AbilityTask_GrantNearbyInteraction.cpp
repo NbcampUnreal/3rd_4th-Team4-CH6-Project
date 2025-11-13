@@ -89,16 +89,13 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 		InteractionQuery.RequestingAvatar = AvatarActor;
 		InteractionQuery.RequestingController = Cast<AController>(AvatarActor->GetOwner());
 		
-		TArray<FAO_InteractionInfo> InteractionInfos;
 		for (TScriptInterface<IAO_Interface_Interactable>& Interactable : Interactables)
 		{
-			FAO_InteractionInfoBuilder InteractionInfoBuilder(Interactable, InteractionInfos);
-			Interactable->GatherPostInteractionInfos(InteractionQuery, InteractionInfoBuilder);
-		}
-		
-		// 필요한 어빌리티 부여 (중복 부여 방지)
-		for (FAO_InteractionInfo& InteractionInfo : InteractionInfos)
-		{
+			// 상호작용 정보 가져오기
+			FAO_InteractionInfo InteractionInfo = Interactable->GetInteractionInfo(InteractionQuery);
+			InteractionInfo.Interactable = Interactable;
+
+			// 필요한 어빌리티 부여 (중복 부여 방지)
 			if (InteractionInfo.AbilityToGrant)
 			{
 				FObjectKey ObjectKey(InteractionInfo.AbilityToGrant);

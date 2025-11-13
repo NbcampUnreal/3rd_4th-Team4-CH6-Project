@@ -25,15 +25,12 @@ bool UAO_GameplayAbility_Interact_Info::InitializeAbility(AActor* TargetActor)
 	InteractableActor = TargetActor;
 
 	// 상호작용 정보 수집
-	TArray<FAO_InteractionInfo> InteractionInfos;
-	FAO_InteractionInfoBuilder InteractionInfoBuilder(Interactable, InteractionInfos);
-	Interactable->GatherPostInteractionInfos(InteractionQuery, InteractionInfoBuilder);
+	InteractionInfo = TargetInteractable->GetInteractionInfo(InteractionQuery);
+	InteractionInfo.Interactable = TargetInteractable;
 	
-	if (InteractionInfos.Num() == 0)
-	{
-		return false;
-	}
+	// Duration 보정 (음수 방지)
+	InteractionInfo.Duration = FMath::Max(0.f, InteractionInfo.Duration);
 	
-	InteractionInfo = InteractionInfos[0];
+	this->InteractionInfo = InteractionInfo;
 	return true;
 }

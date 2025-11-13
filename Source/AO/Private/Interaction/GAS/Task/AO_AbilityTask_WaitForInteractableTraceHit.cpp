@@ -236,26 +236,27 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::UpdateInteractionInfos(
 	// 각 Interactable로부터 상호작용 정보 수집
 	for (const TScriptInterface<IAO_Interface_Interactable>& Interactable : Interactables)
 	{
-		TArray<FAO_InteractionInfo> TempInteractionInfos;
-		FAO_InteractionInfoBuilder InteractionInfoBuilder(Interactable, TempInteractionInfos);
+		// 상호작용 가능 여부 체크
+		if (!Interactable->CanInteraction(InteractQuery))
+		{
+			continue;
+		}
 
-		Interactable->GatherPostInteractionInfos(InteractQuery, InteractionInfoBuilder);
+		// 상호작용 정보 가져오기
+		FAO_InteractionInfo InteractionInfo = Interactable->GetInteractionInfo(InteractQuery);
+		InteractionInfo.Interactable = Interactable; //
 
 		// 상호작용 가능 여부 및 어빌리티 활성화 가능 여부 체크
-		for (FAO_InteractionInfo& InteractionInfo : TempInteractionInfos)
+		if (InteractionInfo.AbilityToGrant)
 		{
-			if (InteractionInfo.AbilityToGrant)
+			// 해당 어빌리티가 이미 부여되어 있는지 확인
+			FGameplayAbilitySpec* InteractionAbilitySpec = AbilitySystemComponent->FindAbilitySpecFromClass(InteractionInfo.AbilityToGrant);
+			if (InteractionAbilitySpec)
 			{
-				// 해당 어빌리티가 이미 부여되어 있는지 확인
-				FGameplayAbilitySpec* InteractionAbilitySpec = AbilitySystemComponent->FindAbilitySpecFromClass(InteractionInfo.AbilityToGrant);
-				if (InteractionAbilitySpec)
+				// 상호작용 가능하고 어빌리티 활성화 가능한 경우만 추가
+				if (InteractionAbilitySpec->Ability->CanActivateAbility(InteractionAbilitySpec->Handle, AbilitySystemComponent->AbilityActorInfo.Get()))
 				{
-					// 상호작용 가능하고 어빌리티 활성화 가능한 경우만 추가
-					if (Interactable->CanInteraction(InteractQuery) && 
-						InteractionAbilitySpec->Ability->CanActivateAbility(InteractionAbilitySpec->Handle, AbilitySystemComponent->AbilityActorInfo.Get()))
-					{
-						NewInteractionInfos.Add(InteractionInfo);
-					}
+					NewInteractionInfos.Add(InteractionInfo);
 				}
 			}
 		}
@@ -263,25 +264,16 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::UpdateInteractionInfos(
 
 	// 이전 정보와 비교하여 변화 감지
 	bool bInfosChanged = false;
-	if (NewInteractionInfos.Num() == CurrentInteractionInfos.Num())
-	{
-		NewInteractionInfos.Sort();
-
-		for (int InfoIndex = 0; InfoIndex < NewInteractionInfos.Num(); InfoIndex++)
-		{
-			const FAO_InteractionInfo& NewInfo = NewInteractionInfos[InfoIndex];
-			const FAO_InteractionInfo& CurrentInfo = CurrentInteractionInfos[InfoIndex];
-
-			if (NewInfo != CurrentInfo)
-			{
-				bInfosChanged = true;
-				break;
-			}
-		}
-	}
-	else
+	if (NewInteractionInfos.Num() != CurrentInteractionInfos.Num())
 	{
 		bInfosChanged = true;
+	}
+	else if (NewInteractionInfos.Num() > 0)
+	{
+		if (NewInteractionInfos[0] != CurrentInteractionInfos[0])
+		{
+			bInfosChanged = true;
+		}
 	}
 	
 	// 변화가 있으면 하이라이트 갱신 및 델리게이트 브로드캐스트
@@ -303,7 +295,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::UpdateInteractionInfos(
 			HighlightInteractables(CurrentInteractionInfos, true);
 		}
 		
-		// UI 업데이트를 위한 델리게이트 브로드캐스트
+		// UI 업데이트 + 상호작용 감지를 위한 델리게이트 브로드캐스트
 		InteractableChanged.Broadcast(CurrentInteractionInfos);
 	}
 }

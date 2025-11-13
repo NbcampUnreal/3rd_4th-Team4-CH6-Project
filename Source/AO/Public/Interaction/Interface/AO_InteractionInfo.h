@@ -64,10 +64,4 @@ public:
 	{
 		return !operator==(Other);
 	}
-	
-	// 상호작용 정보 정렬을 위한 비교 연산자, 상호작용 가능한 객체의 포인터 주소를 기준으로 정렬
-	FORCEINLINE bool operator<(const FAO_InteractionInfo& Other) const
-	{
-		return Interactable.GetInterface() < Other.Interactable.GetInterface();
-	}
 };

@@ -87,7 +87,7 @@ void AAO_PuzzleElement::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(AAO_PuzzleElement, bIsActivated);
 }
 
-FAO_InteractionInfo AAO_PuzzleElement::GetPreInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
+FAO_InteractionInfo AAO_PuzzleElement::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
 {
 	// DataAsset 사용 시 우선
 	if (bUseInteractionDataAsset && InteractionDataAsset)

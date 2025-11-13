@@ -49,6 +49,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 		return;
 	}
 
+	// 다른 플레이어가 먼저 사용할 때 해당 액터가 일회성이라 사용 불가능해지면 return
 	if (!InitializeAbility(const_cast<AActor*>(TriggerEventData->Target.Get())))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -203,16 +204,12 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 		}
 	}
 
-	// inalize 이벤트 발생, 상호작용 당하는 대상이 AbilityTriggers에서 Finalize 이벤트를 듣고 있음
+	// Finalize 이벤트 발생, 상호작용 당하는 대상이 AbilityTriggers에서 Finalize 이벤트를 듣고 있음
 	// 그러면 Finalize 이벤트 이후 당하는 대상이 ActivateAbility 실행
 	FGameplayEventData Payload;
 	Payload.EventTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
 	Payload.Instigator = GetAvatarActorFromActorInfo();
 	Payload.Target = InteractableActor;
-
-	//  Payload에 추가 정보를 넣을 수 있음, 아직은 사용 X
-	// 상호작용 액터에서 오버라이드해서 사용하면 가능
-	Interactable->CustomizeInteractionEventData(AO_InteractionTags::Ability_Action_AbilityInteract_Finalize, Payload);
 	
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{

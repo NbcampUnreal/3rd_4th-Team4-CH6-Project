@@ -46,7 +46,7 @@ class AO_API AAO_PuzzleElement : public AAO_WorldInteractable
 public:
 	AAO_PuzzleElement(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	virtual FAO_InteractionInfo GetPreInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
+	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 	virtual void OnInteractActiveStarted(AActor* Interactor) override;
@@ -64,7 +64,6 @@ public:
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 protected:
-	// 오버라이드
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
