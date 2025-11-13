@@ -11,10 +11,26 @@ public class AO : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			// Initial Dependencies
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			"UMG",
+			
+			// Session
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
 			
 			// Pose Search
 			"PoseSearch",
+		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Slate",
+			"SlateCore",
+			"OnlineSubsystemSteam"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
