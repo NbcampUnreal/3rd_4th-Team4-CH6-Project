@@ -46,6 +46,9 @@ public:
 	UPROPERTY(Replicated, VisibleAnywhere, Category = "Enemy|Target")
 	TObjectPtr<AActor> CurrentTarget;
 
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	TObjectPtr<class UBehaviorTree> BehaviorTreeAsset;
+
 	UPROPERTY(Replicated, VisibleAnywhere, Category = "Enemy|Target")
 	FVector LastSeenLocation = FVector::ZeroVector;
 
@@ -74,4 +77,9 @@ public:
 	void ApplyMovementSpeed();
 
 	void SetCanAttack(bool bValue);
+
+	FORCEINLINE float GetAttackRange() const
+	{
+		return AttackRange;
+	}
 };
