@@ -10,7 +10,7 @@
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
 	bUseControllerRotationPitch = false;
@@ -34,6 +34,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 }
@@ -66,14 +67,13 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
+		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
 	}
 }
 
 void AAO_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	SetCurrentGait();
 }
 
 void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -128,18 +128,27 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 
 void AAO_PlayerCharacter::StartSprint()
 {
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 800.f;
-	}
+	CharacterInputState.bWantsToSprint = true;
+	CharacterInputState.bWantsToWalk = false;
+	SetCurrentGait();
 }
 
 void AAO_PlayerCharacter::StopSprint()
 {
-	if (GetCharacterMovement())
+	CharacterInputState.bWantsToSprint = false;
+	CharacterInputState.bWantsToWalk = false;
+	SetCurrentGait();
+}
+
+void AAO_PlayerCharacter::HandleWalk()
+{
+	if (CharacterInputState.bWantsToSprint)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		return;
 	}
+
+	CharacterInputState.bWantsToWalk = !CharacterInputState.bWantsToWalk;
+	SetCurrentGait();
 }
 
 void AAO_PlayerCharacter::HandleCrouch()
@@ -165,13 +174,16 @@ void AAO_PlayerCharacter::SetCurrentGait()
 	if (CharacterInputState.bWantsToSprint)
 	{
 		Gait = EGait::Sprint;
+		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 	}
 	else if (CharacterInputState.bWantsToWalk)
 	{
 		Gait = EGait::Walk;
+		GetCharacterMovement()->MaxWalkSpeed = 200.f;
 	}
 	else
 	{
 		Gait = EGait::Run;
+		GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	}
 }

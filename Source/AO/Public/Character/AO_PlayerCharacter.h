@@ -49,38 +49,31 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Move;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Look;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Jump;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Sprint;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Crouch;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> IA_Walk;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacter|Movement")
 	EGait Gait = EGait::Run;
-
 	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacter|Movement")
 	FVector LandVelocity;
-
 	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacter|Movement")
 	bool bJustLanded = false;
 
@@ -94,6 +87,7 @@ private:
 	void StartSprint();
 	void StopSprint();
 	void HandleCrouch();
+	void HandleWalk();
 
 	// Movement
 	void SetCurrentGait();
