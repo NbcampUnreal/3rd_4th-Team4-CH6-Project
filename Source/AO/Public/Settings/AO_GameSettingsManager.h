@@ -30,11 +30,52 @@ public:
 	void ApplyAndSaveAllSettings();
 
 	UFUNCTION(BlueprintCallable, Category = "Game Settings")
-	void RevertAndApplyDefaultSettings();
+	void ApplyResolutionSettings();		// 무거움 (화면 새로고침)
 
+	UFUNCTION(BlueprintCallable, Category = "Game Settings")
+	void ApplyNonResolutionSettings();		// 가벼움
+
+	/*UFUNCTION(BlueprintCallable, Category = "Game Settings")
+	void RevertAndApplyDefaultSettings();*/
+
+
+	
+	// Scalability (0 ~ 4, low ~ cine)
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
 	void SetOverallScalability(EScalabilityLevel NewLevel);
 
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetAntiAliasingScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetViewDistanceScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetShadowScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetGlobalIlluminationScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetReflectionScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetTextureScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetVisualEffectScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetPostProcessingScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetFoliageScalability(EScalabilityLevel NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetShadingScalability(EScalabilityLevel NewLevel);
+
+	
+	// 커스텀 추가기능
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Audio")
 	void SetMasterVolume(float NewVolume);
 
