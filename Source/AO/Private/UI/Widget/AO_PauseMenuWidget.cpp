@@ -5,6 +5,11 @@
 void UAO_PauseMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+}
+
+void UAO_PauseMenuWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
 
 	if (Btn_Settings)
 	{

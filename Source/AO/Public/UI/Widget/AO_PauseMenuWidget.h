@@ -13,6 +13,7 @@ class AO_API UAO_PauseMenuWidget : public UUserWidget
 
 public:
 	virtual void NativeConstruct() override;
+	void NativeOnInitialized();
 
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAO_OnPauseMenuRequestSettings);

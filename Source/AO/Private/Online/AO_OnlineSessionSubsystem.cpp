@@ -260,6 +260,8 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.bAllowJoinViaPresence = true;
 	Settings.bUseLobbiesIfAvailable = true;
 
+	Settings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
 	const bool bHasPassword = !Password.IsEmpty();
 	Settings.Set(KEY_SERVER_NAME, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
@@ -352,6 +354,7 @@ void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
 	LastSearch->bIsLanQuery = bIsLAN;
 
 	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	LastSearch->QuerySettings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineComparisonOp::Equals);
 
 	if (FindHandle.IsValid())
 	{
@@ -404,67 +407,69 @@ void UAO_OnlineSessionSubsystem::CancelFind()
 
 void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
-	{
-		if (FindHandle.IsValid())
-		{
-			Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
-			FindHandle.Reset();
-		}
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: Session interface invalid when clearing delegate"));
-	}
+    if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+    {
+        if (FindHandle.IsValid())
+        {
+            Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+            FindHandle.Reset();
+        }
+    }
+    else
+    {
+        AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: Session interface invalid when clearing delegate"));
+    }
 
-	bFinding = false;
-	LastSearchResults.Reset();
+    bFinding = false;
+    LastSearchResults.Reset();
 
-	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: Success=%d"), static_cast<int32>(bWasSuccessful));
+    AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: Success=%d"), static_cast<int32>(bWasSuccessful));
 
-	if (!bWasSuccessful || !LastSearch.IsValid())
-	{
-		if (!LastSearch.IsValid())
-		{
-			AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: LastSearch invalid"));
-		}
-		OnFindSessionsCompleteEvent.Broadcast(false);
-		return;
-	}
+    if (!bWasSuccessful || !LastSearch.IsValid())
+    {
+        if (!LastSearch.IsValid())
+        {
+            AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: LastSearch invalid"));
+        }
+        OnFindSessionsCompleteEvent.Broadcast(false);
+        return;
+    }
+	
+    LastSearchResults = LastSearch->SearchResults;
+    AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: RawResults=%d"), LastSearchResults.Num());
+	
+    {
+        TSet<FString> SeenIds;
+        LastSearchResults.RemoveAll(
+            [&SeenIds](const FOnlineSessionSearchResult& R)
+            {
+                const FString Id = R.GetSessionIdStr();
+                if (SeenIds.Contains(Id))
+                {
+                    return true;
+                }
+                SeenIds.Add(Id);
 
-	LastSearchResults = LastSearch->SearchResults;
+                const auto& S = R.Session;
 
-	{
-		TSet<FString> SeenIds;
-		LastSearchResults.RemoveAll(
-			[&SeenIds](const FOnlineSessionSearchResult& R)
-			{
-				const FString Id = R.GetSessionIdStr();
-				if (SeenIds.Contains(Id))
-				{
-					return true;
-				}
-				SeenIds.Add(Id);
+                bool bLobbyTag = false;
+                S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
 
-				const auto& S = R.Session;
-				bool bLobbyTag = false;
-				S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
+                FString RoomName;
+                const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
 
-				FString RoomName;
-				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
+                const bool bBad =
+                    !bLobbyTag ||
+                    !bHasName || RoomName.IsEmpty() ||
+                    S.OwningUserName.IsEmpty();
 
-				const bool bBad =
-					!bLobbyTag ||
-					!bHasName || RoomName.IsEmpty() ||
-					S.OwningUserName.IsEmpty();
+                return bBad;
+            });
+    }
 
-				return bBad;
-			});
-	}
+    AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: ValidResults=%d"), LastSearchResults.Num());
 
-	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: ValidResults=%d"), LastSearchResults.Num());
-
-	OnFindSessionsCompleteEvent.Broadcast(true);
+    OnFindSessionsCompleteEvent.Broadcast(true);
 }
 
 /* ==================== Join ==================== */
