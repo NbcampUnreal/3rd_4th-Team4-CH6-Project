@@ -34,7 +34,11 @@ public class AO : ModuleRules
 			
 			// 카오스 디스트럭션
 			"ChaosCaching",
-			"GeometryCollectionEngine"
+			"GeometryCollectionEngine",
+			
+			// AI
+			"AIModule",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

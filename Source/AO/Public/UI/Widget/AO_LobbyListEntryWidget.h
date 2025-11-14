@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/Widget/AO_LobbyListWidget.h"
 #include "AO_LobbyListEntryWidget.generated.h"
 
 class UButton;
 class UTextBlock;
 class UImage;
-class UAO_LobbyListWidget;
 
 /** 세션 리스트 한 줄 항목 */
 UCLASS()
