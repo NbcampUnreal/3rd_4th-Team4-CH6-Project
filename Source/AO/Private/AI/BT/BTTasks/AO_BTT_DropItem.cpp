@@ -32,7 +32,6 @@ EBTNodeResult::Type UAO_BTT_DropItem::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
     if (PrevHeld == nullptr)
     {
-        // 들고 있던 게 없으면 상태만 동기화
         if (HasItemKey.SelectedKeyName != NAME_None)
         {
             BB->SetValueAsBool(HasItemKey.SelectedKeyName, false);
@@ -42,14 +41,13 @@ EBTNodeResult::Type UAO_BTT_DropItem::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
     if (Crab->HasAuthority())
     {
-        Crab->DropItem();   // 서버에서 바로 실행
+        Crab->DropItem();
     }
     else
     {
-        Crab->ServerDropItem(); // 이 상황은 거의 없지만 안정성 보장
+        Crab->ServerDropItem();
     }
-
-    // BB 갱신
+    
     if (HasItemKey.SelectedKeyName != NAME_None)
     {
         BB->SetValueAsBool(HasItemKey.SelectedKeyName, false);
@@ -58,12 +56,10 @@ EBTNodeResult::Type UAO_BTT_DropItem::ExecuteTask(UBehaviorTreeComponent& OwnerC
     {
         BB->SetValueAsObject(LastDroppedItemKey.SelectedKeyName, PrevHeld);
     }
-
-    // 일시 태그 부여 (EQS GameplayTags Test에서 제외하기 위함)
+    
     if (RecentlyDroppedTag.IsValid())
     {
-        // AO_PickupItem 내부에 FGameplayTagContainer가 있고 태그 조작 API가 있다고 가정
-        PrevHeld->AddGameplayTag(RecentlyDroppedTag);          // ← 프로젝트 측에 구현 필요
+        PrevHeld->AddGameplayTag(RecentlyDroppedTag);
         ScheduleTagRemoval(PrevHeld, RecentlyDroppedTag, RecentlyDroppedTagDuration);
     }
 
@@ -76,15 +72,14 @@ void UAO_BTT_DropItem::ScheduleTagRemoval(AAO_TestPickupItem* Item, const FGamep
     {
         return;
     }
-
-    // 태그 제거를 아이템 액터 타이머로 예약
+    
     FTimerHandle TimerHandle;
     FTimerDelegate Delegate;
     Delegate.BindLambda([Item, Tag]()
     {
         if (IsValid(Item))
         {
-            Item->RemoveGameplayTag(Tag); // ← 프로젝트 측에 구현 필요
+            Item->RemoveGameplayTag(Tag);
         }
     });
 

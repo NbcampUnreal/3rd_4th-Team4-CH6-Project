@@ -35,6 +35,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector PackTargetLocationKey;
+
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector HasPackMatesKey;
 	
 	UPROPERTY(EditAnywhere, Category = "Pack")
 	int32 MinPackSize = 2;

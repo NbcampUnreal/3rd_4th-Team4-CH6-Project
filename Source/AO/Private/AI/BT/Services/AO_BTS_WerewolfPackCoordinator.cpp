@@ -36,6 +36,11 @@ UAO_BTS_WerewolfPackCoordinator::UAO_BTS_WerewolfPackCoordinator()
 		GET_MEMBER_NAME_CHECKED(UAO_BTS_WerewolfPackCoordinator, PackTargetLocationKey)
 	);
 
+	HasPackMatesKey.AddBoolFilter(
+		this,
+		GET_MEMBER_NAME_CHECKED(UAO_BTS_WerewolfPackCoordinator, HasPackMatesKey)
+	);
+
 	Interval = 0.3f;
 	RandomDeviation = 0.05f;
 }
@@ -69,7 +74,7 @@ void UAO_BTS_WerewolfPackCoordinator::TickNode(UBehaviorTreeComponent& OwnerComp
 	{
 		return;
 	}
-
+	
 	if(!IsPackNotifiedKey.SelectedKeyName.IsValid() ||
 	   !IsInPackPositionKey.SelectedKeyName.IsValid() ||
 	   !ShouldStartPackAttackKey.SelectedKeyName.IsValid())
@@ -79,20 +84,19 @@ void UAO_BTS_WerewolfPackCoordinator::TickNode(UBehaviorTreeComponent& OwnerComp
 
 	const bool bSelfNotified =
 		SelfBB->GetValueAsBool(IsPackNotifiedKey.SelectedKeyName);
-	
+
 	if(!bSelfNotified)
 	{
+		if(HasPackMatesKey.SelectedKeyName.IsValid())
+		{
+			SelfBB->SetValueAsBool(HasPackMatesKey.SelectedKeyName, false);
+		}
 		return;
 	}
 
-	const bool bIsLeader =
-		IsHowlSourceKey.SelectedKeyName.IsValid()
-			? SelfBB->GetValueAsBool(IsHowlSourceKey.SelectedKeyName)
-			: false;
-
 	const bool bAlreadyStartAttack =
 		SelfBB->GetValueAsBool(ShouldStartPackAttackKey.SelectedKeyName);
-
+	
 	if(bAlreadyStartAttack)
 	{
 		return;
@@ -171,7 +175,14 @@ void UAO_BTS_WerewolfPackCoordinator::TickNode(UBehaviorTreeComponent& OwnerComp
 		}
 	}
 	
-	if(ReadyCount >= MinPackSize)
+	const bool bHasPackMates = (NotifiedCount >= 2);
+
+	if(HasPackMatesKey.SelectedKeyName.IsValid())
+	{
+		SelfBB->SetValueAsBool(HasPackMatesKey.SelectedKeyName, bHasPackMates);
+	}
+	
+	if(bHasPackMates && ReadyCount >= MinPackSize)
 	{
 		for(AActor* Actor : WerewolfActors)
 		{

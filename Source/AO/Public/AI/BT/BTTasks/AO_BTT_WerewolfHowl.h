@@ -7,10 +7,6 @@
 #include "BehaviorTree/BehaviorTreeTypes.h"
 #include "AO_BTT_WerewolfHowl.generated.h"
 
-class UBlackboardComponent;
-class AAO_Enemy_Werewolf;
-class AAO_AIC_Werewolf;
-
 UCLASS()
 class AO_API UAO_BTT_WerewolfHowl : public UBTTaskNode
 {
@@ -28,14 +24,14 @@ public:
 	FBlackboardKeySelector TargetActorKey;
 	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector PackTargetLocationKey;
-	
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector IsAlertedKey;
-	
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector IsHowlSourceKey;
 	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector IsPackNotifiedKey;
+	
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector PackTargetLocationKey;
+	
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float HowlNotifyRadius = 3000.0f; // 추측입니다
 };

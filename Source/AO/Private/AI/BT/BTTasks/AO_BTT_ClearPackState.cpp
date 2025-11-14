@@ -27,6 +27,10 @@ UAO_BTT_ClearPackState::UAO_BTT_ClearPackState()
 		this,
 		GET_MEMBER_NAME_CHECKED(UAO_BTT_ClearPackState, IsHowlSourceKey)
 	);
+
+	HasPackMates.AddBoolFilter(
+		this,
+		GET_MEMBER_NAME_CHECKED(UAO_BTT_ClearPackState, HasPackMates));
 }
 
 EBTNodeResult::Type UAO_BTT_ClearPackState::ExecuteTask(
@@ -60,6 +64,16 @@ EBTNodeResult::Type UAO_BTT_ClearPackState::ExecuteTask(
 	if(IsHowlSourceKey.SelectedKeyName.IsValid())
 	{
 		BlackboardComp->SetValueAsBool(IsHowlSourceKey.SelectedKeyName, false);
+	}
+
+	if(HasPackMates.SelectedKeyName.IsValid())
+	{
+		BlackboardComp->SetValueAsBool(HasPackMates.SelectedKeyName, false);
+	}
+
+	if(HasUsedPackAttackKey.SelectedKeyName.IsValid())
+	{
+		BlackboardComp->SetValueAsBool(HasUsedPackAttackKey.SelectedKeyName, true);
 	}
 
 	return EBTNodeResult::Succeeded;
