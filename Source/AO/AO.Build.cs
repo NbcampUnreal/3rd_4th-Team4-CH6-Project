@@ -16,6 +16,8 @@ public class AO : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			
+			//UI
 			"UMG",
 			
 			// Session
@@ -32,13 +34,20 @@ public class AO : ModuleRules
 			
 			// 카오스 디스트럭션
 			"ChaosCaching",
-			"GeometryCollectionEngine"
+			"GeometryCollectionEngine",
+			
+			// AI
+			"AIModule",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			//UI
 			"Slate",
 			"SlateCore",
+			
+			// Session
 			"OnlineSubsystemSteam"
 		});
 
