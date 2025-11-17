@@ -53,17 +53,8 @@ void UAO_InteractionComponent::BeginPlay()
 		{
 			if (PC->IsLocalController())
 			{
-				AO_LOG(LogHSJ, Log, TEXT("Initializing UI for local player"));
 				InitializeInteractionUI(PC);
 			}
-			else
-			{
-				AO_LOG(LogHSJ, Log, TEXT("Not local controller, skipping UI init"));
-			}
-		}
-		else
-		{
-			AO_LOG(LogHSJ, Warning, TEXT("PlayerController not found in BeginPlay, UI init may be delayed"));
 		}
 	}
 }
@@ -142,8 +133,6 @@ void UAO_InteractionComponent::InitializeInteractionUI(APlayerController* PC)
 
 	InteractionWidget->SetWidgetController(InteractionWidgetController);
 	InteractionWidget->AddToViewport();
-	
-	AO_LOG(LogHSJ, Log, TEXT("InteractionUI initialized successfully"));
 }
 
 void UAO_InteractionComponent::GiveDefaultAbilities()
@@ -163,8 +152,6 @@ void UAO_InteractionComponent::GiveDefaultAbilities()
 
 		FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
 		ASC->GiveAbility(Spec);
-
-		AO_LOG(LogHSJ, Log, TEXT("Granted ability: %s"), *AbilityClass->GetName());
 	}
 }
 

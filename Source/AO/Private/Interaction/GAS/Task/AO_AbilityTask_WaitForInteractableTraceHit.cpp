@@ -37,9 +37,6 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::Activate()
 
 	SetWaitingOnAvatar();
 
-	AO_LOG(LogHSJ, Log, TEXT("Trace task activated - Rate: %.2f, Range: %.1f"), 
-		InteractionTraceRate, InteractionTraceRange);
-
 	// 주기적 트레이스 시작
 	if (UWorld* World = GetWorld())
 	{

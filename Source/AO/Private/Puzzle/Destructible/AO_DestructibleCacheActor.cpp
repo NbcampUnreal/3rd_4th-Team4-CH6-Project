@@ -7,7 +7,7 @@
 
 AAO_DestructibleCacheActor::AAO_DestructibleCacheActor()
 {
-	SetReplicates(true);
+	bReplicates = true;
 	
 	GeoComp = CreateDefaultSubobject<UGeometryCollectionComponent>(TEXT("GeoComp"));
 	RootComponent = GeoComp;
@@ -63,8 +63,6 @@ void AAO_DestructibleCacheActor::BeginPlay()
 				TriggerTag,
 				EGameplayTagEventType::NewOrRemoved
 			).AddUObject(this, &AAO_DestructibleCacheActor::OnTagChanged);
-
-			AO_LOG_NET(LogHSJ, Log, TEXT("Registered TriggerTag: %s"), *TriggerTag.ToString());
 		}
 		else
 		{
