@@ -27,20 +27,30 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayAbility> AddEnergyAbilityClass;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayAbility> LeakEnergyAbilityClass;
 	
 protected:
+	virtual void BeginPlay() override;
+	void OnFuelChanged(const FOnAttributeChangeData& Data);
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> ASC;
 
 	UPROPERTY()
 	UAO_Fuel_AttributeSet* FuelAttributeSet;
 
+	UFUNCTION(BlueprintCallable, Category = "GAS|Abilities")
+	void FuelLeakSkillOn();
+	UFUNCTION(BlueprintCallable, Category = "GAS|Abilities")
+	void FuelLeakSkillOut();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fuel")
 	float TotalFuelGained = 0.f;
 
-	virtual void BeginPlay() override;
-	void OnFuelChanged(const FOnAttributeChangeData& Data);
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fuel")
+	float LeakFuelAmount = 10.f;
 };
