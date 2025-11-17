@@ -119,17 +119,17 @@ private:
 	bool bPendingInviteJoin = false;
 	FOnlineSessionSearchResult CachedInviteResult;
 
-	/* 로비/메인메뉴 맵 이름 */
-	static FName GetLobbyMapName()
-	{
-		return FName(TEXT("/Game/AVaOut/Maps/Test/AO_JSH_Test_Lobby"));
-	}
-
+	/* 맵 이름 */
 	static FName GetMainMenuMapName()
 	{
-		return FName(TEXT("/Game/AVaOut/Maps/Test/AO_JSH_Test_MainMenu"));
+		return FName(TEXT("/Game/AVaOut/Maps/LV_MainMenu"));
 	}
 
+	static FName GetLobbyMapName()
+	{
+		return FName(TEXT("/Game/AVaOut/Maps/LV_Lobby"));
+	}
+	
 	static FString ToMD5(const FString& In);
 
 	/* 호스트/클라이언트 분기용 */
