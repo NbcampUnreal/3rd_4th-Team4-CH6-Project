@@ -291,6 +291,66 @@ void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMo
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void UAO_GameSettingsManager::SetScreenResolutionByIndex(int32 ResolutionIndex)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	const TArray<FResolutionInfo>& ResolutionInfoList = GetResolutionInfoList();
+
+	if (ResolutionInfoList.IsValidIndex(ResolutionIndex))
+	{
+		if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+		{
+			Settings->SetScreenResolution(ResolutionInfoList[ResolutionIndex].Resolution);
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Resolution Index is not valid"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+TArray<FResolutionInfo> UAO_GameSettingsManager::GetSupportedScreenResolutionInfos() const
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	AO_LOG(LogJM, Log, TEXT("End"));
+	return GetResolutionInfoList();
+}
+
+int32 UAO_GameSettingsManager::GetCurrentResolutionIndex() const
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	const FIntPoint CurrentResolution = GetAppliedScreenResolution();
+	const TArray<FResolutionInfo>& ResolutionList = GetResolutionInfoList();
+
+	for (int32 Index=0; Index<ResolutionList.Num(); ++Index)
+	{
+		if (ResolutionList[Index].Resolution == CurrentResolution)
+		{
+			AO_LOG(LogJM, Log, TEXT("Index Found"));
+			return Index;
+		}
+	}
+
+	AO_LOG(LogJM, Warning, TEXT("Index Not Found (return -1)"));
+	return -1;
+}
+
+FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (const UAO_GameUserSettings* Settings = GetGameUserSettings())
+	{
+		return Settings->GetScreenResolution();
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+	return FIntPoint(1920, 1080);	// 포인터가 유효하지 않으면 1920x1080 해상도 반환
+}
+
 
 void UAO_GameSettingsManager::SetMasterVolume(float NewVolume)
 {
@@ -318,4 +378,40 @@ void UAO_GameSettingsManager::SetMouseSensitivity(float NewSensitivity)
 		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+const TArray<FResolutionInfo>& UAO_GameSettingsManager::GetResolutionInfoList()
+{
+	static TArray<FResolutionInfo> ResolutionInfoList;
+
+	if (ResolutionInfoList.Num() == 0)
+	{
+		auto AddResolutionInfo = [&](const int32 Width, const int32 Height, const FString& Type)
+		{
+			FResolutionInfo Info;
+			Info.Resolution = FIntPoint(Width, Height);
+			Info.DisplayName = FString::Printf(TEXT("%d x %d (%s)"), Width, Height, *Type);
+			ResolutionInfoList.Add(Info);
+		};
+		
+		// 16:9 비율
+		AddResolutionInfo(3840, 2160, TEXT("UHD"));
+		AddResolutionInfo(2560, 1440, TEXT("QHD"));
+		AddResolutionInfo(1920, 1080, TEXT("FHD"));
+		AddResolutionInfo(1280, 720, TEXT("HD"));
+		
+		// 21:9 비율
+		AddResolutionInfo(3440, 1440, TEXT("UW-QHD"));
+		AddResolutionInfo(2560, 1080, TEXT("UW-FHD"));
+		
+		// 32:9 비율
+		AddResolutionInfo(5120, 1440, TEXT("SUW-QHD"));
+		AddResolutionInfo(3840, 1080, TEXT("SUW-FHD"));
+		
+		// 기타 비율
+		AddResolutionInfo(1280, 1024, TEXT("5:4"));
+		AddResolutionInfo(1024, 768, TEXT("4:3"));
+		AddResolutionInfo(1366, 768, TEXT("Laptop Hi-DPI"));
+	}
+	return ResolutionInfoList;
 }
