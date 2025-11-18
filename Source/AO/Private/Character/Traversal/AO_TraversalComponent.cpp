@@ -387,9 +387,9 @@ void UAO_TraversalComponent::PerformTraversalAnimation()
 		TraversalResult.StartTime);
 
 	// 몽타주 종료 시에 실행할 함수 바인딩
-	FOnMontageEnded MontageEndDelegate;
-	MontageEndDelegate.BindUFunction(this, FName("OnMontageEnded"));
-	AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, TraversalResult.ChosenMontage);
+	FOnMontageBlendingOutStarted BlendOutingDelegate;
+	BlendOutingDelegate.BindUFunction(this, FName("OnMontageBlendingOut"));
+	AnimInstance->Montage_SetBlendingOutDelegate(BlendOutingDelegate, TraversalResult.ChosenMontage);
 
 	bDoingTraversal = true;
 
@@ -405,7 +405,7 @@ void UAO_TraversalComponent::PerformTraversalAnimation()
 	CharacterMovement->SetMovementMode(MOVE_Flying);
 }
 
-void UAO_TraversalComponent::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+void UAO_TraversalComponent::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
 {
 	bDoingTraversal = false;
 

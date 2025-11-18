@@ -56,5 +56,5 @@ private:
 	void PerformTraversalAnimation();
 	
 	UFUNCTION()
-	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
 };
