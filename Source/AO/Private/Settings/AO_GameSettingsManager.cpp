@@ -263,6 +263,34 @@ void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	{
+		Settings->SetVSyncEnabled(bEnable);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMode)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	{
+		Settings->SetFullscreenMode(InFullscreenMode);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 
 void UAO_GameSettingsManager::SetMasterVolume(float NewVolume)
 {

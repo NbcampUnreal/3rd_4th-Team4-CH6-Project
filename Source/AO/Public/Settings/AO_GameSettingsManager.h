@@ -74,6 +74,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
 	void SetShadingScalability(EScalabilityLevel NewLevel);
 
+	// VSync
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	void SetVSyncEnabled(bool bEnable);
+
+	// Screen Mode
+	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	void SetFullscreenMode(EWindowMode::Type InFullscreenMode);
+
+
 	
 	// 커스텀 추가기능
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Audio")
