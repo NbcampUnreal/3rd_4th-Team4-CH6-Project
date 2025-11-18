@@ -53,4 +53,8 @@ private:
 		FHitResult& OutHit,
 		FColor DebugHitColor,
 		FColor DebugTraceColor);
+	void PerformTraversalAnimation();
+	
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 };

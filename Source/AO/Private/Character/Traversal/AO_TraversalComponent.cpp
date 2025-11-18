@@ -25,21 +25,21 @@ void UAO_TraversalComponent::BeginPlay()
 	Owner = GetOwner();
 	if (!Owner)
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get Owner"));
+		AO_LOG(LogKH, Error, TEXT("Failed to get Owner"));
 		return;
 	}
 
 	Character = Cast<ACharacter>(Owner);
 	if (!Character)
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to cast Owner to ACharacter"));
+		AO_LOG(LogKH, Error, TEXT("Failed to cast Owner to ACharacter"));
 		return;
 	}
 
 	CharacterMovement = Character->GetCharacterMovement();
 	if (!CharacterMovement)
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get CharacterMovementComponent"));
+		AO_LOG(LogKH, Error, TEXT("Failed to get CharacterMovementComponent"));
 		return;
 	}
 }
@@ -275,6 +275,9 @@ bool UAO_TraversalComponent::TryTraversal()
 	TraversalResult.ChosenMontage = SelectedAnim;
 	TraversalResult.StartTime = MotionMatchResult.SelectedTime;
 	TraversalResult.PlayRate = MotionMatchResult.WantedPlayRate;
+
+	// Perform the traversal animation
+	PerformTraversalAnimation();
 	
 	return true;
 }
@@ -316,7 +319,7 @@ bool UAO_TraversalComponent::GetTraversalCheckInputs()
 bool UAO_TraversalComponent::RunCapsuleTrace(const FVector& StartLocation, const FVector& EndLocation, float Radius,
 	float HalfHeight, FHitResult& OutHit, FColor DebugHitColor, FColor DebugTraceColor)
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (!World)
 	{
 		return false;
@@ -357,4 +360,74 @@ bool UAO_TraversalComponent::RunCapsuleTrace(const FVector& StartLocation, const
 	}
 
 	return bHit;
+}
+
+void UAO_TraversalComponent::PerformTraversalAnimation()
+{
+	if (!Character || !CharacterMovement)
+	{
+		AO_LOG(LogKH, Error, TEXT("Character or CharacterMovementComponent is null"));
+		return;
+	}
+
+	// 서버 권위를 일시적으로 완화하고, 클라이언트 측 예측을 극대화하기 위해 사용
+	CharacterMovement->bIgnoreClientMovementErrorChecksAndCorrection = true;
+	CharacterMovement->bServerAcceptClientAuthoritativePosition = true;
+
+	TObjectPtr<UAnimInstance> AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance || !TraversalResult.ChosenMontage)
+	{
+		AO_LOG(LogKH, Error, TEXT("AnimInstance or TraversalResult.ChosenMontage is null"));
+		return;
+	}
+	AnimInstance->Montage_Play(
+		TraversalResult.ChosenMontage,
+		TraversalResult.PlayRate,
+		EMontagePlayReturnType::MontageLength,
+		TraversalResult.StartTime);
+
+	// 몽타주 종료 시에 실행할 함수 바인딩
+	FOnMontageEnded MontageEndDelegate;
+	MontageEndDelegate.BindUFunction(this, FName("OnMontageEnded"));
+	AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, TraversalResult.ChosenMontage);
+
+	bDoingTraversal = true;
+
+	TObjectPtr<UCapsuleComponent> CapsuleComponent = Cast<UCapsuleComponent>(
+		GetOwner()->GetComponentByClass(UCapsuleComponent::StaticClass()));
+	if (!CapsuleComponent)
+	{
+		AO_LOG(LogKH, Error, TEXT("Failed to get CapsuleComponent"));
+		return;
+	}
+	CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
+
+	CharacterMovement->SetMovementMode(MOVE_Flying);
+}
+
+void UAO_TraversalComponent::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bDoingTraversal = false;
+
+	TObjectPtr<UCapsuleComponent> CapsuleComponent = Cast<UCapsuleComponent>(
+		GetOwner()->GetComponentByClass(UCapsuleComponent::StaticClass()));
+	if (!CapsuleComponent)
+	{
+		AO_LOG(LogKH, Error, TEXT("Failed to get CapsuleComponent"));
+		return;
+	}
+	CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, false);
+	
+	if (TraversalResult.ActionType == ETraversalActionType::Vault)
+	{
+		CharacterMovement->SetMovementMode(MOVE_Falling);
+	}
+	else
+	{
+		CharacterMovement->SetMovementMode(MOVE_Walking);
+	}
+
+	// 서버 권위를 다시 활성화
+	CharacterMovement->bIgnoreClientMovementErrorChecksAndCorrection = false;
+	CharacterMovement->bServerAcceptClientAuthoritativePosition = false;
 }
