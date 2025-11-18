@@ -1,26 +1,23 @@
-// TraversableComponent.cpp - KH
+// AO_TraversableComponent.cpp - KH
 
-#include "Maps/Traversal/TraversableComponent.h"
+#include "Maps/Traversal/AO_TraversableComponent.h"
 
-#include "ParticleHelper.h"
+#include "AO_Log.h"
 #include "Components/SplineComponent.h"
 
-UTraversableComponent::UTraversableComponent()
+UAO_TraversableComponent::UAO_TraversableComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UTraversableComponent::OnRegister()
+void UAO_TraversableComponent::OnRegister()
 {
 	Super::OnRegister();
 
 	ScanSplines();
-
-	UE_LOG(LogTemp, Display, TEXT("Ledges Count : %d"), Ledges.Num());
-	UE_LOG(LogTemp, Display, TEXT("Opposite Ledges Count : %d"), OppositeLedges.Num());
 }
 
-void UTraversableComponent::GetLedgeTransforms(FVector& HitLocation, FVector& ActorLocation,
+void UAO_TraversableComponent::GetLedgeTransforms(FVector& HitLocation, FVector& ActorLocation,
 	FTraversalCheckResult& TraversalResult)
 {
 	// Find the ledge closest to the actor
@@ -51,7 +48,7 @@ void UTraversableComponent::GetLedgeTransforms(FVector& HitLocation, FVector& Ac
 
 	// Find the opposite ledge of the closest ledge using map
 	USplineComponent* OppositeLedge = *OppositeLedges.Find(ClosestLedge);
-	if (OppositeLedge)
+	if (!OppositeLedge)
 	{
 		TraversalResult.bHasBackLedge = false;
 		return;
@@ -65,7 +62,7 @@ void UTraversableComponent::GetLedgeTransforms(FVector& HitLocation, FVector& Ac
 	TraversalResult.BackLedgeNormal = OppositeClosestTransform.GetRotation().GetUpVector();
 }
 
-USplineComponent* UTraversableComponent::FindLedgeClosestToActor(FVector& ActorLocation)
+USplineComponent* UAO_TraversableComponent::FindLedgeClosestToActor(FVector& ActorLocation)
 {
 	if (Ledges.Num() == 0)
 	{
@@ -95,7 +92,7 @@ USplineComponent* UTraversableComponent::FindLedgeClosestToActor(FVector& ActorL
 	return Ledges[ClosestIndex];
 }
 
-void UTraversableComponent::ScanSplines()
+void UAO_TraversableComponent::ScanSplines()
 {
 	Ledges.Empty();
 	OppositeLedges.Empty();

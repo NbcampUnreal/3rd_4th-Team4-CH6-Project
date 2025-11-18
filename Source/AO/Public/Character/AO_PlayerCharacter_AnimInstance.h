@@ -8,6 +8,7 @@
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/TrajectoryTypes.h"
 #include "PoseSearch/PoseSearchTrajectoryLibrary.h"
+#include "Traversal/AO_TraversalTransform.h"
 #include "AO_PlayerCharacter_AnimInstance.generated.h"
 
 class UCharacterMovementComponent;
@@ -34,7 +35,7 @@ public:
 };
 
 UCLASS()
-class AO_API UAO_PlayerCharacter_AnimInstance : public UAnimInstance
+class AO_API UAO_PlayerCharacter_AnimInstance : public UAnimInstance, public IAO_TraversalTransform
 {
 	GENERATED_BODY()
 
@@ -47,6 +48,9 @@ protected:
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
+
+	virtual void SetTraversalTransform_Implementation(const FTransform& InTraversalTransform) override;
+	virtual FTransform GetTraversalTransform_Implementation() override;
 	
 public:
 	// Essential Values
@@ -81,6 +85,9 @@ public:
 	UPoseSearchDatabase* CurrentSelectedDatabase;
 	UPROPERTY(BlueprintReadWrite, Category = "PlayerCharacter|Essential Values")
 	TArray<FName> CurrentDatabaseTags;
+
+	UPROPERTY(BlueprintReadWrite, Category = "PlayerCharacter|Essential Values")
+	FTransform TraversalTransform;
 	
 	// States
 	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacter|States")

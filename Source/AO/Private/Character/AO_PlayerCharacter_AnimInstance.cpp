@@ -61,6 +61,16 @@ void UAO_PlayerCharacter_AnimInstance::NativeThreadSafeUpdateAnimation(float Del
 	UpdateStates();
 }
 
+void UAO_PlayerCharacter_AnimInstance::SetTraversalTransform_Implementation(const FTransform& InTraversalTransform)
+{
+	this->TraversalTransform = InTraversalTransform;
+}
+
+FTransform UAO_PlayerCharacter_AnimInstance::GetTraversalTransform_Implementation()
+{
+	return TraversalTransform;
+}
+
 bool UAO_PlayerCharacter_AnimInstance::IsMoving() 
 {
 	if (TrjFutureVelocity.IsNearlyZero(10.f) && Acceleration.IsNearlyZero())

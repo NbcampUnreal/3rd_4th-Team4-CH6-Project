@@ -8,6 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_TraversalComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UInputMappingContext;
@@ -56,13 +57,14 @@ protected:
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
-
-	// 승조 : ASC
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-	// 승조 : 상호작용 컴포넌트
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -106,6 +108,7 @@ private:
 	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
+	void HandleJump();
 
 	// Movement
 	void SetCurrentGait();

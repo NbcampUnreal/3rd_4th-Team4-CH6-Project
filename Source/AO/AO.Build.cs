@@ -32,7 +32,10 @@ public class AO : ModuleRules
 			
 			// 카오스 디스트럭션
 			"ChaosCaching",
-			"GeometryCollectionEngine"
+			"GeometryCollectionEngine",
+			
+			// Chooser
+			"Chooser",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
