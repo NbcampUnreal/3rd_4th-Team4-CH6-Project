@@ -52,6 +52,10 @@ public:
 	/*UFUNCTION(BlueprintCallable, Category = "Game Settings")
 	void RevertAndApplyDefaultSettings();*/
 
+	// 기본값으로 초기화
+	UFUNCTION(BlueprintCallable, Category = "Game Settings")
+	void SetToDefaults();
+
 
 	
 	// Scalability (0 ~ 4, low ~ cine)
@@ -109,7 +113,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
 	FIntPoint GetAppliedScreenResolution() const;
 
-
+	
 	
 	// 커스텀 추가기능
 	UFUNCTION(BlueprintCallable, Category = "Game Settings|Audio")

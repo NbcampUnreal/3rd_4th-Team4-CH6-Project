@@ -109,6 +109,20 @@ void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void UAO_GameSettingsManager::SetToDefaults()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	{
+		Settings->SetToDefaults();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
