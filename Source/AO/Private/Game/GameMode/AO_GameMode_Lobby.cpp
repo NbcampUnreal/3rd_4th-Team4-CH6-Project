@@ -11,7 +11,7 @@
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
 	PlayerControllerClass = AAO_PlayerController_Lobby::StaticClass();
-	// bUseSeamlessTravel = false; // 나중에 필요하면 켜기
+	bUseSeamlessTravel = true;
 }
 
 void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
@@ -123,6 +123,7 @@ void AAO_GameMode_Lobby::TravelToStage()
 {
 	if (UWorld* World = GetWorld())
 	{
-		UGameplayStatics::OpenLevel(World, FName(TEXT("/Game/AVaOut/Maps/LV_Meadow")), true);
+		FString Path = "/Game/AVaOut/Maps/LV_Meadow?listen";
+		World->ServerTravel(Path);
 	}
 }
