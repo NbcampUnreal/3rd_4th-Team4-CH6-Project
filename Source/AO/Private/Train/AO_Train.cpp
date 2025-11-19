@@ -62,6 +62,15 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	const float Delta = NewFuel - OldFuel;
 
 	TotalFuelGained += Delta;
+
+	if (Delta > 0.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
+	}
+	else if (Delta < 0.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
+	}
 }
 
 void AAO_Train::FuelLeakSkillOn()

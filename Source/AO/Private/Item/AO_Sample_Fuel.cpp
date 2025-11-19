@@ -36,8 +36,6 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
     if (bConsumed) return;
     bConsumed = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("🔥 OnOverlap Fired! OtherActor = %s"), *GetNameSafe(OtherActor));
-
     AAO_Train* Train = TargetTrain;
     if (!Train)
     {
@@ -52,7 +50,6 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
     UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
     if (!ASC)
     {
-        UE_LOG(LogTemp, Error, TEXT("❌ Train ASC is null"));
         return;
     }
     
@@ -76,7 +73,6 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
 
     if (!FoundSpec)
     {
-        UE_LOG(LogTemp, Error, TEXT("❌ Train doesn't have AddEnergy ability (after thorough search)"));
         return;
     }
     
@@ -89,7 +85,6 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
     if (AbilityInst)
     {
         AbilityInst->PendingAmount = AddFuelAmount;
-        UE_LOG(LogTemp, Warning, TEXT("✅ Item: PendingAmount set to ability instance = %f"), AddFuelAmount);
     }
   
     if (FoundSpec)
