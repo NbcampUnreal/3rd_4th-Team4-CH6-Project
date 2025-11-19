@@ -4,6 +4,7 @@
 #include "Player/PlayerController/AO_PlayerController_Lobby.h"
 #include "Game/GameMode/AO_GameMode_Lobby.h"
 #include "AO/AO_Log.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 
 AAO_PlayerController_Lobby::AAO_PlayerController_Lobby()
 {
@@ -56,6 +57,11 @@ void AAO_PlayerController_Lobby::OnPressed_StartKey()
 void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
 {
 	bIsReady = bNewReady;
+
+	if(AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
+	{
+		PS->SetLobbyReady(bNewReady);
+	}
 
 	if (UWorld* World = GetWorld())
 	{

@@ -7,11 +7,26 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
+#include "UI/Actor/AO_LobbyReadyBoardActor.h"
 
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
 	PlayerControllerClass = AAO_PlayerController_Lobby::StaticClass();
 	bUseSeamlessTravel = true;
+}
+
+void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+	
+	NotifyLobbyBoardChanged();
+}
+
+void AAO_GameMode_Lobby::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+	
+	NotifyLobbyBoardChanged();
 }
 
 void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
@@ -34,6 +49,8 @@ void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
 		*Controller->GetName(),
 		static_cast<int32>(bReady),
 		ReadyPlayers.Num());
+
+	NotifyLobbyBoardChanged();
 }
 
 AController* AAO_GameMode_Lobby::GetHostController() const
@@ -117,6 +134,26 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 
 	AO_LOG(LogJSH, Log, TEXT("Lobby: All players ready, starting stage"));
 	TravelToStage();
+}
+
+void AAO_GameMode_Lobby::NotifyLobbyBoardChanged()
+{
+	UWorld* World = GetWorld();
+	if(!World)
+	{
+		return;
+	}
+
+	TArray<AActor*> FoundBoards;
+	UGameplayStatics::GetAllActorsOfClass(World, AAO_LobbyReadyBoardActor::StaticClass(), FoundBoards);
+
+	for(AActor* Actor : FoundBoards)
+	{
+		if(AAO_LobbyReadyBoardActor* Board = Cast<AAO_LobbyReadyBoardActor>(Actor))
+		{
+			Board->MulticastRebuildBoard();
+		}
+	}
 }
 
 void AAO_GameMode_Lobby::TravelToStage()
