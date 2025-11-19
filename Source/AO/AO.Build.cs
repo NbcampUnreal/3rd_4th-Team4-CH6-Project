@@ -36,6 +36,10 @@ public class AO : ModuleRules
 			
 			// Chooser
 			"Chooser",
+			
+			// Motion Warping
+			"MotionWarping",
+			"AnimationWarpingRuntime",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

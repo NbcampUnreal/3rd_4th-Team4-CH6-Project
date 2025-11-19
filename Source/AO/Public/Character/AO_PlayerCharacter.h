@@ -8,6 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "AO_PlayerCharacter.generated.h"
 
+class UMotionWarpingComponent;
 class UAO_TraversalComponent;
 class UCameraComponent;
 class USpringArmComponent;
@@ -65,6 +66,8 @@ protected:
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;

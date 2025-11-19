@@ -11,6 +11,12 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 {
 	Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
 
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
+	
 	TObjectPtr<ACharacter> Character = Cast<ACharacter>(MeshComp->GetOwner());
 	if (!Character)
 	{
@@ -41,7 +47,7 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 	{
 		if (TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement())
 		{
-			if (CharacterMovement->GetCurrentAcceleration().IsNearlyZero(0.1f))
+			if (!CharacterMovement->GetCurrentAcceleration().IsNearlyZero(0.1f))
 			{
 				bShouldBlendOut = true;
 			}

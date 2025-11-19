@@ -7,11 +7,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ChooserFunctionLibrary.h"
+#include "PoseSearch/PoseSearchLibrary.h"
+#include "MotionWarpingComponent.h"
+#include "AnimationWarpingLibrary.h"
 
 #include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Maps/Traversal/AO_TraversableComponent.h"
-#include "PoseSearch/PoseSearchLibrary.h"
 
 UAO_TraversalComponent::UAO_TraversalComponent()
 {
@@ -370,6 +372,9 @@ void UAO_TraversalComponent::PerformTraversalAnimation()
 		return;
 	}
 
+	// 모션 워핑 실행
+	UpdateWarpTargets();
+
 	// 서버 권위를 일시적으로 완화하고, 클라이언트 측 예측을 극대화하기 위해 사용
 	CharacterMovement->bIgnoreClientMovementErrorChecksAndCorrection = true;
 	CharacterMovement->bServerAcceptClientAuthoritativePosition = true;
@@ -403,6 +408,86 @@ void UAO_TraversalComponent::PerformTraversalAnimation()
 	CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
 
 	CharacterMovement->SetMovementMode(MOVE_Flying);
+}
+
+void UAO_TraversalComponent::UpdateWarpTargets()
+{
+	TObjectPtr<UMotionWarpingComponent> MotionWarping = Cast<UMotionWarpingComponent>(
+		Owner->GetComponentByClass(UMotionWarpingComponent::StaticClass()));
+	if (!MotionWarping)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to get MotionWarpingComponent"));
+		return;
+	}
+
+	MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(
+		FName(TEXT("FrontLedge")),
+		TraversalResult.FrontLedgeLocation + FVector(0.f, 0.f, 0.5f),
+		UKismetMathLibrary::MakeRotFromX(UKismetMathLibrary::NegateVector(TraversalResult.FrontLedgeNormal)));
+
+	float DistanceFromFrontLedgeToBackLedge = 0.f;
+	float DistanceFromFrontLedgeToBackFloor = 0.f;
+	
+	if (TraversalResult.ActionType == ETraversalActionType::Hurdle
+		|| TraversalResult.ActionType == ETraversalActionType::Vault)
+	{
+		TArray<FMotionWarpingWindowData> OutWindows;
+		UMotionWarpingUtilities::GetMotionWarpingWindowsForWarpTargetFromAnimation(TraversalResult.ChosenMontage, FName(TEXT("BackLedge")), OutWindows);
+
+		if (OutWindows.Num() > 0)
+		{
+			UAnimationWarpingLibrary::GetCurveValueFromAnimation(
+				TraversalResult.ChosenMontage,
+				FName(TEXT("Distance_From_Ledge")),
+				OutWindows[0].EndTime,
+				DistanceFromFrontLedgeToBackLedge);
+
+			MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(
+				FName(TEXT("BackLedge")),
+				TraversalResult.BackLedgeLocation,
+				FRotator::ZeroRotator);
+		}
+		else
+		{
+			MotionWarping->RemoveWarpTarget(FName(TEXT("BackLedge")));
+		}
+	}
+	else
+	{
+		MotionWarping->RemoveWarpTarget(FName(TEXT("BackLedge")));
+	}
+
+	if (TraversalResult.ActionType == ETraversalActionType::Hurdle)
+	{
+		TArray<FMotionWarpingWindowData> OutWindows;
+		UMotionWarpingUtilities::GetMotionWarpingWindowsForWarpTargetFromAnimation(TraversalResult.ChosenMontage, FName(TEXT("BackFloor")), OutWindows);
+
+		if (OutWindows.Num() > 0)
+		{
+			UAnimationWarpingLibrary::GetCurveValueFromAnimation(
+				TraversalResult.ChosenMontage,
+				FName(TEXT("Distance_From_Ledge")),
+				OutWindows[0].EndTime,
+				DistanceFromFrontLedgeToBackFloor);
+
+			FVector TargetLocation = TraversalResult.BackLedgeLocation
+				+ TraversalResult.BackLedgeNormal * abs(DistanceFromFrontLedgeToBackLedge - DistanceFromFrontLedgeToBackFloor);
+			TargetLocation.Z = TraversalResult.BackFloorLocation.Z;
+			
+			MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(
+				FName(TEXT("BackFloor")),
+				TargetLocation,
+				FRotator::ZeroRotator);
+		}
+		else
+		{
+			MotionWarping->RemoveWarpTarget(FName(TEXT("BackFloor")));
+		}
+	}
+	else
+	{
+		MotionWarping->RemoveWarpTarget(FName(TEXT("BackFloor")));
+	}
 }
 
 void UAO_TraversalComponent::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)

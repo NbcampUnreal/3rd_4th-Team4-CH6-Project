@@ -54,6 +54,7 @@ private:
 		FColor DebugHitColor,
 		FColor DebugTraceColor);
 	void PerformTraversalAnimation();
+	void UpdateWarpTargets();
 	
 	UFUNCTION()
 	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
