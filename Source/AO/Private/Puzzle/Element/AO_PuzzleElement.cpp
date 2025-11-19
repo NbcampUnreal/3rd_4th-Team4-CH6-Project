@@ -18,7 +18,7 @@ AAO_PuzzleElement::AAO_PuzzleElement(const FObjectInitializer& ObjectInitializer
 
 	// 상호작용 가능하도록 콜리전 설정
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	MeshComponent->SetCollisionObjectType(AO_TraceChannel_Interaction);
+	MeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Block);
 }

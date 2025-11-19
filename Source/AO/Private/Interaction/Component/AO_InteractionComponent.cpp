@@ -80,15 +80,6 @@ void UAO_InteractionComponent::ServerTriggerInteract_Implementation(AActor* Targ
 		return;
 	}
 	
-	// 클라이언트 치팅 방지를 위한 추가 거리 검증
-	const float DistSq = FVector::DistSquared(GetOwner()->GetActorLocation(), TargetActor->GetActorLocation());
-	constexpr float MaxInteractionDistanceSq = 250.0f * 250.0f;
-	if (DistSq > MaxInteractionDistanceSq)
-	{
-		AO_LOG_NET(LogHSJ, Error, TEXT("Target too far: %.1fm"), FMath::Sqrt(DistSq) / 100.0f);
-		return;
-	}
-	
 	bIsHoldingInteract = true;
 	
 	// GameplayEvent로 Execute 어빌리티 트리거
