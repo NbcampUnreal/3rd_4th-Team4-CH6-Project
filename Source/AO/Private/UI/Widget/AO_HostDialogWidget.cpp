@@ -6,6 +6,7 @@
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Containers/UnrealString.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO/AO_Log.h"
 
@@ -240,7 +241,7 @@ FString UAO_HostDialogWidget::GetTrimmedPassword() const
 	FString Trimmed = Txt_Password->GetText().ToString().TrimStartAndEnd();
 	if(Trimmed.Len() > 4)
 	{
-		Trimmed.LeftInline(4, false);
+		Trimmed.LeftInline(4, EAllowShrinking::No);
 	}
 	return Trimmed;
 }

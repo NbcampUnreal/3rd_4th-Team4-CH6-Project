@@ -260,8 +260,6 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.bAllowJoinViaPresence = true;
 	Settings.bUseLobbiesIfAvailable = true;
 
-	Settings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-
 	const bool bHasPassword = !Password.IsEmpty();
 	Settings.Set(KEY_SERVER_NAME, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
@@ -353,21 +351,7 @@ void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
 	LastSearch->MaxSearchResults = MaxResults;
 	LastSearch->bIsLanQuery = bIsLAN;
 
-	// NULL(로컬) / Steam 분리
-	if (IsNullOSS())
-	{
-		// 로컬(NULL): 예전처럼 PRESENCE 기반 검색
-		LastSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-	}
-	else
-	{
-		// Steam: Lobbies + Presence 둘 다 켜서 최대한 넓게 검색
-		LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-		LastSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-	}
-
-	// Host 쪽에서 광고하는 커스텀 태그
-	LastSearch->QuerySettings.Set(FName(TEXT("LOBBYSEARCH")), true, EOnlineComparisonOp::Equals);
+	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
 
 	if (FindHandle.IsValid())
 	{
@@ -466,7 +450,7 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 				const auto& S = R.Session;
 
 				bool bLobbyTag = false;
-				S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
+				S.SessionSettings.Get(SEARCH_LOBBIES, bLobbyTag);
 
 				FString RoomName;
 				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
