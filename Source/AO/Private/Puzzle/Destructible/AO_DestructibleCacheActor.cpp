@@ -102,7 +102,7 @@ void AAO_DestructibleCacheActor::OnTagChanged(const FGameplayTag Tag, int32 NewC
 	// TriggerTag가 추가되고 아직 파괴 안 됐으면 실행
 	if (HasAuthority() && Tag.MatchesTagExact(TriggerTag) && NewCount > 0 && !bIsDestroyed)
 	{
-		AO_LOG_NET(LogHSJ, Warning, TEXT("TriggerTag added, executing destruction: %s"), *Tag.ToString());
+		//AO_LOG_NET(LogHSJ, Warning, TEXT("TriggerTag added, executing destruction: %s"), *Tag.ToString());
 		bIsDestroyed = true;
 		ExecuteDestruction();
 	}
@@ -113,7 +113,7 @@ void AAO_DestructibleCacheActor::OnRep_IsDestroyed()
 	// 클라이언트에서 파괴 상태 복제 받음
 	if (bIsDestroyed)
 	{
-		AO_LOG_NET(LogHSJ, Log, TEXT("Replicated destruction state, executing"));
+		//AO_LOG_NET(LogHSJ, Log, TEXT("Replicated destruction state, executing"));
 		ExecuteDestruction();
 	}
 }
@@ -128,4 +128,27 @@ void AAO_DestructibleCacheActor::ExecuteDestruction()
 
 	// 카오스 캐시 매니저의 Trigger 모드 실행 (녹화된 파괴 재생)
 	TriggerComponent(GeoComp);
+
+	// 삭제 타이머 설정
+	if (HasAuthority() && DestroyDelay > 0.0f)
+	{
+		FTimerDelegate TimerDelegate;
+		TimerDelegate.BindWeakLambda(this, [this]()
+		{
+			Destroy();
+		});
+
+		GetWorldTimerManager().SetTimer(
+			DestroyTimerHandle,
+			TimerDelegate,
+			DestroyDelay,
+			false
+		);
+	}
+}
+
+void AAO_DestructibleCacheActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(DestroyTimerHandle);
+	Super::EndPlay(EndPlayReason);
 }
