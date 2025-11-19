@@ -22,6 +22,7 @@ void AAO_InspectionPuzzle::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AAO_InspectionPuzzle, ReplicatedMappings);
+	DOREPLIFETIME(AAO_InspectionPuzzle, bInteractionEnabled);
 }
 
 void AAO_InspectionPuzzle::BeginPlay()
@@ -50,6 +51,11 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
     {
         return false;
     }
+
+	if (!bInteractionEnabled)
+	{
+		return false;
+	}
     
     AActor* RequestingActor = InteractionQuery.RequestingAvatar.Get();
     if (!RequestingActor)
@@ -135,4 +141,23 @@ void AAO_InspectionPuzzle::BroadcastTag(const FGameplayTag& Tag)
     }
 
     LinkedChecker->OnPuzzleEvent(Tag, GetInstigator());
+}
+
+void AAO_InspectionPuzzle::ResetToInitialState()
+{
+	if (!HasAuthority()) return;
+
+	bInteractionEnabled = true;
+    
+	// ElementMappings의 활성화 상태 초기화
+	for (FAO_InspectionElementMapping& Mapping : ReplicatedMappings)
+	{
+		Mapping.bIsActivated = false;
+	}
+}
+
+void AAO_InspectionPuzzle::SetInteractionEnabled(bool bEnabled)
+{
+	if (!HasAuthority()) return;
+	bInteractionEnabled = bEnabled;
 }

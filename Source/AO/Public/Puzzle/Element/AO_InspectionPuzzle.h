@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Interaction/Interface/AO_Interface_Inspectable.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
+#include "Puzzle/Interface/AO_Interface_PuzzleElement.h"
 #include "AO_InspectionPuzzle.generated.h"
 
 class UAO_InspectableComponent;
@@ -49,7 +50,10 @@ struct FAO_InspectionElementMapping
  */
 
 UCLASS()
-class AO_API AAO_InspectionPuzzle : public AActor, public IAO_Interface_Interactable, public IAO_Interface_Inspectable
+class AO_API AAO_InspectionPuzzle : public AActor,
+	public IAO_Interface_Interactable,
+	public IAO_Interface_Inspectable,
+	public IAO_Interface_PuzzleElement
 {
     GENERATED_BODY()
 
@@ -65,6 +69,12 @@ public:
 
     // IAO_Interface_Inspectable
     virtual void OnInspectionMeshClicked(UPrimitiveComponent* ClickedComponent) override;
+
+	// IAO_Interface_PuzzleElement 구현
+	virtual void ResetToInitialState() override;
+	virtual void SetInteractionEnabled(bool bEnabled) override;
+	virtual bool IsInteractionEnabled() const override { return bInteractionEnabled; }
+
 
 protected:
     virtual void BeginPlay() override;
@@ -102,4 +112,7 @@ public:
 protected:
     UPROPERTY(Replicated)
     TArray<FAO_InspectionElementMapping> ReplicatedMappings;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Inspection")
+	bool bInteractionEnabled = true;
 };
