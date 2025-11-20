@@ -10,6 +10,7 @@
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
@@ -41,18 +42,24 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
-	// 승조 : AbilitySystemComponent 생성
+	// 승조: AbilitySystemComponent 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	// 승조 : InteractionComponent 생성
+	// 승조: InteractionComponent 생성
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
+	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+bool AAO_PlayerCharacter::IsInspecting() const
+{
+	return InspectionComponent && InspectionComponent->IsInspecting();
 }
 
 void AAO_PlayerCharacter::BeginPlay()
@@ -97,6 +104,10 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		InteractionComponent->SetupInputBinding(PlayerInputComponent);
 	}
+	if (InspectionComponent)
+	{
+		InspectionComponent->SetupInputBinding(PlayerInputComponent);
+	}
 }
 
 void AAO_PlayerCharacter::Tick(float DeltaTime)
@@ -139,6 +150,12 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 
 void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
 {
+	// 승조 : Inspection 중이면 입력 차단
+	if (IsInspecting())
+	{
+		return;
+	}
+	
 	FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
@@ -156,6 +173,12 @@ void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
 
 void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 {
+	// 승조 : Inspection 중이면 카메라 회전 차단
+	if (IsInspecting())
+	{
+		return;
+	}
+	
 	FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
