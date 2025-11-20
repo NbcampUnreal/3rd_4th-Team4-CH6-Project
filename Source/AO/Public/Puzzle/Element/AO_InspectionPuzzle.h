@@ -79,9 +79,10 @@ public:
 protected:
     virtual void BeginPlay() override;
 
+	FGameplayTag FindTagForComponent(UPrimitiveComponent* Component) const;
+	void BroadcastTag(const FGameplayTag& Tag);
+
 private:
-    FGameplayTag FindTagForComponent(UPrimitiveComponent* Component) const;
-    void BroadcastTag(const FGameplayTag& Tag);
     void UpdateActivationState(const FName& ComponentName, bool bActivated);
 
 public:

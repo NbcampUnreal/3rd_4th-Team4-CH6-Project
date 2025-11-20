@@ -35,6 +35,14 @@ void UAO_GameplayAbility_Inspect_Click::ActivateAbility(
         return;
     }
 
+	// InspectionComponent에서 현재 검사 중인 액터 확인
+	UAO_InspectionComponent* InspectionComp = AvatarActor->FindComponentByClass<UAO_InspectionComponent>();
+	if (!InspectionComp || !InspectionComp->GetInspectedActor())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
     APlayerController* PC = Cast<APlayerController>(AvatarActor->GetOwner());
     if (!PC)
     {
@@ -72,21 +80,14 @@ void UAO_GameplayAbility_Inspect_Click::ActivateAbility(
         QueryParams
     );
 
-    if (bHit && HitResult.GetComponent())
-    {
-        AActor* HitActor = HitResult.GetActor();
-        
-        // 인터페이스 체크
-        if (HitActor && HitActor->GetClass()->ImplementsInterface(UAO_Interface_Inspectable::StaticClass()))
-        {
-            UAO_InspectionComponent* InspectionComp = AvatarActor->FindComponentByClass<UAO_InspectionComponent>();
-            if (InspectionComp)
-            {
-                FName ComponentName = HitResult.GetComponent()->GetFName();
-                InspectionComp->ServerProcessInspectionClick(HitActor, ComponentName);
-            }
-        }
-    }
+	if (bHit && HitResult.GetComponent() && HitResult.GetActor())
+	{
+		// InspectionComponent가 유효성 검사 담당
+		if (InspectionComp->IsValidExternalClickTarget(HitResult.GetActor(), HitResult.GetComponent()))
+		{
+			InspectionComp->ServerProcessInspectionClick(HitResult.GetActor(), HitResult.GetComponent()->GetFName());
+		}
+	}
 
     EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

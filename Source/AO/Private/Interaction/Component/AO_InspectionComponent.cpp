@@ -8,6 +8,7 @@
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
+#include "InputAction.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -16,6 +17,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
 #include "AO_Log.h"
+#include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -36,12 +38,13 @@ void UAO_InspectionComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 // PlayerCharacter가 소유한 이 컴포넌트를 통해 서버로 전달
 void UAO_InspectionComponent::ServerProcessInspectionClick_Implementation(AActor* TargetActor, FName ComponentName)
 {
-    if (!TargetActor)
+    if (!TargetActor || !CurrentInspectedActor)
     {
         return;
     }
 
-    if (!TargetActor->GetClass()->ImplementsInterface(UAO_Interface_Inspectable::StaticClass()))
+    // 현재 검사 중인 액터가 Inspectable 인터페이스를 구현하는지 확인
+    if (!CurrentInspectedActor->GetClass()->ImplementsInterface(UAO_Interface_Inspectable::StaticClass()))
     {
         return;
     }
@@ -55,7 +58,7 @@ void UAO_InspectionComponent::ServerProcessInspectionClick_Implementation(AActor
         if (Comp && Comp->GetFName() == ComponentName)
         {
             // 인터페이스를 통해 클릭 이벤트 전달
-            IAO_Interface_Inspectable* Inspectable = Cast<IAO_Interface_Inspectable>(TargetActor);
+            IAO_Interface_Inspectable* Inspectable = Cast<IAO_Interface_Inspectable>(CurrentInspectedActor);
             if (Inspectable)
             {
                 Inspectable->OnInspectionMeshClicked(Comp);
@@ -92,6 +95,11 @@ void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComp
     {
         EnhancedInput->BindAction(InspectionClickInputAction, ETriggerEvent::Started, this, &UAO_InspectionComponent::OnInspectionClick);
     }
+
+    if (CameraMoveAction)
+    {
+        EnhancedInput->BindAction(CameraMoveAction, ETriggerEvent::Triggered, this, &UAO_InspectionComponent::OnCameraMoveInput);
+    }
 }
 
 void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
@@ -127,15 +135,33 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
         GrantedClickAbilityHandle = ASC->GiveAbility(Spec);
     }
 
+    // 카메라 설정
+    FAO_InspectionCameraSettings CameraSettings;
+
+    // 인터페이스를 통한 설정 가져오기
+    if (IAO_Interface_InspectionCameraProvider* CameraProvider = Cast<IAO_Interface_InspectionCameraProvider>(InspectableActor))
+    {
+        CameraSettings = CameraProvider->GetInspectionCameraSettings();
+    }
+    else
+    {
+        // 기본 설정 (InspectableComponent에 있는 설정 사용)
+        FTransform CameraTransform = InspectableComp->GetInspectionCameraTransform();
+        CameraSettings.CameraMode = EInspectionCameraMode::RelativeToActor;
+        CameraSettings.CameraLocation = CameraTransform.GetLocation();
+        CameraSettings.CameraRotation = CameraTransform.Rotator();
+        CameraSettings.MovementType = EInspectionMovementType::None;
+    }
+
     // ClientRPC로 클라이언트도 어빌리티를 활성화할 수 있도록 Handle도 함께 전달
-    ClientNotifyInspectionStarted_WithHandle(InspectableActor, GrantedClickAbilityHandle);
+    ClientNotifyInspectionStarted(InspectableActor, GrantedClickAbilityHandle, CameraSettings);
     
     // 리슨서버에서 ClientRPC는 호스트 본인에게는 전달되지 않으므로 로컬에서 직접 실행
     APlayerController* LocalPC = Cast<APlayerController>(Owner->GetOwner());
     if (LocalPC && LocalPC->IsLocalController())
     {
-        FTransform CameraTransform = InspectableComp->GetInspectionCameraTransform();
-        ClientEnterInspection(CameraTransform.GetLocation(), CameraTransform.Rotator());
+        CurrentCameraSettings = CameraSettings;
+        ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
     }
 }
 
@@ -195,7 +221,7 @@ void UAO_InspectionComponent::ExitInspectionMode()
     }
 }
 
-void UAO_InspectionComponent::ClientNotifyInspectionStarted_WithHandle_Implementation(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle)
+void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings)
 {
     if (!InspectableActor)
     {
@@ -204,16 +230,9 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_WithHandle_Implement
 
     // 서버에서 전달받은 Handle 저장
     GrantedClickAbilityHandle = AbilityHandle;
-	
-    UAO_InspectableComponent* InspectableComp = InspectableActor->FindComponentByClass<UAO_InspectableComponent>();
-    if (!InspectableComp)
-    {
-        return;
-    }
-	
-	// InspectableComponent에서 카메라 Transform 정보 가져오기
-    FTransform CameraTransform = InspectableComp->GetInspectionCameraTransform();
-    ClientEnterInspection(CameraTransform.GetLocation(), CameraTransform.Rotator());
+    CurrentCameraSettings = CameraSettings;
+
+    ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
 }
 
 void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
@@ -285,6 +304,9 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
             Mesh->SetComponentTickEnabled(false);
         }
     }
+
+    // 초기 카메라 위치 저장 (클램프 기준)
+    InitialCameraLocation = CameraLocation;
     
     // Inspection 카메라로 전환
     TransitionToInspectionCamera(CameraLocation, CameraRotation);
@@ -355,6 +377,10 @@ void UAO_InspectionComponent::ClientExitInspection()
     }
     
     OriginalViewTarget = nullptr;
+
+    // 설정 초기화
+    CurrentCameraSettings = FAO_InspectionCameraSettings();
+    InitialCameraLocation = FVector::ZeroVector;
 }
 
 void UAO_InspectionComponent::OnExitPressed()
@@ -404,6 +430,54 @@ void UAO_InspectionComponent::OnInspectionClick()
     // GA_Inspect_Click 어빌리티 활성화
     // LocalPredicted 정책이므로 로컬에서 즉시 실행 후 서버에 전달
     ASC->TryActivateAbility(GrantedClickAbilityHandle);
+}
+
+void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Instance)
+{
+    if (CurrentCameraSettings.MovementType == EInspectionMovementType::None)
+    {
+        return;
+    }
+
+    if (!bIsInspecting || !InspectionCameraActor)
+    {
+        return;
+    }
+
+    FVector2D InputValue = Instance.GetValue().Get<FVector2D>();
+    if (InputValue.IsNearlyZero())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    float DeltaTime = World->GetDeltaSeconds();
+    FVector CurrentLocation = InspectionCameraActor->GetActorLocation();
+    FVector NewLocation = CurrentLocation;
+
+    // 이동 타입에 따른 처리
+    if (CurrentCameraSettings.MovementType == EInspectionMovementType::Planar)
+    {
+    	// 카메라 Yaw 기준으로 이동 방향 계산 (Pitch는 무시하고 XY 평면에서만 이동)
+    	FRotator CameraRotation = InspectionCameraActor->GetActorRotation();
+    	FRotator YawRotation(0.f, CameraRotation.Yaw, 0.f);
+        
+    	FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+    	FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+        
+    	// W/S = Forward 방향, A/D = Right 방향
+    	FVector MoveDelta = (ForwardDirection * InputValue.Y + RightDirection * InputValue.X) 
+						  * CurrentCameraSettings.MovementSpeed * DeltaTime;
+        
+    	NewLocation = ClampCameraPosition(CurrentLocation + MoveDelta);
+    }
+
+    InspectionCameraActor->SetActorLocation(NewLocation);
 }
 
 // 조사 카메라로 전환
@@ -484,4 +558,37 @@ void UAO_InspectionComponent::TransitionToPlayerCamera()
 void UAO_InspectionComponent::ServerNotifyInspectionEnded_Implementation()
 {
     ExitInspectionMode();
+}
+
+FVector UAO_InspectionComponent::ClampCameraPosition(const FVector& NewPosition) const
+{
+    FVector Extent = CurrentCameraSettings.MovementBoundsExtent;
+    
+    return FVector(
+        FMath::Clamp(NewPosition.X, InitialCameraLocation.X - Extent.X, InitialCameraLocation.X + Extent.X),
+        FMath::Clamp(NewPosition.Y, InitialCameraLocation.Y - Extent.Y, InitialCameraLocation.Y + Extent.Y),
+        FMath::Clamp(NewPosition.Z, InitialCameraLocation.Z - Extent.Z, InitialCameraLocation.Z + Extent.Z)
+    );
+}
+
+bool UAO_InspectionComponent::IsValidExternalClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const
+{
+    if (!CurrentInspectedActor || !HitActor)
+    {
+        return false;
+    }
+
+    // 검사 중인 액터 자체면 true
+    if (HitActor == CurrentInspectedActor)
+    {
+        return true;
+    }
+
+    // 인터페이스를 통해 외부 클릭 대상 확인
+    if (IAO_Interface_InspectionCameraProvider* CameraProvider = Cast<IAO_Interface_InspectionCameraProvider>(CurrentInspectedActor))
+    {
+        return CameraProvider->IsValidClickTarget(HitActor, Component);
+    }
+
+    return false;
 }
