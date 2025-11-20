@@ -3,6 +3,7 @@
 
 #include "Settings/AO_GameSettingsManager.h"
 
+#include "AO_DelegateManager.h"
 #include "AO_Log.h"
 
 void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
@@ -115,6 +116,14 @@ void UAO_GameSettingsManager::SetToDefaults()
 	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetToDefaults();
+		if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		{
+			DelegateManager->OnResetAllSettings.Broadcast();
+			AO_LOG(LogJM, Log, TEXT("Broadcast DelegateManager::OnResetAllSettings"));
+		}
+		else{
+			AO_LOG(LogJM, Warning, TEXT("Failed to get DelegateManager"));
+		}
 	}
 	else
 	{
