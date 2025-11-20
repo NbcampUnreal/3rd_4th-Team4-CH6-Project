@@ -2,6 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Item/AO_struct_FItemBase.h"
+#include "Net/UnrealNetwork.h"
 #include "Train/GAS/AO_AddFuel_GameplayAbility.h"
 
 AAO_MasterItem::AAO_MasterItem()
@@ -18,7 +19,6 @@ AAO_MasterItem::AAO_MasterItem()
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
 	// Components
-	PickupComponent = CreateDefaultSubobject<UAO_ItemPickupComponent>(TEXT("PickupComponent"));
 	FuelComponent   = CreateDefaultSubobject<UAO_ItemFuelComponent>(TEXT("FuelComponent"));
 }
 
@@ -55,15 +55,6 @@ void AAO_MasterItem::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
 	if (FuelComponent && Interactor)
 	{
 		FuelComponent->ApplyFuel();
-	}
-
-	// Pickup 처리 (optional)
-	if (PickupComponent && Interactor)
-	{
-		if (USkeletalMeshComponent* SkeletalMesh = Interactor->FindComponentByClass<USkeletalMeshComponent>())
-		{
-			PickupComponent->Pickup(SkeletalMesh, FName("PickupSocket"));
-		}
 	}
 
 	// 아이템 Destroy

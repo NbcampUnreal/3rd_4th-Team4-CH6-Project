@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -48,6 +49,9 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	// 승조 : InteractionComponent 생성
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
+
+	//ms: inventory component
+	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -90,6 +94,10 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
+		
+		//ms_inventory key binding
+		EIC->BindAction(Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
+		
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -249,6 +257,8 @@ void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSp
 	SetCurrentGait();
 }
 
+
+
 void AAO_PlayerCharacter::OnRep_Gait()
 {
 	switch (Gait)
@@ -264,3 +274,15 @@ void AAO_PlayerCharacter::OnRep_Gait()
 		break;
 	}
 }
+
+//ms_inventory key binding
+void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
+{
+	/*int32 SlotIndex = Value.Get<int32>();
+
+	if (InventoryComp)
+	{
+		InventoryComp->ServerSetSelectedSlot(SlotIndex);
+	}*/
+}
+

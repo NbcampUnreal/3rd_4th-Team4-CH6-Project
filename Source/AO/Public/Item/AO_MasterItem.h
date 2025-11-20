@@ -3,14 +3,12 @@
 // this item can.
 // 1) interection with Press F
 // 2) Can Be Fuel
-// 3) Crab monster can bring it //to do 
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Interaction/Base/AO_BaseInteractable.h"
 #include "Components/SphereComponent.h"
-#include "Item/AO_ItemPickupComponent.h"
 #include "Item/AO_ItemFuelComponent.h"
 #include "AO_MasterItem.generated.h"
 
@@ -32,9 +30,6 @@ public:
 	USphereComponent* InteractionSphere;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UAO_ItemPickupComponent* PickupComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UAO_ItemFuelComponent* FuelComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
@@ -42,8 +37,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
-
-	// GameplayTags
+	
 	UPROPERTY(Replicated)
 	FGameplayTagContainer ItemTags;
 

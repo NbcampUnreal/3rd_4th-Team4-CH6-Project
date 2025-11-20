@@ -63,6 +63,9 @@ protected:
 	// 승조 : 상호작용 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
+	//ms: inventory component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
+	class UAO_InventoryComponent* InventoryComp;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -79,6 +82,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> Select_inventory_Slot;
+		
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
@@ -106,7 +112,11 @@ private:
 	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
-
+	
 	// Movement
 	void SetCurrentGait();
+	
+	//ms: inventory component input
+	void SelectInventorySlot(const FInputActionValue& Value);
+	
 };

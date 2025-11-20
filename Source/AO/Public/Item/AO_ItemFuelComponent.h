@@ -13,12 +13,10 @@ class AO_API UAO_ItemFuelComponent : public UActorComponent
 
 public:
 	UAO_ItemFuelComponent();
-
-	/** Fuel 추가량 */
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fuel")
 	float AddFuelAmount = 50.f;
-
-	/** Fuel 적용 */
+	
 	UFUNCTION(BlueprintCallable)
 	void ApplyFuel();
 
@@ -26,11 +24,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	/** Owner ASC */
 	UPROPERTY()
 	UAbilitySystemComponent* OwnerASC;
 
-	/** Fuel AttributeSet */
 	UPROPERTY()
 	UAO_Fuel_AttributeSet* OwnerFuelAttributeSet;
 };
