@@ -16,15 +16,38 @@ public class AO : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			
+			//UI
 			"UMG",
+			
+			// Session
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			
+			// Pose Search
+			"PoseSearch",
+			
+			// GAS
+			"GameplayTags",
+			"GameplayAbilities",
+			"GameplayTasks",
+			
+			// 카오스 디스트럭션
+			"ChaosCaching",
+			"GeometryCollectionEngine",
+			
+			// AI
+			"AIModule",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			//UI
 			"Slate",
 			"SlateCore",
+			
+			// Session
 			"OnlineSubsystemSteam"
 		});
 

@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/Widget/AO_LobbyListWidget.h"
 #include "AO_PasswordDialogWidget.generated.h"
 
 class UButton;
 class UEditableTextBox;
-class UAO_LobbyListWidget;
 
 /** 방 참가용 비밀번호 입력 다이얼로그(팝업) */
 UCLASS()

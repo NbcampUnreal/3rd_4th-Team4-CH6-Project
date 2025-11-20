@@ -6,6 +6,7 @@
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Containers/UnrealString.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO/AO_Log.h"
 
@@ -240,8 +241,7 @@ FString UAO_HostDialogWidget::GetTrimmedPassword() const
 	FString Trimmed = Txt_Password->GetText().ToString().TrimStartAndEnd();
 	if(Trimmed.Len() > 4)
 	{
-		// Trimmed.LeftInline(4, false);					// JM : 해당 방법은 Deprecated
-		Trimmed.LeftInline(4, EAllowShrinking::No);	// JM : UE 5.5 이후, bool 대신 EAllowShrinking 사용
+		Trimmed.LeftInline(4, EAllowShrinking::No);
 	}
 	return Trimmed;
 }
