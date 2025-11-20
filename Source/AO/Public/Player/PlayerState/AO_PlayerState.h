@@ -19,22 +19,46 @@ public:
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_PlayerName() override;
-	
+
+	/* ==================== 로비 레디 상태 ==================== */
+
 	// 로비 Ready 플래그 설정
 	void SetLobbyReady(bool bNewReady);
 	bool IsLobbyReady() const;
 
+	// Ready 플래그 변경 브로드캐스트 (UI 바인딩용)
 	UPROPERTY(BlueprintAssignable)
 	FAOLobbyReadyChanged OnLobbyReadyChanged;
 
+	/* ==================== 로비 입장 순서 / 호스트 ==================== */
+
+	// 로비 입장 순서 설정 (서버 전용)
+	void SetLobbyJoinOrder(int32 InOrder);
+
+	// 로비 입장 순서 조회
+	int32 GetLobbyJoinOrder() const;
+
+	// 호스트 여부 (입장 순서 0번을 호스트로 간주)
+	bool IsLobbyHost() const;
+
 protected:
-	UPROPERTY(ReplicatedUsing = OnRep_LobbyIsReady)
+	// 레디 상태 (변경 시 OnRep_LobbyIsReady 호출)
+	UPROPERTY(ReplicatedUsing=OnRep_LobbyIsReady)
 	bool bLobbyIsReady;
 
+	// 로비 입장 순서 (0부터 시작, -1이면 아직 미할당)
+	UPROPERTY(ReplicatedUsing=OnRep_LobbyJoinOrder)
+	int32 LobbyJoinOrder;
+
+	// 레디 상태가 복제될 때 호출
 	UFUNCTION()
 	void OnRep_LobbyIsReady();
 
+	// 입장 순서가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_LobbyJoinOrder();
+
 private:
-	// 보드 재빌드
+	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
 };

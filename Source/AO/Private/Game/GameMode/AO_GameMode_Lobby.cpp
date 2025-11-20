@@ -7,36 +7,99 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
 	PlayerControllerClass = AAO_PlayerController_Lobby::StaticClass();
 	bUseSeamlessTravel = true;
+
+	NextLobbyJoinOrder = 0;
 }
 
 void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-	
+
+	// 로비에 이미 있는 플레이어들의 JoinOrder 를 보고 NextLobbyJoinOrder 재계산
+	UpdateNextLobbyJoinOrderFromExistingPlayers();
+
+	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여
+	if(NewPlayer != nullptr && NewPlayer->PlayerState != nullptr)
+	{
+		AssignJoinOrderIfNeeded(NewPlayer->PlayerState);
+	}
+
 	NotifyLobbyBoardChanged();
 }
 
 void AAO_GameMode_Lobby::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
-	
+
+	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
 	NotifyLobbyBoardChanged();
 }
 
-void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
+/* ========== 로비 입장 순서 관리 ========== */
+
+void AAO_GameMode_Lobby::UpdateNextLobbyJoinOrderFromExistingPlayers()
 {
-	if (!Controller)
+	if(GameState == nullptr)
 	{
 		return;
 	}
 
-	if (bReady)
+	int32 MaxOrder = -1;
+
+	for(APlayerState* PS : GameState->PlayerArray)
+	{
+		if(AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS))
+		{
+			const int32 Order = AOPS->GetLobbyJoinOrder();
+			if(Order >= 0 && Order > MaxOrder)
+			{
+				MaxOrder = Order;
+			}
+		}
+	}
+
+	NextLobbyJoinOrder = MaxOrder + 1;
+}
+
+void AAO_GameMode_Lobby::AssignJoinOrderIfNeeded(APlayerState* PlayerState)
+{
+	AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PlayerState);
+	if(AOPS == nullptr)
+	{
+		return;
+	}
+
+	// 이미 순서를 가진 플레이어면(예: 스테이지 갔다가 로비로 돌아온 경우) 건너뜀
+	if(AOPS->GetLobbyJoinOrder() >= 0)
+	{
+		return;
+	}
+
+	AOPS->SetLobbyJoinOrder(NextLobbyJoinOrder);
+	++NextLobbyJoinOrder;
+
+	AO_LOG(LogJSH, Log, TEXT("Lobby: Assign JoinOrder=%d to %s"),
+		AOPS->GetLobbyJoinOrder(),
+		*PlayerState->GetPlayerName());
+}
+
+/* ========== 레디 상태/호스트/시작 처리 ========== */
+
+void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
+{
+	if(!Controller)
+	{
+		return;
+	}
+
+	if(bReady)
 	{
 		ReadyPlayers.Add(Controller);
 	}
@@ -55,10 +118,20 @@ void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
 
 AController* AAO_GameMode_Lobby::GetHostController() const
 {
-	// PlayerArray[0] 를 호스트로 간주
-	if (GameState && GameState->PlayerArray.Num() > 0 && GameState->PlayerArray[0])
+	if(!GameState)
 	{
-		return GameState->PlayerArray[0]->GetOwner<AController>();
+		return nullptr;
+	}
+
+	for(APlayerState* PS : GameState->PlayerArray)
+	{
+		if(AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS))
+		{
+			if(AOPS->IsLobbyHost())
+			{
+				return PS->GetOwner<AController>();
+			}
+		}
 	}
 
 	return nullptr;
@@ -66,7 +139,7 @@ AController* AAO_GameMode_Lobby::GetHostController() const
 
 bool AAO_GameMode_Lobby::IsEveryoneReadyExceptHost() const
 {
-	if (!GameState)
+	if(!GameState)
 	{
 		return false;
 	}
@@ -74,31 +147,31 @@ bool AAO_GameMode_Lobby::IsEveryoneReadyExceptHost() const
 	const int32 TotalPlayers = GameState->PlayerArray.Num();
 
 	// 최소 2명 이상 있어야 시작 가능
-	if (TotalPlayers <= 1)
+	if(TotalPlayers <= 1)
 	{
 		return false;
 	}
 
 	AController* Host = GetHostController();
-	if (!Host)
+	if(!Host)
 	{
 		return false;
 	}
 
-	for (APlayerState* PS : GameState->PlayerArray)
+	for(APlayerState* PS : GameState->PlayerArray)
 	{
-		if (!PS)
+		if(!PS)
 		{
 			continue;
 		}
 
 		AController* Ctrl = PS->GetOwner<AController>();
-		if (!Ctrl || Ctrl == Host)
+		if(!Ctrl || Ctrl == Host)
 		{
 			continue;
 		}
 
-		if (!ReadyPlayers.Contains(Ctrl))
+		if(!ReadyPlayers.Contains(Ctrl))
 		{
 			return false;
 		}
@@ -109,7 +182,7 @@ bool AAO_GameMode_Lobby::IsEveryoneReadyExceptHost() const
 
 void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 {
-	if (!Controller)
+	if(!Controller)
 	{
 		return;
 	}
@@ -117,7 +190,7 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 	AController* Host = GetHostController();
 
 	// 호스트만 시작 가능
-	if (Controller != Host)
+	if(Controller != Host)
 	{
 		AO_LOG(LogJSH, Warning, TEXT("Lobby: Only host can start (Caller=%s, Host=%s)"),
 			*Controller->GetName(),
@@ -126,7 +199,7 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 	}
 
 	// 호스트 제외 모두 레디 확인
-	if (!IsEveryoneReadyExceptHost())
+	if(!IsEveryoneReadyExceptHost())
 	{
 		AO_LOG(LogJSH, Warning, TEXT("Lobby: Not everyone is ready, cannot start"));
 		return;
@@ -158,9 +231,9 @@ void AAO_GameMode_Lobby::NotifyLobbyBoardChanged()
 
 void AAO_GameMode_Lobby::TravelToStage()
 {
-	if (UWorld* World = GetWorld())
+	if(UWorld* World = GetWorld())
 	{
-		FString Path = "/Game/AVaOut/Maps/LV_Meadow?listen";
+		FString Path = TEXT("/Game/AVaOut/Maps/LV_Meadow?listen");
 		World->ServerTravel(Path);
 	}
 }
