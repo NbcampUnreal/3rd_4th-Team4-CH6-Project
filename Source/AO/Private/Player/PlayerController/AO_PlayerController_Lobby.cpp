@@ -5,6 +5,8 @@
 #include "Game/GameMode/AO_GameMode_Lobby.h"
 #include "AO/AO_Log.h"
 #include "Player/PlayerState/AO_PlayerState.h"
+#include "Engine/GameInstance.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_PlayerController_Lobby::AAO_PlayerController_Lobby()
 {
@@ -34,6 +36,20 @@ void AAO_PlayerController_Lobby::SetupInputComponent()
 		// 3키: 호스트 시작 요청
 		InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::OnPressed_StartKey);
 	}
+}
+
+void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
+{
+	if(const UGameInstance* GI = GetGameInstance())
+	{
+		if(UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
+		{
+			Sub->ShowInviteUI();
+			return;
+		}
+	}
+
+	AO_LOG(LogJSH, Warning, TEXT("Client_OpenInviteOverlay: OnlineSessionSubsystem not found"));
 }
 
 void AAO_PlayerController_Lobby::OnPressed_ReadyKey()
