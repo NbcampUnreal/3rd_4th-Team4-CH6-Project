@@ -30,8 +30,10 @@ protected:
 	
 	FTraversalCheckResult TraversalResult;
 	FTraversalCheckInput TraversalInput;
-	int32 DrawDebugLevel = 2;
-	float DrawDebugDuration = 20.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal|Debug")
+	int32 DrawDebugLevel = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal|Debug")
+	float DrawDebugDuration = 5.f;
 	
 private:
 	UPROPERTY()
