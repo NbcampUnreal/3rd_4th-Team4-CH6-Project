@@ -13,8 +13,9 @@ AAO_BaseInteractable::AAO_BaseInteractable(const FObjectInitializer& ObjectIniti
 	RootComponent = MeshComponent;
 
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	MeshComponent->SetCollisionObjectType(AO_TraceChannel_Interaction);
+	MeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Block);
 }
 
 FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const

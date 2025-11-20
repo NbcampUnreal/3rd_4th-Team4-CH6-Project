@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Interaction/Actor/AO_WorldInteractable.h"
+#include "Puzzle/Interface/AO_Interface_PuzzleElement.h"
 #include "AO_PuzzleElement.generated.h"
 
 class AAO_PuzzleConditionChecker;
@@ -20,8 +21,7 @@ enum class EPuzzleElementType : uint8
 {
 	OneTime         UMETA(DisplayName = "One Time"),
 	Toggle          UMETA(DisplayName = "Toggle"),
-	HoldToggle      UMETA(DisplayName = "Hold Toggle"),
-	HoldContinuous  UMETA(DisplayName = "Hold Continuous")
+	HoldToggle      UMETA(DisplayName = "Hold Toggle")
 };
 
 /**
@@ -39,20 +39,24 @@ enum class EPuzzleElementType : uint8
  * 
  */
 UCLASS(Abstract)
-class AO_API AAO_PuzzleElement : public AAO_WorldInteractable
+class AO_API AAO_PuzzleElement : public AAO_WorldInteractable, public IAO_Interface_PuzzleElement
 {
 	GENERATED_BODY()
 
 public:
 	AAO_PuzzleElement(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	// AAO_WorldInteractable 구현
 	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
-	virtual void OnInteractActiveStarted(AActor* Interactor) override;
-	virtual void OnInteractActiveEnded(AActor* Interactor) override;
 	virtual void GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const override;
 
+	// IAO_Interface_PuzzleElement 구현
+	virtual void ResetToInitialState() override; // 초기 상태로 복구 (Checker에서 호출)
+	virtual void SetInteractionEnabled(bool bEnabled) override; // 상호작용 활성화/비활성화
+	virtual bool IsInteractionEnabled() const override { return bInteractionEnabled; }
+	
 	UFUNCTION(BlueprintCallable, Category="Puzzle")
 	void BroadcastPuzzleEvent(bool bActivate);
 
@@ -65,11 +69,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 
 	UFUNCTION()
 	virtual void OnRep_IsActivated();
@@ -84,7 +85,7 @@ protected:
 	FGameplayTag ActivatedEventTag;		// 활성화 시 전송할 태그
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle", 
-		meta=(EditCondition="ElementType == EPuzzleElementType::Toggle || ElementType == EPuzzleElementType::HoldToggle || ElementType == EPuzzleElementType::HoldContinuous", 
+		meta=(EditCondition="ElementType == EPuzzleElementType::Toggle || ElementType == EPuzzleElementType::HoldToggle", 
 		EditConditionHides))
 	FGameplayTag DeactivatedEventTag;	// 비활성화 시 전송할 태그
 
@@ -106,13 +107,9 @@ protected:
 		meta=(EditCondition="!bUseInteractionDataAsset", EditConditionHides))
 	FAO_InteractionInfo PuzzleInteractionInfo;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Visual")
-	TObjectPtr<UStaticMesh> PuzzleMesh;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Puzzle")
+	bool bInteractionEnabled = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Visual")
-	TArray<TObjectPtr<UMaterialInterface>> PuzzleMaterials;
-
-private:
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentHolder;	// 현재 홀딩 중인 액터
 };

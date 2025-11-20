@@ -15,6 +15,7 @@ class UInputAction;
 struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
+class UAO_InspectionComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -50,6 +51,10 @@ protected:
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+
+	// 승조 : Inspect하는 중인지 확인
+	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
+	bool IsInspecting() const;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
@@ -63,6 +68,8 @@ protected:
 	// 승조 : 상호작용 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
 	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	class UAO_InventoryComponent* InventoryComp;
