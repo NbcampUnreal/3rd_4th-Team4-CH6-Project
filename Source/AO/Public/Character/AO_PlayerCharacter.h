@@ -111,7 +111,8 @@ private:
 	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
-	void HandleJump();
+	void StartJump();
+	void TriggerJump();
 
 	// Movement
 	void SetCurrentGait();

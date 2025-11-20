@@ -87,7 +87,8 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		EIC->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Move);
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Look);
-		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleJump);
+		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartJump);
+		EIC->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::TriggerJump);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
@@ -207,11 +208,27 @@ void AAO_PlayerCharacter::HandleWalk()
 	}
 }
 
-void AAO_PlayerCharacter::HandleJump()
+void AAO_PlayerCharacter::StartJump()
 {
-	if (!TraversalComponent->TryTraversal())
+	if (TraversalComponent)
 	{
-		Jump();
+		if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
+		{
+			return;
+		}
+	}
+
+	Jump();
+}
+
+void AAO_PlayerCharacter::TriggerJump()
+{
+	if (TraversalComponent)
+	{
+		if (!TraversalComponent->GetDoingTraversal())
+		{
+			TraversalComponent->TryTraversal();
+		}
 	}
 }
 

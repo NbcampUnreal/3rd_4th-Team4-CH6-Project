@@ -14,6 +14,7 @@
 #include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Maps/Traversal/AO_TraversableComponent.h"
+#include "Net/UnrealNetwork.h"
 
 UAO_TraversalComponent::UAO_TraversalComponent()
 {
@@ -46,6 +47,13 @@ void UAO_TraversalComponent::BeginPlay()
 	}
 }
 
+void UAO_TraversalComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UAO_TraversalComponent, TraversalResult);
+}
+
 bool UAO_TraversalComponent::TryTraversal()
 {
 	if (bDoingTraversal)
@@ -69,7 +77,8 @@ bool UAO_TraversalComponent::TryTraversal()
 	}
 	float CapsuleRadius = CapsuleComponent->GetScaledCapsuleRadius();
 	float CapsuleHalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
-
+	FTraversalCheckResult TraversalCheckResult;
+	
 	// Perform a trace in the actor's forward direction to find a traversable object
 	FHitResult HitResult;
 	FVector TraceStart = ActorLocation + TraversalInput.TraceOriginOffset;
@@ -99,10 +108,10 @@ bool UAO_TraversalComponent::TryTraversal()
 		return false;
 	}
 
-	TraversalResult.HitComponent = HitResult.GetComponent();
-	TraversableComponent->GetLedgeTransforms(HitResult.ImpactPoint, ActorLocation, TraversalResult);
+	TraversalCheckResult.HitComponent = HitResult.GetComponent();
+	TraversableComponent->GetLedgeTransforms(HitResult.ImpactPoint, ActorLocation, TraversalCheckResult);
 
-	if (!TraversalResult.bHasFrontLedge)
+	if (!TraversalCheckResult.bHasFrontLedge)
 	{
 		AO_LOG(LogKH, Display, TEXT("No front ledge found"));
 		return false;
@@ -110,14 +119,14 @@ bool UAO_TraversalComponent::TryTraversal()
 	
 	if (DrawDebugLevel >= 1)
 	{
-		if (TraversalResult.bHasFrontLedge)
+		if (TraversalCheckResult.bHasFrontLedge)
 		{
-			DrawDebugSphere(GetWorld(), TraversalResult.FrontLedgeLocation, 10.f, 12,	FColor::Green, false, DrawDebugDuration, 0, 1.0f);
+			DrawDebugSphere(GetWorld(), TraversalCheckResult.FrontLedgeLocation, 10.f, 12,	FColor::Green, false, DrawDebugDuration, 0, 1.0f);
 		}
 
-		if (TraversalResult.bHasBackLedge)
+		if (TraversalCheckResult.bHasBackLedge)
 		{
-			DrawDebugSphere(GetWorld(), TraversalResult.BackLedgeLocation, 10.f, 12,	FColor::Cyan, false, DrawDebugDuration, 0, 1.0f);
+			DrawDebugSphere(GetWorld(), TraversalCheckResult.BackLedgeLocation, 10.f, 12,	FColor::Cyan, false, DrawDebugDuration, 0, 1.0f);
 		}
 		else
 		{
@@ -126,7 +135,7 @@ bool UAO_TraversalComponent::TryTraversal()
 	}
 	
 	// Perform a trace from the actors location up to the front ledge location to determine if there is room for the actor to move up to it
-	FVector RoomCheckFrontLedgeLocation = TraversalResult.FrontLedgeLocation + TraversalResult.FrontLedgeNormal * (CapsuleRadius + 2.0f);
+	FVector RoomCheckFrontLedgeLocation = TraversalCheckResult.FrontLedgeLocation + TraversalCheckResult.FrontLedgeNormal * (CapsuleRadius + 2.0f);
 	RoomCheckFrontLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
 
 	FHitResult RoomCheckFrontHitResult;
@@ -146,10 +155,10 @@ bool UAO_TraversalComponent::TryTraversal()
 	}
 
 	// Save the height of the obstacle
-	TraversalResult.ObstacleHeight = abs((ActorLocation.Z - CapsuleHalfHeight) - TraversalResult.FrontLedgeLocation.Z);
+	TraversalCheckResult.ObstacleHeight = abs((ActorLocation.Z - CapsuleHalfHeight) - TraversalCheckResult.FrontLedgeLocation.Z);
 	
 	// Perform a trace across the top of the obstacle from the front ledge to the back ledge to see if theres room for the actor to move across it.
-	FVector RoomCheckBackLedgeLocation = TraversalResult.BackLedgeLocation + TraversalResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
+	FVector RoomCheckBackLedgeLocation = TraversalCheckResult.BackLedgeLocation + TraversalCheckResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
 	RoomCheckBackLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
 
 	FHitResult RoomCheckBackHitResult;
@@ -164,15 +173,15 @@ bool UAO_TraversalComponent::TryTraversal()
 
 	if (bRoomCheckBackHit)
 	{
-		TraversalResult.ObstacleDepth = (RoomCheckBackHitResult.ImpactPoint - TraversalResult.FrontLedgeLocation).Size2D();
-		TraversalResult.bHasBackLedge = false;
+		TraversalCheckResult.ObstacleDepth = (RoomCheckBackHitResult.ImpactPoint - TraversalCheckResult.FrontLedgeLocation).Size2D();
+		TraversalCheckResult.bHasBackLedge = false;
 	}
 	else
 	{
-		TraversalResult.ObstacleDepth = (TraversalResult.FrontLedgeLocation - TraversalResult.BackLedgeLocation).Size2D();
+		TraversalCheckResult.ObstacleDepth = (TraversalCheckResult.FrontLedgeLocation - TraversalCheckResult.BackLedgeLocation).Size2D();
 
 		// Trace downward from the back ledge location to find the floor
-		FVector BackFloorTrace = TraversalResult.BackLedgeLocation + TraversalResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
+		FVector BackFloorTrace = TraversalCheckResult.BackLedgeLocation + TraversalCheckResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
 		BackFloorTrace.Z -= 50.f;
 		FHitResult BackFloorHitResult;
 		RunCapsuleTrace(
@@ -186,13 +195,13 @@ bool UAO_TraversalComponent::TryTraversal()
 
 		if (BackFloorHitResult.bBlockingHit)
 		{
-			TraversalResult.bHasBackFloor = true;
-			TraversalResult.BackFloorLocation = BackFloorHitResult.ImpactPoint;
-			TraversalResult.BackLedgeHeight = abs(BackFloorHitResult.ImpactPoint.Z - TraversalResult.BackLedgeLocation.Z);
+			TraversalCheckResult.bHasBackFloor = true;
+			TraversalCheckResult.BackFloorLocation = BackFloorHitResult.ImpactPoint;
+			TraversalCheckResult.BackLedgeHeight = abs(BackFloorHitResult.ImpactPoint.Z - TraversalCheckResult.BackLedgeLocation.Z);
 		}
 		else
 		{
-			TraversalResult.bHasBackFloor = false;
+			TraversalCheckResult.bHasBackFloor = false;
 		}
 	}
 	
@@ -217,13 +226,13 @@ bool UAO_TraversalComponent::TryTraversal()
 	InputStruct.InitializeAs<FTraversalChooserInput>();
 	FTraversalChooserInput& InputData = InputStruct.GetMutable<FTraversalChooserInput>();
 	FTraversalChooserInput ChooserInput = FTraversalChooserInput(
-		TraversalResult.ActionType,
-		TraversalResult.bHasFrontLedge,
-		TraversalResult.bHasBackLedge,
-		TraversalResult.bHasBackFloor,
-		TraversalResult.ObstacleHeight,
-		TraversalResult.ObstacleDepth,
-		TraversalResult.BackLedgeHeight,
+		TraversalCheckResult.ActionType,
+		TraversalCheckResult.bHasFrontLedge,
+		TraversalCheckResult.bHasBackLedge,
+		TraversalCheckResult.bHasBackFloor,
+		TraversalCheckResult.ObstacleHeight,
+		TraversalCheckResult.ObstacleDepth,
+		TraversalCheckResult.BackLedgeHeight,
 		CharacterMovement->MovementMode,
 		PlayerCharacter->Gait,
 		CharacterMovement->Velocity.Size2D());
@@ -238,8 +247,8 @@ bool UAO_TraversalComponent::TryTraversal()
 	TArray<UObject*> EvaluateObjects = UChooserFunctionLibrary::EvaluateObjectChooserBaseMulti(
 		 EvaluationContext, ResultInstances, UAnimMontage::StaticClass());
 
-	TraversalResult.ActionType = OutputData.ActionType;
-	if (TraversalResult.ActionType == ETraversalActionType::None)
+	TraversalCheckResult.ActionType = OutputData.ActionType;
+	if (TraversalCheckResult.ActionType == ETraversalActionType::None)
 	{
 		AO_LOG(LogKH, Display, TEXT("No valid traversal action found"));
 		return false;
@@ -274,14 +283,35 @@ bool UAO_TraversalComponent::TryTraversal()
 	}
 	AO_LOG(LogKH, Display, TEXT("Selected Anim: %s"), *SelectedAnim->GetName());
 	
-	TraversalResult.ChosenMontage = SelectedAnim;
-	TraversalResult.StartTime = MotionMatchResult.SelectedTime;
-	TraversalResult.PlayRate = MotionMatchResult.WantedPlayRate;
+	TraversalCheckResult.ChosenMontage = SelectedAnim;
+	TraversalCheckResult.StartTime = MotionMatchResult.SelectedTime;
+	TraversalCheckResult.PlayRate = MotionMatchResult.WantedPlayRate;
 
-	// Perform the traversal animation
-	PerformTraversalAnimation();
+	TraversalResult = TraversalCheckResult;
+	
+	if (Owner->HasAuthority())
+	{
+		MulticastRPC_PlayTraversal(TraversalResult);
+	}
+	else
+	{
+		ServerRPC_PlayTraversal(TraversalResult);
+	}
 	
 	return true;
+}
+
+void UAO_TraversalComponent::MulticastRPC_PlayTraversal_Implementation(const FTraversalCheckResult InTraversalResult)
+{
+	TraversalResult = InTraversalResult;
+
+	PerformTraversalAnimation();
+}
+
+void UAO_TraversalComponent::ServerRPC_PlayTraversal_Implementation(const FTraversalCheckResult InTraversalResult)
+{
+	TraversalResult = InTraversalResult;
+	MulticastRPC_PlayTraversal(TraversalResult);
 }
 
 bool UAO_TraversalComponent::GetTraversalCheckInputs()
