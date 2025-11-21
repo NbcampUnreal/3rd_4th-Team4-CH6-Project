@@ -2,6 +2,7 @@
 
 #include "UI/Widget/AO_MainMenuWidget.h"
 
+#include "AO_DelegateManager.h"
 #include "UI/Widget/AO_HostDialogWidget.h"
 #include "UI/Widget/AO_LobbyListWidget.h"
 
@@ -138,7 +139,16 @@ void UAO_MainMenuWidget::OnClicked_Join()
 void UAO_MainMenuWidget::OnClicked_Settings()
 {
 	AO_LOG(LogJSH, Log, TEXT("Settings clicked (placeholder)"));
-	// TODO: 설정 위젯 추가 예정
+	// JM : 설정 위젯 클릭 시 설정 Widget 열기
+	if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsOpen.Broadcast();
+		AO_LOG(LogJM, Log, TEXT("Broadcast DelegateManager::OnSettingsOpen"));
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Failed to Get DelegateManager"));
+	}
 }
 
 void UAO_MainMenuWidget::OnClicked_Quit()
