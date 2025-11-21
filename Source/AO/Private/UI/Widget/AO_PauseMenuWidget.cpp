@@ -38,20 +38,6 @@ void UAO_PauseMenuWidget::NativeOnInitialized()
 void UAO_PauseMenuWidget::HandleClicked_Settings()
 {
 	OnRequestSettings.Broadcast();
-	// TODO: JM: 위의 델리게이트는 언제 쓰시는지..?
-	
-	// JM : 설정 위젯 클릭 시 WBP_Settings 열기
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
-	{
-		DelegateManager->OnSettingsOpen.Broadcast();
-		AO_LOG(LogJM, Log, TEXT("Broadcast OnSettingsOpen"));
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Cant Get DelegateManager"));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_PauseMenuWidget::HandleClicked_ReturnLobby()

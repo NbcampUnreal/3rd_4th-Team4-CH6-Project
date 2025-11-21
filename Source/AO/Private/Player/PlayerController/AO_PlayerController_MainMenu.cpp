@@ -44,6 +44,7 @@ void AAO_PlayerController_MainMenu::BeginPlay()
 
 	AO_LOG(LogJSH, Log, TEXT("BeginPlay: UIOnly input mode applied, mouse cursor enabled"));
 
+	// JM 코드추가 : 세팅 위젯 생성
 	if (SettingClass)
 	{
 		Settings = CreateWidget<UAO_UserWidget>(this, SettingClass);

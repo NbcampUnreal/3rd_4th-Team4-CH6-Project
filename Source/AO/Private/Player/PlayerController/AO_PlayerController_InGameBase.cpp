@@ -2,6 +2,7 @@
 
 #include "Player/PlayerController/AO_PlayerController_InGameBase.h"
 
+#include "AO_DelegateManager.h"
 #include "AO/AO_Log.h"
 #include "UI/Widget/AO_PauseMenuWidget.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
@@ -25,6 +26,18 @@ AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 	else
 	{
 		AO_LOG(LogJSH, Warning, TEXT("PauseMenu widget not found, check path"));
+	}
+
+	// JM 코드추가 : 세팅위젯 로드
+	// TODO: 왜 하드하게 로드하는 것이죠? 여기서 미리 넣어두면 Lobby나 InGame 계열에서는 따로 안해줘도 되는건가?
+	static ConstructorHelpers::FClassFinder<UAO_UserWidget> SettingsWBPClass(TEXT("/Game/AVaOut/UI/Widget/Settings/WBP_Settings"));
+	if(SettingsWBPClass.Succeeded())
+	{
+		SettingsClass = SettingsWBPClass.Class;
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Settings widget not found, check path"));
 	}
 }
 
@@ -62,8 +75,41 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 		// ESC/P 키 테스트용 직접 바인딩
 		InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ThisClass::TogglePauseMenu);
 		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &ThisClass::TogglePauseMenu);
+
+		// JM 코드추가 : 테스트용 키 직접 바인딩 (좋지 않음, 나중에 지워야함)
+		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::JMTestOpenSettings);
+		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::JMTestCloseSettings);
 	}
 }
+
+void AAO_PlayerController_InGameBase::JMTestOpenSettings()	// JM 코드추가 : 테스트용 코드
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if(UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsOpen.Broadcast();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No DelegateManager"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::JMTestCloseSettings()	// JM 코드추가 : 테스트용 코드
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if(UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsClose.Broadcast();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No DelegateManager"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 
 void AAO_PlayerController_InGameBase::TogglePauseMenu()
 {
@@ -141,6 +187,20 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestSettings()
 {
 	// TODO: 설정 UI 완성되면 여기서 띄우기
 	AO_LOG(LogJSH, Log, TEXT("Settings clicked (TODO)"));
+
+	// JM 코드추가 : 아.... 위젯에서 델리게이트를 호출해서 이 함수를 실행시키는구나..
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsOpen.Broadcast();
+		AO_LOG(LogJM, Log, TEXT("Broadcast OnSettingsOpen"));
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cant Get DelegateManager"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+	
 }
 
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()

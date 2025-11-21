@@ -23,11 +23,11 @@ protected:
 	TSubclassOf<UAO_MainMenuWidget> MainMenuClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
-	TSubclassOf<UAO_UserWidget> SettingClass;		// JM: 세팅 위젯
+	TSubclassOf<UAO_UserWidget> SettingClass;		// JM 코드추가 : 세팅 위젯
 
 private:
 	UPROPERTY() UAO_MainMenuWidget* MainMenu = nullptr;
 
 	UPROPERTY()
-	UAO_UserWidget* Settings = nullptr;				// JM 세팅 위젯
+	UAO_UserWidget* Settings = nullptr;				// JM 코드추가 : 세팅 위젯
 };

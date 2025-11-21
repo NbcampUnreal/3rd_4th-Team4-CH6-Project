@@ -35,12 +35,19 @@ protected:
 	UPROPERTY()
 	bool bPauseMenuVisible;
 	
-	// JM : 설정 위젯 관련
+	// JM 코드추가 : 설정 위젯 관련
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_UserWidget> SettingsClass;
 
 	UPROPERTY()
-	UAO_UserWidget* Settings; 
+	UAO_UserWidget* Settings;
+
+	// JM 코드추가 : 테스트용 코드
+	UFUNCTION()
+	void JMTestOpenSettings();
+
+	UFUNCTION()
+	void JMTestCloseSettings();
 
 protected:
 	void TogglePauseMenu();
