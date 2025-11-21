@@ -73,12 +73,12 @@ FTransform UAO_PlayerCharacter_AnimInstance::GetTraversalTransform_Implementatio
 
 bool UAO_PlayerCharacter_AnimInstance::IsMoving() 
 {
-	if (TrjFutureVelocity.IsNearlyZero(10.f) && Acceleration.IsNearlyZero())
+	if (!TrjFutureVelocity.IsNearlyZero(10.f) && !Acceleration.IsNearlyZero())
 	{
-		return false;
+		return true;
 	}
 	
-	return true;
+	return false;
 }
 
 bool UAO_PlayerCharacter_AnimInstance::IsStarting() 
