@@ -95,7 +95,10 @@ bool UAO_TraversalComponent::TryTraversal()
 
 	if (!HitResult.bBlockingHit)
 	{
-		AO_LOG(LogKH, Display, TEXT("No blocking hit found"));
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No blocking hit found"));
+		}
 		return false;
 	}
 
@@ -104,7 +107,10 @@ bool UAO_TraversalComponent::TryTraversal()
 		HitResult.GetActor()->GetComponentByClass(UAO_TraversableComponent::StaticClass()));
 	if (!TraversableComponent)
 	{
-		AO_LOG(LogKH, Display, TEXT("No TraversableComponent found on hit actor"));
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No TraversableComponent found on hit actor"));
+		}
 		return false;
 	}
 
@@ -255,12 +261,15 @@ bool UAO_TraversalComponent::TryTraversal()
 	}
 
 	// Debug Traversal Result
-	AO_LOG(LogKH, Display, TEXT("Has Front Ledge: %s"), TraversalResult.bHasFrontLedge ? TEXT("true") : TEXT("false"));
-	AO_LOG(LogKH, Display, TEXT("Has Back Ledge: %s"), TraversalResult.bHasBackLedge ? TEXT("true") : TEXT("false"));
-	AO_LOG(LogKH, Display, TEXT("Has Back Floor: %s"), TraversalResult.bHasBackFloor ? TEXT("true") : TEXT("false"));
-	AO_LOG(LogKH, Display, TEXT("Obstacle Height: %f"), TraversalResult.ObstacleHeight);
-	AO_LOG(LogKH, Display, TEXT("Obstacle Depth: %f"), TraversalResult.ObstacleDepth);
-	AO_LOG(LogKH, Display, TEXT("Back Ledge Height: %f"), TraversalResult.BackLedgeHeight);
+	if (DrawDebugLevel >= 1)
+	{
+		AO_LOG(LogKH, Display, TEXT("Has Front Ledge: %s"), TraversalResult.bHasFrontLedge ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Has Back Ledge: %s"), TraversalResult.bHasBackLedge ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Has Back Floor: %s"), TraversalResult.bHasBackFloor ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Obstacle Height: %f"), TraversalResult.ObstacleHeight);
+		AO_LOG(LogKH, Display, TEXT("Obstacle Depth: %f"), TraversalResult.ObstacleDepth);
+		AO_LOG(LogKH, Display, TEXT("Back Ledge Height: %f"), TraversalResult.BackLedgeHeight);
+	}
 
 	// Perform a Motion Match on all the montages that were chosen by the chooser to find the best result.
 	// This match will elect the best montage AND the best entry frame (start time) based on the distance to the ledge, and the current characters pose.
@@ -281,7 +290,11 @@ bool UAO_TraversalComponent::TryTraversal()
 		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
 		return false;
 	}
-	AO_LOG(LogKH, Display, TEXT("Selected Anim: %s"), *SelectedAnim->GetName());
+
+	if (DrawDebugLevel >= 1)
+	{
+		AO_LOG(LogKH, Display, TEXT("Selected Anim: %s"), *SelectedAnim->GetName());
+	}
 	
 	TraversalCheckResult.ChosenMontage = SelectedAnim;
 	TraversalCheckResult.StartTime = MotionMatchResult.SelectedTime;
