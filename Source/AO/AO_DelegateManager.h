@@ -24,7 +24,7 @@ public:	// 델리게이트 정의
 	FOnSettingsOpenDelegate OnSettingsOpen;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnSettingsOpenDelegate OnSettingsClose;
+	FOnSettingsCloseDelegate OnSettingsClose;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnResetAllSettings OnResetAllSettings;
