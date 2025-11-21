@@ -39,6 +39,13 @@ public class AO : ModuleRules
 			// AI
 			"AIModule",
 			"NavigationSystem",
+			
+			// Chooser
+			"Chooser",
+			
+			// Motion Warping
+			"MotionWarping",
+			"AnimationWarpingRuntime",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
