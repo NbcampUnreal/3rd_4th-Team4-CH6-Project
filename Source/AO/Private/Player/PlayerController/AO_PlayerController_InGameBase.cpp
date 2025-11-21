@@ -31,6 +31,25 @@ AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 void AAO_PlayerController_InGameBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (SettingsClass)
+	{
+		Settings = CreateWidget<UAO_UserWidget>(this, SettingsClass);
+		if (Settings)
+		{
+			Settings->AddToViewport(1);
+			Settings->SetVisibility(ESlateVisibility::Hidden);
+			AO_LOG(LogJM, Log, TEXT("Setting Widget Created"));
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Create Widget Failed"));
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Setting Class is not set"));
+	}
 }
 
 void AAO_PlayerController_InGameBase::SetupInputComponent()
@@ -86,7 +105,9 @@ void AAO_PlayerController_InGameBase::ShowPauseMenu()
 		return;
 	}
 
-	PauseMenu->AddToViewport(10);
+	// PauseMenu->AddToViewport(10);		// TODO: JM : 어... 상현님 이거 왜 10이죠?
+	// TODO : JM : 지금 다 일반호출이라서, 나중에 델리게이트 기반으로 호출 바꿔야 할 수도 있을듯요
+	PauseMenu->AddToViewport(0);		// JM : 메뉴가 설정화면보다 위로 올라와서 zorder 내림
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 	PauseMenu->SetIsFocusable(true);
 

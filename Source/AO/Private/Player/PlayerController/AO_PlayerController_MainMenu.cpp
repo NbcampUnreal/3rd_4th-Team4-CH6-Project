@@ -43,4 +43,23 @@ void AAO_PlayerController_MainMenu::BeginPlay()
 	bShowMouseCursor = true;
 
 	AO_LOG(LogJSH, Log, TEXT("BeginPlay: UIOnly input mode applied, mouse cursor enabled"));
+
+	if (SettingClass)
+	{
+		Settings = CreateWidget<UAO_UserWidget>(this, SettingClass);
+		if (Settings)
+		{
+			Settings->AddToViewport(1);
+			Settings->SetVisibility(ESlateVisibility::Hidden);
+			AO_LOG(LogJM, Log, TEXT("Setting Widget Created"));
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Create Widget Failed"));
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Setting Class is not set"));
+	}
 }

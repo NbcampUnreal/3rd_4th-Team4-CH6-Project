@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController_MainMenu.generated.h"
 
 class UAO_MainMenuWidget;
@@ -21,6 +22,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_MainMenuWidget> MainMenuClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
+	TSubclassOf<UAO_UserWidget> SettingClass;		// JM: 세팅 위젯
+
 private:
 	UPROPERTY() UAO_MainMenuWidget* MainMenu = nullptr;
+
+	UPROPERTY()
+	UAO_UserWidget* Settings = nullptr;				// JM 세팅 위젯
 };
