@@ -2,6 +2,7 @@
 #include "Interaction/GAS/Task/AO_AbilityTask_WaitForInteractableTraceHit.h"
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Interface/AO_InteractionInfo.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
 
@@ -36,9 +37,6 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::Activate()
 	Super::Activate();
 
 	SetWaitingOnAvatar();
-
-	AO_LOG(LogHSJ, Log, TEXT("Trace task activated - Rate: %.2f, Range: %.1f"), 
-		InteractionTraceRate, InteractionTraceRange);
 
 	// 주기적 트레이스 시작
 	if (UWorld* World = GetWorld())
@@ -82,20 +80,27 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 	// SphereCast 수행
 	FHitResult HitResult;
 	LineTrace(TraceStart, TraceEnd, Params, HitResult);
-
+	
 	// Hit된 오브젝트에서 IAO_Interactable 찾기
 	TArray<TScriptInterface<IAO_Interface_Interactable>> Interactables;
 
-	TScriptInterface<IAO_Interface_Interactable> InteractableActor(HitResult.GetActor());
-	if (InteractableActor)
+	AActor* HitActor = HitResult.GetActor();
+	if (HitActor)
 	{
-		Interactables.AddUnique(InteractableActor);
-	}
-
-	TScriptInterface<IAO_Interface_Interactable> InteractableComponent(HitResult.GetComponent());
-	if (InteractableComponent)
-	{
-		Interactables.AddUnique(InteractableComponent);
+		// Actor 자체가 인터페이스 구현인지
+		TScriptInterface<IAO_Interface_Interactable> InteractableActor(HitActor);
+		if (InteractableActor)
+		{
+			Interactables.AddUnique(InteractableActor);
+		}
+		else
+		{
+			// Actor에 InteractableComponent가 있는지 체크
+			if (UAO_InteractableComponent* InteractableComp = HitActor->FindComponentByClass<UAO_InteractableComponent>())
+			{
+				Interactables.AddUnique(TScriptInterface<IAO_Interface_Interactable>(InteractableComp));
+			}
+		}
 	}
 
 	// 상호작용 정보 업데이트 (하이라이트, UI)

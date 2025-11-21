@@ -17,6 +17,7 @@ class UInputAction;
 struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
+class UAO_InspectionComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -52,6 +53,10 @@ protected:
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+
+	// 승조 : Inspect하는 중인지 확인
+	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
+	bool IsInspecting() const;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
@@ -68,6 +73,8 @@ protected:
 	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;

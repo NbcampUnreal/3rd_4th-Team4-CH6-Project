@@ -17,12 +17,7 @@ void UAO_InteractionGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo
 	// OnSpawn 정책인 경우 부여 즉시 자동 활성화
 	if (ActivationPolicy == ECYAbilityActivationPolicy::OnSpawn)
 	{
-		AO_LOG(LogHSJ, Log, TEXT("Ability %s - OnSpawn policy, attempting auto-activation"), 
-			*GetClass()->GetName());
-		
 		bool bSuccess = ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
-		
-		AO_LOG(LogHSJ, Log, TEXT("Auto-activation %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
 	}
 }
 

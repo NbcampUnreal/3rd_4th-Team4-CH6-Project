@@ -47,8 +47,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction")
 	FGameplayTag TriggerTag; // 이 태그가 추가되면 파괴 실행
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction", meta=(ClampMin="0.0"))
+	float DestroyDelay = 4.0f;
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
@@ -66,4 +70,6 @@ private:
 
 	UPROPERTY(ReplicatedUsing=OnRep_IsDestroyed)
 	bool bIsDestroyed = false;
+
+	FTimerHandle DestroyTimerHandle;
 };

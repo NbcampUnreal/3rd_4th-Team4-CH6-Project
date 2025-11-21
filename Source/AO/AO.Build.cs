@@ -16,6 +16,8 @@ public class AO : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			
+			//UI
 			"UMG",
 			
 			// Session
@@ -34,6 +36,10 @@ public class AO : ModuleRules
 			"ChaosCaching",
 			"GeometryCollectionEngine",
 			
+			// AI
+			"AIModule",
+			"NavigationSystem",
+			
 			// Chooser
 			"Chooser",
 			
@@ -44,8 +50,11 @@ public class AO : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			//UI
 			"Slate",
 			"SlateCore",
+			
+			// Session
 			"OnlineSubsystemSteam"
 		});
 

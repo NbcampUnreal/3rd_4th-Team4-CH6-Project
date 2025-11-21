@@ -422,9 +422,7 @@ void UAO_LobbyListWidget::HandleJoin(int32 Index, bool bNeedsPassword)
 	{
 		Dialog->SetParentList(this);
 		Dialog->SetTargetIndex(Index);
-		Dialog->AddToViewport(200);
-
-		SetVisibility(ESlateVisibility::Collapsed);
+		Dialog->AddToViewport(200);	
 
 		if(APlayerController* PC = GetOwningPlayer())
 		{

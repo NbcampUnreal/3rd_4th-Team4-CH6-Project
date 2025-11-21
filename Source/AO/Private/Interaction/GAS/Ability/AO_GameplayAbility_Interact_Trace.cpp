@@ -18,8 +18,6 @@ void UAO_GameplayAbility_Interact_Trace::ActivateAbility(const FGameplayAbilityS
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	AO_LOG(LogHSJ, Log, TEXT("GA_Interaction_Trace activated - starting trace task"));
-
 	FAO_InteractionQuery InteractionQuery;
 	InteractionQuery.RequestingAvatar = GetAvatarActorFromActorInfo();
 	InteractionQuery.RequestingController = GetControllerFromActorInfo();
@@ -31,7 +29,6 @@ void UAO_GameplayAbility_Interact_Trace::ActivateAbility(const FGameplayAbilityS
 	{
 		TraceHitTask->InteractableChanged.AddDynamic(this, &ThisClass::UpdateInteractions);
 		TraceHitTask->ReadyForActivation();
-		AO_LOG(LogHSJ, Log, TEXT("Trace task ready"));
 	}
 	else
 	{

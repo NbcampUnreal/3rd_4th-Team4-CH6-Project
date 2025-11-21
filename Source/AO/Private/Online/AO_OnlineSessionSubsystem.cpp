@@ -431,9 +431,10 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
-
+	
 	LastSearchResults = LastSearch->SearchResults;
-
+	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: RawResults=%d"), LastSearchResults.Num());
+	
 	{
 		TSet<FString> SeenIds;
 		LastSearchResults.RemoveAll(
@@ -447,8 +448,9 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 				SeenIds.Add(Id);
 
 				const auto& S = R.Session;
+
 				bool bLobbyTag = false;
-				S.SessionSettings.Get(FName(TEXT("LOBBYSEARCH")), bLobbyTag);
+				S.SessionSettings.Get(SEARCH_LOBBIES, bLobbyTag);
 
 				FString RoomName;
 				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
