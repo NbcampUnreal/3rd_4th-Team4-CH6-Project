@@ -110,6 +110,34 @@ void AAO_PlayerController_InGameBase::JMTestCloseSettings()	// JM 코드추가 :
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_OnlineSessionSubsystem* OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSSManager->StartVoiceChat();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No OSS Manager"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+
+void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (UAO_OnlineSessionSubsystem* OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSSManager->StopVoiceChat();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No OSS Manager"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
 
 void AAO_PlayerController_InGameBase::TogglePauseMenu()
 {

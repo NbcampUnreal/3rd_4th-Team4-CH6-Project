@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
+#include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
 class UMotionWarpingComponent;
@@ -63,6 +64,8 @@ protected:
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")	// JM : VOIPTalker
+	TObjectPtr<UVOIPTalker> VOIPTalker;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -109,6 +112,7 @@ protected:
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
+	FTimerHandle VOIPRegisterToPSTimerHandle;	// JM : VOIPTalker
 	
 private:
 	// Input Actions
@@ -123,4 +127,10 @@ private:
 
 	// Movement
 	void SetCurrentGait();
+
+	
+// JM : VOIPTalker Register to PS
+private:
+	void TryRegisterVoiceTalker();
+	void RegisterVoiceTalker();
 };

@@ -9,11 +9,13 @@
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "MotionWarpingComponent.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -36,6 +38,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	// JM : VOIP Talker
+	VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
+	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh();
 	
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
@@ -85,6 +91,22 @@ void AAO_PlayerCharacter::BeginPlay()
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
 		}
+	}
+
+	// JM : VOIPTalker PS 에 연결될 때까지 연결 시도
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			VOIPRegisterToPSTimerHandle,
+			this,
+			&ThisClass::TryRegisterVoiceTalker,
+			0.2f,
+			true
+		);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No World"));
 	}
 }
 
@@ -315,4 +337,48 @@ void AAO_PlayerCharacter::OnRep_Gait()
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
 	}
+}
+
+void AAO_PlayerCharacter::TryRegisterVoiceTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (APlayerState* PS = GetPlayerState())
+	{
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(VOIPRegisterToPSTimerHandle);
+			RegisterVoiceTalker();
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));	
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No PS Yet"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerCharacter::RegisterVoiceTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (VOIPTalker)
+	{
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(GetPlayerState()))
+		{
+			VOIPTalker->RegisterWithPlayerState(AO_PS);
+			AO_LOG(LogJM, Log, TEXT("RegisterWithPlayerState Called"));
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));			
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
