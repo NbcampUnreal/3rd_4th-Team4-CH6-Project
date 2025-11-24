@@ -4,12 +4,14 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayAbilitySpec.h"
+#include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "AO_InspectionComponent.generated.h"
 
 class UAO_InspectableComponent;
 class ACameraActor;
 class UInputAction;
 class UGameplayAbility;
+struct FInputActionInstance;
 
 /**
  * Inspection 시스템의 핵심 컴포넌트
@@ -58,8 +60,11 @@ public:
         InspectEnterAbilityHandle = Handle; 
     }
 
-	UFUNCTION(Server, Reliable)
-	void ServerProcessInspectionClick(AActor* TargetActor, FName ComponentName);
+    UFUNCTION(Server, Reliable)
+    void ServerProcessInspectionClick(AActor* TargetActor, FName ComponentName);
+
+    // 외부 클릭 대상 유효성 검사 (GA_Inspect_Click에서 사용)
+    bool IsValidExternalClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const;
 
 protected:
     virtual void BeginPlay() override;
@@ -67,6 +72,7 @@ protected:
 private:
     void OnExitPressed();
     void OnInspectionClick();
+    void OnCameraMoveInput(const FInputActionInstance& Instance);
     
     void TransitionToInspectionCamera(const FVector& CameraLocation, const FRotator& CameraRotation);
     void TransitionToPlayerCamera();
@@ -74,8 +80,10 @@ private:
     void ClientEnterInspection(const FVector& CameraLocation, const FRotator& CameraRotation);
     void ClientExitInspection();
 
+    FVector ClampCameraPosition(const FVector& NewPosition) const;
+
     UFUNCTION(Client, Reliable)
-    void ClientNotifyInspectionStarted_WithHandle(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle);
+    void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings);
 
     UFUNCTION(Client, Reliable)
     void ClientNotifyInspectionEnded();
@@ -89,6 +97,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> InspectionClickInputAction;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> CameraMoveAction;
 
     UPROPERTY(EditAnywhere, Category = "Inspection")
     float CameraBlendTime = 0.5f;
@@ -111,4 +122,10 @@ private:
 
     UPROPERTY()
     TArray<TObjectPtr<UPrimitiveComponent>> HiddenComponents;
+
+    // 현재 적용된 카메라 설정 (클라이언트에서 사용)
+    FAO_InspectionCameraSettings CurrentCameraSettings;
+    
+    // 초기 카메라 위치 (클램프 기준점)
+    FVector InitialCameraLocation;
 };

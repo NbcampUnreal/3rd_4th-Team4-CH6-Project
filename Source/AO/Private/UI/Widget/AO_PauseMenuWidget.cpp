@@ -1,5 +1,8 @@
 
 #include "UI/Widget/AO_PauseMenuWidget.h"
+
+#include "AO_DelegateManager.h"
+#include "AO_Log.h"
 #include "Components/Button.h"
 
 void UAO_PauseMenuWidget::NativeConstruct()
