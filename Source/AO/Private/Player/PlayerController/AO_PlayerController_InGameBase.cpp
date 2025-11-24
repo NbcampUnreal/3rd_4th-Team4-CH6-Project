@@ -45,6 +45,11 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!IsLocalPlayerController())
+	{
+		return;
+	}
+
 	if (SettingsClass)
 	{
 		Settings = CreateWidget<UAO_UserWidget>(this, SettingsClass);
