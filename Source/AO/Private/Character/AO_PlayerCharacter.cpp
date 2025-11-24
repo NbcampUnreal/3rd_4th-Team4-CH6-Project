@@ -390,6 +390,8 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 //ms_inventory key binding
 void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
 {
