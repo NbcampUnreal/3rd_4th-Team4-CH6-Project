@@ -24,20 +24,6 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 }
 
-void AAO_PlayerController_Lobby::SetupInputComponent()
-{
-	Super::SetupInputComponent();
-
-	if (InputComponent)
-	{
-		// 2키: 레디 토글
-		InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::OnPressed_ReadyKey);
-
-		// 3키: 호스트 시작 요청
-		InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::OnPressed_StartKey);
-	}
-}
-
 void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
 {
 	if(const UGameInstance* GI = GetGameInstance())
@@ -52,28 +38,8 @@ void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
 	AO_LOG(LogJSH, Warning, TEXT("Client_OpenInviteOverlay: OnlineSessionSubsystem not found"));
 }
 
-void AAO_PlayerController_Lobby::OnPressed_ReadyKey()
-{
-	bIsReady = !bIsReady;
-
-	AO_LOG(LogJSH, Log, TEXT("LobbyPC: Ready key pressed (%s), NewReady=%d"),
-		*GetName(),
-		static_cast<int32>(bIsReady));
-
-	ServerSetReady(bIsReady);
-}
-
-void AAO_PlayerController_Lobby::OnPressed_StartKey()
-{
-	AO_LOG(LogJSH, Log, TEXT("LobbyPC: Start key pressed (%s)"), *GetName());
-
-	ServerRequestStart();
-}
-
 void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
 {
-	bIsReady = bNewReady;
-
 	if(AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
 	{
 		PS->SetLobbyReady(bNewReady);
