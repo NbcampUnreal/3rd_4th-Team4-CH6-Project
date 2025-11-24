@@ -83,6 +83,9 @@ private:
 	UPROPERTY() int32 PageIndex = 0;
 	UPROPERTY() TArray<int32> FilteredIndices;
 
+	/* 이전 검색 개수 기억 (안내 메시지) */
+	int32 LastResultCount = -1;
+
 	void RebuildFilter();
 	void ClampAndUpdatePage();
 	void UpdatePageUI();

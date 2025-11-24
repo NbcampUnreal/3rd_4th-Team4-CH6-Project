@@ -209,14 +209,18 @@ void UAO_LobbyListWidget::OnClicked_Close()
 void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 {
 	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: Rebuilding filter and list"));
-
+	
 	PageIndex = 0;
 	RebuildFilter();
 	RebuildList();
 
-	if(Txt_InfoMessage)
+	const int32 NewCount = FilteredIndices.Num();
+	const int32 OldCount = LastResultCount;
+	const bool bFirstTime = (OldCount < 0);
+
+	if (Txt_InfoMessage)
 	{
-		if(FilteredIndices.Num() == 0)
+		if (NewCount == 0 && !bFirstTime)
 		{
 			const FString Msg =
 				TEXT("현재 Steam 매칭 서버가 불안정해 방 검색이 표시되지 않을 수 있습니다.\n")
@@ -225,7 +229,9 @@ void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 			Txt_InfoMessage->SetText(FText::FromString(Msg));
 			Txt_InfoMessage->SetVisibility(ESlateVisibility::Visible);
 
-			AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: No sessions found, showing Steam warning message"));
+			AO_LOG(LogJSH, Warning,
+				TEXT("OnFindSessionsComplete: Session list empty (Old=%d, New=%d), showing Steam warning"),
+				OldCount, NewCount);
 		}
 		else
 		{
@@ -233,6 +239,7 @@ void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 			Txt_InfoMessage->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
+	LastResultCount = NewCount;
 }
 
 void UAO_LobbyListWidget::OnSearchTextCommitted(const FText& Text, ETextCommit::Type /*CommitMethod*/)
