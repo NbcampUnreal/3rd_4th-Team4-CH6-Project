@@ -81,6 +81,12 @@ void UAO_LobbyListWidget::NativeConstruct()
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Next is null"));
 	}
 
+	if(Txt_InfoMessage)
+	{
+		Txt_InfoMessage->SetText(FText::GetEmpty());
+		Txt_InfoMessage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	if(UAO_OnlineSessionSubsystem* Sub = GetSub())
 	{
 		Sub->OnFindSessionsCompleteEvent.AddDynamic(this, &ThisClass::OnFindSessionsComplete);
@@ -207,6 +213,26 @@ void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 	PageIndex = 0;
 	RebuildFilter();
 	RebuildList();
+
+	if(Txt_InfoMessage)
+	{
+		if(FilteredIndices.Num() == 0)
+		{
+			const FString Msg =
+				TEXT("현재 Steam 매칭 서버가 불안정해 방 검색이 표시되지 않을 수 있습니다.\n")
+				TEXT("호스트에게 Steam 초대를 받아 참여해 주세요.");
+
+			Txt_InfoMessage->SetText(FText::FromString(Msg));
+			Txt_InfoMessage->SetVisibility(ESlateVisibility::Visible);
+
+			AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: No sessions found, showing Steam warning message"));
+		}
+		else
+		{
+			Txt_InfoMessage->SetText(FText::GetEmpty());
+			Txt_InfoMessage->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
 }
 
 void UAO_LobbyListWidget::OnSearchTextCommitted(const FText& Text, ETextCommit::Type /*CommitMethod*/)

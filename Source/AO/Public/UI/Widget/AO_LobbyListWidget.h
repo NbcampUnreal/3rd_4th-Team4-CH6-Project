@@ -40,6 +40,7 @@ protected:
 	UPROPERTY(meta=(BindWidget)) UButton* Btn_Refresh = nullptr;
 	UPROPERTY(meta=(BindWidget)) UButton* Btn_Close   = nullptr;
 	UPROPERTY(meta=(BindWidget)) UScrollBox* Scroll_SessionList = nullptr;
+	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_InfoMessage = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_LobbyListEntryWidget> LobbyEntryClass;
