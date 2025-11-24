@@ -65,7 +65,7 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
     }
     
     UAO_AddFuel_GameplayAbility* AbilityInst = nullptr;
-    if (FoundSpec->GetPrimaryInstance()) // 안전하게 검사
+    if (FoundSpec->GetPrimaryInstance())
     {
         AbilityInst = Cast<UAO_AddFuel_GameplayAbility>(FoundSpec->GetPrimaryInstance());
     }

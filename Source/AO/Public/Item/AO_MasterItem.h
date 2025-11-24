@@ -9,7 +9,6 @@
 #include "CoreMinimal.h"
 #include "Interaction/Base/AO_BaseInteractable.h"
 #include "Components/SphereComponent.h"
-#include "Item/AO_ItemFuelComponent.h"
 #include "AO_MasterItem.generated.h"
 
 UCLASS()
@@ -37,6 +36,8 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
+	
+	void ItemSawp(FName ItemID);
 	
 	UPROPERTY(Replicated)
 	FGameplayTagContainer ItemTags;

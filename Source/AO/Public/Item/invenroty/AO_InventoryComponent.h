@@ -33,7 +33,7 @@ public:
 	TArray<FInventorySlot> Slots;
 	
 	UPROPERTY(ReplicatedUsing=OnRep_SelectedIndex, BlueprintReadWrite, Category="Inventory")
-	int32 SelectedSlotIndex = 0;
+	int32 SelectedSlotIndex = 1;
 	
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventoryUpdated OnInventoryUpdated;
@@ -45,7 +45,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	void UseSelectedItem();
 	
-	void PickupItem(const FInventorySlot& IncomingItem);
+	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }

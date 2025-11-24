@@ -4,7 +4,6 @@
 #include "Item/AO_struct_FItemBase.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "Train/GAS/AO_AddFuel_GameplayAbility.h"
 
 AAO_MasterItem::AAO_MasterItem()
 {
@@ -38,6 +37,7 @@ void AAO_MasterItem::BeginPlay()
 		}
 	}
 }
+
 
 
 void AAO_MasterItem::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
@@ -80,8 +80,12 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 	ItemToAdd.FuelAmount = ServerFuelAmount;
 
 	//UE_LOG(LogTemp, Warning, TEXT("DEBUG: Adding item to inventory. FuelAmount = %f"), ServerFuelAmount);
-
-	Inventory->PickupItem(ItemToAdd);
+	Inventory->PickupItem(ItemToAdd, this);
 
 	Destroy();
+}
+
+void AAO_MasterItem::ItemSawp(FName NewItemID)
+{
+	//
 }

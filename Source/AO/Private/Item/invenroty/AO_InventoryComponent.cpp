@@ -1,19 +1,20 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
+#include "Item/AO_MasterItem.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
 	
-	Slots.SetNum(4);
+	Slots.SetNum(5);
 	for (FInventorySlot& Slot : Slots)
 	{
 		Slot = FInventorySlot();
 	}
 
-	SelectedSlotIndex = 0;
+	SelectedSlotIndex = 1;
 }
 
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
@@ -36,43 +37,29 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 
 void UAO_InventoryComponent::UseSelectedItem()
 {
-	/*if (GetOwnerRole() == ROLE_Authority)
-	{
-		if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-
-		//수량감소
-		FInventorySlot& Slot = Slots[SelectedSlotIndex];
-		if (Slot.Quantity > 0)
-		{
-			Slot.Quantity = FMath::Max(0, Slot.Quantity - 1);
-			
-			if (OnInventoryUpdated.IsBound())
-			{
-				OnInventoryUpdated.Broadcast(Slots);
-			}
-		}
-	}
-	*/
+	//
 }
 
-void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem)
+void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-
-	if (GetOwnerRole() == ROLE_Authority)
+	if (GetOwnerRole() != ROLE_Authority) return;
+	
+	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
+	if (!WorldItemActor) return;
+	
+	FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
+	
+	Slots[SelectedSlotIndex] = IncomingItem;
+	OnInventoryUpdated.Broadcast(Slots);
+	
+	if (PreviousItemID != "empty")
 	{
-		Slots[SelectedSlotIndex] = IncomingItem;
-		UE_LOG(LogTemp, Log, TEXT("SERVER: Picked up item into slot %d, FuelAmount=%f"),
-			SelectedSlotIndex, IncomingItem.FuelAmount)
-		
-		if (OnInventoryUpdated.IsBound())
-		{
-			OnInventoryUpdated.Broadcast(Slots);
-		}
+		WorldItemActor->ItemSawp(PreviousItemID);
 	}
 	else
 	{
-		// 클라이언트가 Pickup을 시도하면 서버 RPC로 요청해야 함. (예: ServerPickupItem)
+		WorldItemActor->Destroy();
 	}
 }
 
