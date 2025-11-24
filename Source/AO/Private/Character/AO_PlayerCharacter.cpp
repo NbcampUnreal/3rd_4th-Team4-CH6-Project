@@ -9,11 +9,14 @@
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "MotionWarpingComponent.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -59,6 +62,25 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
+{
+	if (!DefaultFoleyAudioBank)
+	{
+		AO_LOG(LogKH, Error, TEXT("DefaultFoleyAudioBank is null"));
+		return nullptr;
+	}
+	return DefaultFoleyAudioBank;
+}
+
+bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
+{
+	if (GetCharacterMovement()->IsMovingOnGround() || TraversalComponent->GetDoingTraversal())
+	{
+		return true;
+	}
+	return false;
 }
 
 bool AAO_PlayerCharacter::IsInspecting() const
@@ -140,6 +162,11 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
+	PlayAudioEvent(
+		FGameplayTag::RequestGameplayTag(FName("Foley.Event.Land")),
+		UKismetMathLibrary::MapRangeClamped(GetCharacterMovement()->Velocity.Z, -500.f, -900.f, 0.5f, 1.5f),
+		1.f);
+		
 	if (HasAuthority())
 	{
 		LandVelocity = GetCharacterMovement()->Velocity;
@@ -151,6 +178,16 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 			bJustLanded = false;
 		}, 0.3f, false);
 	}
+}
+
+void AAO_PlayerCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+
+	PlayAudioEvent(
+		FGameplayTag::RequestGameplayTag(FName("Foley.Event.Jump")),
+		UKismetMathLibrary::MapRangeClamped(GetCharacterMovement()->Velocity.Size2D(), 0.f, 500.f, 0.5f, 1.0f),
+		1.f);
 }
 
 void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
@@ -291,6 +328,24 @@ void AAO_PlayerCharacter::SetCurrentGait()
 	}
 
 	OnRep_Gait();
+}
+
+void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier, float PitchMultiplier)
+{
+	TObjectPtr<UAO_FoleyAudioBank> FoleyAudioBank = Execute_GetFoleyAudioBank(this);
+	if (!FoleyAudioBank)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to get FoleyAudioBank"));
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		FoleyAudioBank->GetSoundFromFoleyEvent(Value),
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		VolumeMultiplier,
+		PitchMultiplier);
 }
 
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)

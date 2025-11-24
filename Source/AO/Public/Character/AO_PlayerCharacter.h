@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
+#include "Foley/AO_FoleyAudioBankInterface.h"
 #include "AO_PlayerCharacter.generated.h"
 
 class UMotionWarpingComponent;
@@ -18,6 +19,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
+class UAO_FoleyAudioBank;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -33,7 +35,7 @@ public:
 };
 
 UCLASS()
-class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInterface
+class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInterface, public IAO_FoleyAudioBankInterface
 {
 	GENERATED_BODY()
 
@@ -48,7 +50,11 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void Landed(const FHitResult& Hit) override;
+	virtual void OnJumped_Implementation() override;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
+	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
@@ -91,6 +97,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Foley")
+	TObjectPtr<UAO_FoleyAudioBank> DefaultFoleyAudioBank;
+
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
@@ -123,4 +132,7 @@ private:
 
 	// Movement
 	void SetCurrentGait();
+
+	// Foley
+	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 };

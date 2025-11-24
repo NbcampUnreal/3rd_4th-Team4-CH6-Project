@@ -25,6 +25,7 @@ protected:
 public:
 	bool TryTraversal();
 
+	UFUNCTION(BlueprintCallable, Category = "Traversal")
 	bool GetDoingTraversal() const { return bDoingTraversal; }
 
 protected:
