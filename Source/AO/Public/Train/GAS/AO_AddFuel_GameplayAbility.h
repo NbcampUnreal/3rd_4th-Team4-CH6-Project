@@ -25,8 +25,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="GAS|Effects")
 	TSubclassOf<UGameplayEffect> AddEnergyEffectClass;
-
-	// 외부에서 세팅할 수 있는 임시 값 (인스턴스 단위)
+	
 	UPROPERTY(Transient)
 	float PendingAmount = 0.f;
 };
