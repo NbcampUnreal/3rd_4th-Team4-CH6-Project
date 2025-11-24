@@ -13,6 +13,7 @@
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
+#include "Item/invenroty/AO_InputModifier.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -103,7 +104,7 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
 		
 		//ms_inventory key binding
-		EIC->BindAction(Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
+		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
 		
 	}
 	
@@ -299,11 +300,13 @@ void AAO_PlayerCharacter::OnRep_Gait()
 //ms_inventory key binding
 void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
 {
-	/*int32 SlotIndex = Value.Get<int32>();
+	UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+	
+	float SlotIndexAsFloat = Value.Get<float>();
+	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
 
 	if (InventoryComp)
 	{
 		InventoryComp->ServerSetSelectedSlot(SlotIndex);
-	}*/
+	}
 }
-

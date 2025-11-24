@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,13 +8,18 @@ USTRUCT(BlueprintType)
 struct FInventorySlot
 {
 	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName ItemID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Quantity;
+	FName ItemID = "empty";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Quantity = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FuelAmount = 0.f;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdated, const TArray<FInventorySlot>&, Slots);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class AO_API UAO_InventoryComponent : public UActorComponent
@@ -26,27 +29,37 @@ class AO_API UAO_InventoryComponent : public UActorComponent
 public:
 	UAO_InventoryComponent();
 	
-	// 슬롯들 (예: 4개 단축키용)
-	UPROPERTY(ReplicatedUsing=OnRep_Slots, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(ReplicatedUsing=OnRep_Slots, EditAnywhere, BlueprintReadWrite, Category="Inventory")
 	TArray<FInventorySlot> Slots;
-
+	
+	UPROPERTY(ReplicatedUsing=OnRep_SelectedIndex, BlueprintReadWrite, Category="Inventory")
+	int32 SelectedSlotIndex = 0;
+	
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnInventoryUpdated OnInventoryUpdated;
+	
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
+	void ServerSetSelectedSlot_Implementation(int32 NewIndex);
 	
-	// 현재 선택된 슬롯 인덱스 (1~4)
-	UPROPERTY(ReplicatedUsing=OnRep_SelectedIndex, BlueprintReadWrite)
-	int32 SelectedSlotIndex;
-
-	// 아이템 사용
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category="Inventory")
 	void UseSelectedItem();
-
-protected:
+	
 	void PickupItem(const FInventorySlot& IncomingItem);
 	
+	UFUNCTION(BlueprintPure, Category="Inventory")
+	TArray<FInventorySlot> GetSlots() const { return Slots; }
+
+	void ClearSlot();
+	
+protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	UFUNCTION()
 	void OnRep_Slots();
+
 	UFUNCTION()
 	void OnRep_SelectedIndex();
+	
+	bool IsValidSlotIndex(int32 Index) const { return Index >= 0 && Index < Slots.Num(); }
 };

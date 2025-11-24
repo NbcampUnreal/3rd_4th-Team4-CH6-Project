@@ -1,5 +1,6 @@
 #include "Train/AO_Train.h"
 #include "AbilitySystemComponent.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "Train/GAS/AO_AddFuel_GameplayAbility.h"
 #include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
@@ -17,8 +18,12 @@ AAO_Train::AAO_Train()
 	ASC->SetIsReplicated(true);
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 	FuelAttributeSet = CreateDefaultSubobject<UAO_Fuel_AttributeSet>(TEXT("AttributeSet"));
-	StartupAbilities.Add(UAO_AddFuel_GameplayAbility::StaticClass());
-	StartupAbilities.Add(UAO_RemoveFuel_GameplayAbility::StaticClass());
+
+	InteractableComp = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
+	if (InteractableComp)
+	{
+		InteractableComp->OnInteractionSuccess.AddDynamic(this, &AAO_Train::HandleInteractionSuccess);
+	}
 }
 
 UAbilitySystemComponent* AAO_Train::GetAbilitySystemComponent() const
@@ -29,8 +34,7 @@ UAbilitySystemComponent* AAO_Train::GetAbilitySystemComponent() const
 void AAO_Train::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ASC) return;
-	ASC->InitAbilityActorInfo(this, this);
+		
 	if (HasAuthority())
 	{
 		if (!ASC) return;
@@ -93,4 +97,51 @@ void AAO_Train::FuelLeakSkillOut()
 	
 	ASC->CancelAbility(Spec->Ability);
 	ASC->ClearAbility(Spec->Handle);
+}
+
+void AAO_Train::HandleInteractionSuccess(AActor* Interactor)
+{
+	if (!HasAuthority() || !ASC) 
+	{
+		return;
+	}
+
+	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
+	if (!Inventory) return;
+
+	if (!Inventory->Slots.IsValidIndex(Inventory->SelectedSlotIndex))
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("Invalid slot index"));
+		return;
+	}
+
+	FInventorySlot& Slot = Inventory->Slots[Inventory->SelectedSlotIndex];
+	
+	/*UE_LOG(LogTemp, Warning, TEXT("DEBUG: Slot Index=%d, ItemID=%s, FuelAmount=%f"),
+	   Inventory->SelectedSlotIndex,
+	   *Slot.ItemID.ToString(),
+	   Slot.FuelAmount);*/
+
+	float FuelFromItem = Slot.FuelAmount;
+
+	if (FuelFromItem <= 0.f)
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("Item has no fuel amount."));
+		return;
+	}
+	
+	const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddFuel")); 
+    
+	FGameplayEventData EventData;
+	EventData.EventTag = ActivationEventTag;
+	EventData.Target = this;
+	EventData.Instigator = Interactor;
+	EventData.EventMagnitude = FuelFromItem;
+	
+	ASC->HandleGameplayEvent(
+	   ActivationEventTag, 
+	   &EventData
+	);
+
+	Inventory->ClearSlot();	
 }

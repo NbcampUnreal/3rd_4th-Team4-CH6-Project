@@ -2,6 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Item/AO_struct_FItemBase.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Train/GAS/AO_AddFuel_GameplayAbility.h"
 
@@ -9,33 +10,26 @@ AAO_MasterItem::AAO_MasterItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-
-	// Interaction Sphere
+	
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
 	InteractionSphere->SetupAttachment(MeshComponent);
 	InteractionSphere->SetSphereRadius(50.f);
 	InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-
-	// Components
-	FuelComponent   = CreateDefaultSubobject<UAO_ItemFuelComponent>(TEXT("FuelComponent"));
 }
 
 void AAO_MasterItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!ItemID.IsNone() && ItemDataTable)
+	if (HasAuthority() && !ItemID.IsNone() && ItemDataTable)
 	{
 		static const FString ContextString(TEXT("Reading ItemDataTable"));
 		if (FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, ContextString))
 		{
 			ItemTags = Row->ItemTags;
-
-			if (FuelComponent)
-				FuelComponent->AddFuelAmount = Row->FuelAmount;
-
+			FuelAmount = Row->FuelAmount;
 			if (!Row->WorldMesh.IsNull())
 			{
 				if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
@@ -45,23 +39,17 @@ void AAO_MasterItem::BeginPlay()
 	}
 }
 
+
 void AAO_MasterItem::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
 {
 	Super::OnInteractionSuccess_BP_Implementation(Interactor);
 
-	UE_LOG(LogTemp, Warning, TEXT("AAO_MasterItem::OnInteractionSuccess_BP_Implementation called"));
-
-	// Fuel 적용
-	if (FuelComponent && Interactor)
+	if (!HasAuthority())
 	{
-		FuelComponent->ApplyFuel();
+		Server_HandleInteraction(Interactor);
+		return;
 	}
-
-	// 아이템 Destroy
-	if (HasAuthority())
-	{
-		Destroy();
-	}
+	Server_HandleInteraction(Interactor);
 }
 
 void AAO_MasterItem::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
@@ -74,4 +62,26 @@ void AAO_MasterItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAO_MasterItem, ItemTags);
+	DOREPLIFETIME(AAO_MasterItem, FuelAmount);
+}
+
+void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
+{
+	if (!Interactor) return;
+
+	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
+	if (!Inventory) return;
+
+	FInventorySlot ItemToAdd;
+	ItemToAdd.ItemID = this->ItemID;
+	ItemToAdd.Quantity = 1;
+	
+	float ServerFuelAmount = FuelAmount;
+	ItemToAdd.FuelAmount = ServerFuelAmount;
+
+	//UE_LOG(LogTemp, Warning, TEXT("DEBUG: Adding item to inventory. FuelAmount = %f"), ServerFuelAmount);
+
+	Inventory->PickupItem(ItemToAdd);
+
+	Destroy();
 }

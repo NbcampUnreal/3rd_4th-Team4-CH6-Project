@@ -90,7 +90,7 @@ protected:
 	TObjectPtr<UInputAction> IA_Walk;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
-	TObjectPtr<UInputAction> Select_inventory_Slot;
+	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
 		
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")

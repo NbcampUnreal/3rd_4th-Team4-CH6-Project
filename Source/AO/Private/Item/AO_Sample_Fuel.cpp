@@ -58,18 +58,6 @@ void AAO_Sample_Fuel::OnOverlap(UPrimitiveComponent* Overlapped, AActor* OtherAc
     {
         FoundSpec = ASC->FindAbilitySpecFromClass(Train->AddEnergyAbilityClass);
     }
- 
-    if (!FoundSpec)
-    {
-        for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-        {
-            if (Spec.Ability && Spec.Ability->GetClass()->IsChildOf(UAO_AddFuel_GameplayAbility::StaticClass()))
-            {
-                FoundSpec = &Spec;
-                break;
-            }
-        }
-    }
 
     if (!FoundSpec)
     {

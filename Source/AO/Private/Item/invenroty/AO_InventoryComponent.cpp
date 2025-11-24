@@ -1,23 +1,96 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Actor.h"
 
-
-// Sets default values for this component's properties
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+	
+	Slots.SetNum(4);
+	for (FInventorySlot& Slot : Slots)
+	{
+		Slot = FInventorySlot();
+	}
+
+	SelectedSlotIndex = 0;
 }
 
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
 {
-	if (NewIndex < 0 || NewIndex >= Slots.Num())
+	if (!IsValidSlotIndex(NewIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
 		return;
+	}
 
-	SelectedSlotIndex = NewIndex; 
+	SelectedSlotIndex = NewIndex;
+	
+	if (OnInventoryUpdated.IsBound())
+	{
+		OnInventoryUpdated.Broadcast(Slots);
+	}
+
+	UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
+}
+
+void UAO_InventoryComponent::UseSelectedItem()
+{
+	/*if (GetOwnerRole() == ROLE_Authority)
+	{
+		if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+
+		//수량감소
+		FInventorySlot& Slot = Slots[SelectedSlotIndex];
+		if (Slot.Quantity > 0)
+		{
+			Slot.Quantity = FMath::Max(0, Slot.Quantity - 1);
+			
+			if (OnInventoryUpdated.IsBound())
+			{
+				OnInventoryUpdated.Broadcast(Slots);
+			}
+		}
+	}
+	*/
+}
+
+void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem)
+{
+	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+
+	if (GetOwnerRole() == ROLE_Authority)
+	{
+		Slots[SelectedSlotIndex] = IncomingItem;
+		UE_LOG(LogTemp, Log, TEXT("SERVER: Picked up item into slot %d, FuelAmount=%f"),
+			SelectedSlotIndex, IncomingItem.FuelAmount)
+		
+		if (OnInventoryUpdated.IsBound())
+		{
+			OnInventoryUpdated.Broadcast(Slots);
+		}
+	}
+	else
+	{
+		// 클라이언트가 Pickup을 시도하면 서버 RPC로 요청해야 함. (예: ServerPickupItem)
+	}
+}
+
+void UAO_InventoryComponent::OnRep_Slots()
+{
+	//UE_LOG(LogTemp, Verbose, TEXT("CLIENT: OnRep_Slots called (Owner: %s)"), *GetOwner()->GetName());
+	
+	if (OnInventoryUpdated.IsBound())
+	{
+		OnInventoryUpdated.Broadcast(Slots);
+	}
+}
+
+void UAO_InventoryComponent::OnRep_SelectedIndex()
+{
+	/*UE_LOG(LogTemp, Verbose, TEXT("CLIENT: SelectedSlotIndex updated to: %d (Owner: %s)"),
+		   SelectedSlotIndex,
+		   *GetOwner()->GetName());*/
 }
 
 void UAO_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -28,35 +101,12 @@ void UAO_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(UAO_InventoryComponent, SelectedSlotIndex);
 }
 
-void UAO_InventoryComponent::UseSelectedItem()
+void UAO_InventoryComponent::ClearSlot()
 {
-	// 서버 권한에서만 처리하거나 서버 RPC로 라우팅해야 함
-	// 예: if (GetOwnerRole() == ROLE_Authority) { ... }
-}
-
-void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem)
-{
-	/*// 1) 빈 슬롯 검색
-	int32 EmptyIndex = FindEmptySlot();
-
-	if (EmptyIndex != INDEX_NONE)
+	Slots[SelectedSlotIndex] = FInventorySlot();
+	
+	if (OnInventoryUpdated.IsBound())
 	{
-		Slots[EmptyIndex] = IncomingItem;
-		return;
+		OnInventoryUpdated.Broadcast(Slots);
 	}
-
-	// 2) 전부 찼다면 SelectedSlotIndex 교체
-	if (IsValidSlotIndex(SelectedSlotIndex))
-	{
-		Slots[SelectedSlotIndex] = IncomingItem;
-	}*/
-}
-
-void UAO_InventoryComponent::OnRep_Slots()
-{
-	// 클라이언트 UI 갱신 
-}
-void UAO_InventoryComponent::OnRep_SelectedIndex()
-{
-	// 클라이언트 HUD 업데이트
 }

@@ -29,12 +29,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UAO_ItemFuelComponent* FuelComponent;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	FName ItemID;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", Replicated)
+	float FuelAmount = 0.f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
 	
@@ -44,4 +44,8 @@ public:
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(Server, Reliable)
+	void Server_HandleInteraction(AActor* Interactor);
+
 };
