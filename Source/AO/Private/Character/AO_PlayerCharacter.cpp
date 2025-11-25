@@ -11,8 +11,8 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
-#include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -47,12 +47,11 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
-	// 승조: AbilitySystemComponent 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+	AttributeSet = CreateDefaultSubobject<UAO_PlayerCharacter_AttributeSet>(TEXT("AttributeSet"));
 
-	// 승조: InteractionComponent 생성
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
 	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
@@ -88,14 +87,49 @@ bool AAO_PlayerCharacter::IsInspecting() const
 	return InspectionComponent && InspectionComponent->IsInspecting();
 }
 
+void AAO_PlayerCharacter::StartSprint_GAS(bool bShouldSprint)
+{
+	if (bShouldSprint)
+	{
+		CharacterInputState.bWantsToSprint = true;
+		CharacterInputState.bWantsToWalk = false;
+	}
+	else
+	{
+		CharacterInputState.bWantsToSprint = false;
+	}
+
+	SetCurrentGait();
+
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
+}
+
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 승조 : ASC 초기화
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+		if (HasAuthority())
+		{
+			for (const auto& DefaultAbility : DefaultAbilities)
+			{
+				FGameplayAbilitySpec AbilitySpec(DefaultAbility);
+				AbilitySystemComponent->GiveAbility(AbilitySpec);
+			}
+
+			for (const auto& InputAbility : InputAbilities)
+			{
+				FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
+				AbilitySpec.InputID = InputAbility.Key;
+				AbilitySystemComponent->GiveAbility(AbilitySpec);
+			}
+		}
 	}
 
 	if (IsLocallyControlled())
@@ -120,10 +154,14 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Look);
 		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartJump);
 		EIC->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::TriggerJump);
-		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
-		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
+
+		if (IsValid(AbilitySystemComponent))
+		{
+			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
+			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
+		}
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -230,30 +268,6 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void AAO_PlayerCharacter::StartSprint()
-{
-	CharacterInputState.bWantsToSprint = true;
-	CharacterInputState.bWantsToWalk = false;
-	SetCurrentGait();
-
-	if (!HasAuthority())
-	{
-		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
-	}
-}
-
-void AAO_PlayerCharacter::StopSprint()
-{
-	CharacterInputState.bWantsToSprint = false;
-	CharacterInputState.bWantsToWalk = false;
-	SetCurrentGait();
-	
-	if (!HasAuthority())
-	{
-		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
-	}
-}
-
 void AAO_PlayerCharacter::HandleWalk()
 {
 	if (CharacterInputState.bWantsToSprint)
@@ -290,6 +304,36 @@ void AAO_PlayerCharacter::TriggerJump()
 		if (!TraversalComponent->GetDoingTraversal())
 		{
 			TraversalComponent->TryTraversal();
+		}
+	}
+}
+
+void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
+{
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
+	if (Spec)
+	{
+		Spec->InputPressed = true;
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
+		}
+		else
+		{
+			AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+		}
+	}
+}
+
+void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
+{
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
+	if (Spec)
+	{
+		Spec->InputPressed = false;
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
 		}
 	}
 }

@@ -9,6 +9,10 @@
 #include "Foley/AO_FoleyAudioBankInterface.h"
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_PlayerCharacter_AttributeSet;
+class UGameplayAbility;
+class UGameplayEffect;
+class UAttributeSet;
 class UMotionWarpingComponent;
 class UAO_TraversalComponent;
 class UCameraComponent;
@@ -42,6 +46,8 @@ class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInter
 public:
 	AAO_PlayerCharacter();
 
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -51,7 +57,6 @@ protected:
 
 	virtual void Landed(const FHitResult& Hit) override;
 	virtual void OnJumped_Implementation() override;
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
 	virtual bool CanPlayFootstepSounds_Implementation() const override;
@@ -63,15 +68,14 @@ public:
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
 	bool IsInspecting() const;
+
+	void StartSprint_GAS(bool bShouldSprint);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
@@ -81,6 +85,15 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TObjectPtr<UAO_PlayerCharacter_AttributeSet> AttributeSet;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TMap<int32, TSubclassOf<UGameplayAbility>> InputAbilities;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -123,12 +136,12 @@ private:
 	// Input Actions
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void StartSprint();
-	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
 	void StartJump();
 	void TriggerJump();
+	void HandleGameplayAbilityInputPressed(int32 InInputID);
+	void HandleGameplayAbilityInputReleased(int32 InInputID);
 
 	// Movement
 	void SetCurrentGait();
