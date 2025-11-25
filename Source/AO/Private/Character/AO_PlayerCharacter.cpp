@@ -9,9 +9,13 @@
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "MotionWarpingComponent.h"
+#include "Character/Traversal/AO_TraversalComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Item/invenroty/AO_InputModifier.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -50,6 +54,11 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	// 승조: InteractionComponent 생성
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
+	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+	//ms: inventory component
+	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
+
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -92,11 +101,16 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		EIC->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Move);
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Look);
-		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartJump);
+		EIC->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::TriggerJump);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
 		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
+		
+		//ms_inventory key binding
+		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
+		
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -228,6 +242,30 @@ void AAO_PlayerCharacter::HandleWalk()
 	}
 }
 
+void AAO_PlayerCharacter::StartJump()
+{
+	if (TraversalComponent)
+	{
+		if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
+		{
+			return;
+		}
+	}
+
+	Jump();
+}
+
+void AAO_PlayerCharacter::TriggerJump()
+{
+	if (TraversalComponent)
+	{
+		if (!TraversalComponent->GetDoingTraversal())
+		{
+			TraversalComponent->TryTraversal();
+		}
+	}
+}
+
 void AAO_PlayerCharacter::HandleCrouch()
 {
 	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
@@ -285,5 +323,19 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+//ms_inventory key binding
+void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+	
+	float SlotIndexAsFloat = Value.Get<float>();
+	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
+
+	if (InventoryComp)
+	{
+		InventoryComp->ServerSetSelectedSlot(SlotIndex);
 	}
 }
