@@ -86,6 +86,8 @@ public:
 
 // Voice Chat (JM)
 public:
+	IOnlineVoicePtr GetOnlineVoiceInterface() const;	// JM
+	
 	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
 	void StartVoiceChat();
 
@@ -94,7 +96,6 @@ public:
 
 protected:
 	IOnlineSessionPtr GetSessionInterface() const;
-	IOnlineVoicePtr GetOnlineVoiceInterface() const;	// JM
 
 	/* 세션 델리게이트 */
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);

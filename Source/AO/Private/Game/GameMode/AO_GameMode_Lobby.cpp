@@ -29,24 +29,6 @@ void AAO_GameMode_Lobby::Logout(AController* Exiting)
 	NotifyLobbyBoardChanged();
 }
 
-void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	Super::HandleSeamlessTravelPlayer(C);
-
-	// JM: 레벨 이동시 Voice Chat이 내부적으로 종료됨을 확인
-	// 명시적으로 다시 StartVoiceChat을 호출하여 보이스 채팅 연결 활성화
-	if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(C))
-	{
-		AO_PC_InGame->Client_StartVoiceChat();
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Can't cast to PC -> AAO InGame PC "));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
-}
-
 void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
 {
 	if (!Controller)
@@ -176,31 +158,6 @@ void AAO_GameMode_Lobby::NotifyLobbyBoardChanged()
 			Board->MulticastRebuildBoard();
 		}
 	}
-}
-
-void AAO_GameMode_Lobby::StopVoiceChatForAllClients()
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UWorld* World = GetWorld())
-	{
-		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
-		{
-			AAO_PlayerController_Lobby* AO_PC_Lobby = Cast<AAO_PlayerController_Lobby>(*It);
-			if (AO_PC_Lobby)
-			{
-				AO_PC_Lobby->Client_StopVoiceChat();
-			}
-			else
-			{
-				AO_LOG(LogJM, Warning, TEXT("Can't Cast to PC_Lobby"));
-			}
-		}
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("No World"));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::TravelToStage()

@@ -9,8 +9,12 @@
 #include "Engine/GameInstance.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Game/GameMode/AO_GameMode_InGameBase.h"
+#include "GameFramework/GameStateBase.h"
+#include "Interfaces/VoiceInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
@@ -28,46 +32,20 @@ AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 		AO_LOG(LogJSH, Warning, TEXT("PauseMenu widget not found, check path"));
 	}
 
-	// JM 코드추가 : 세팅위젯 로드
-	// TODO: 왜 하드하게 로드하는 것이죠? 여기서 미리 넣어두면 Lobby나 InGame 계열에서는 따로 안해줘도 되는건가?
-	static ConstructorHelpers::FClassFinder<UAO_UserWidget> SettingsWBPClass(TEXT("/Game/AVaOut/UI/Widget/Settings/WBP_Settings"));
-	if(SettingsWBPClass.Succeeded())
-	{
-		SettingsClass = SettingsWBPClass.Class;
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Settings widget not found, check path"));
-	}
+	// TODO: Hard Load 말고 UPROPERTY를 활용한 로드로 전환 (WBP_Settings는 완료)
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::BeginPlay();
 
-	if (!IsLocalPlayerController())
+	if (IsLocalPlayerController())
 	{
-		return;
+		AO_LOG(LogJM, Log, TEXT("Create"));
+		CreateSettingsWidgetInstance(20, ESlateVisibility::Hidden);
 	}
-
-	if (SettingsClass)
-	{
-		Settings = CreateWidget<UAO_UserWidget>(this, SettingsClass);
-		if (Settings)
-		{
-			Settings->AddToViewport(1);
-			Settings->SetVisibility(ESlateVisibility::Hidden);
-			AO_LOG(LogJM, Log, TEXT("Setting Widget Created"));
-		}
-		else
-		{
-			AO_LOG(LogJM, Warning, TEXT("Create Widget Failed"));
-		}
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Setting Class is not set"));
-	}
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_InGameBase::SetupInputComponent()
@@ -82,37 +60,9 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &ThisClass::TogglePauseMenu);
 
 		// JM 코드추가 : 테스트용 키 직접 바인딩 (좋지 않음, 나중에 지워야함)
-		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::JMTestOpenSettings);
-		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::JMTestCloseSettings);
+		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
+		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);
 	}
-}
-
-void AAO_PlayerController_InGameBase::JMTestOpenSettings()	// JM 코드추가 : 테스트용 코드
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	if(UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
-	{
-		DelegateManager->OnSettingsOpen.Broadcast();
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("No DelegateManager"));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
-}
-
-void AAO_PlayerController_InGameBase::JMTestCloseSettings()	// JM 코드추가 : 테스트용 코드
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	if(UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
-	{
-		DelegateManager->OnSettingsClose.Broadcast();
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("No DelegateManager"));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
@@ -129,7 +79,6 @@ void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-
 void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -141,6 +90,142 @@ void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
 	{
 		AO_LOG(LogJM, Warning, TEXT("No OSS Manager"));
 	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AAO_PlayerState* DeadPlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!DeadPlayerState)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Dead PlayerState is null"));
+		return;
+	}
+
+	IOnlineVoicePtr VoiceInterface = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>()->GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("VoiceInterface is InValid"));
+		return;
+	}
+
+	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_PS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
+		return;
+	}
+
+	// TODO: DeadPlayerState랑 AO_PS랑 타입이 다른데 이렇게 바로 비교할 수 있어?
+	if (DeadPlayerState == AO_PS)	// 내가 죽은 경우, 다른 사람 모두 Unmute
+	{
+		UWorld* World = GetWorld();
+		if (!World)
+		{
+			AO_LOG(LogJM, Warning, TEXT("No World"));
+			return;
+		}
+
+		for (APlayerState* OtherPS : World->GetGameState()->PlayerArray)
+		{
+			if (!OtherPS->GetUniqueId().IsValid())
+			{
+				continue;
+			}
+			
+			if (OtherPS == AO_PS)
+			{
+				continue;
+			}
+			
+			TSharedPtr<const FUniqueNetId> OtherPSId = OtherPS->GetUniqueId().GetUniqueNetId();
+			if (!OtherPSId.IsValid())
+			{
+				AO_LOG(LogJM, Warning, TEXT("OtherPSId Is Not Valid"));
+				continue;
+			}
+
+			// NOTE : RegisterRemoteTalker가 아니라 UnmuteRemoteTalker 방식을 사용하는 이유
+			// Mute 방식은 실제 보이스 스트림은 유지되고 Voice 시스템의 변화가 없음
+			// Register 방식은 네트워크 Voice 파이프라인을 변경해야 하기 때문에 무거운 작업 (위험)
+			if (VoiceInterface->UnmuteRemoteTalker(0, *OtherPSId, false))
+			{
+				AO_LOG(LogJM, Log, TEXT("Other PS : %s, Unmuted"), *OtherPS->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Warning, TEXT("OtherPS: %s, Unmute Failed"), *OtherPS->GetPlayerName());
+			}
+		}
+	}
+	else if (AO_PS->bIsAlive)		// 내가 살아있다면, 죽은 사람 소리 Mute
+	{
+		if (TSharedPtr<const FUniqueNetId> DeadPSId = DeadPlayerState->GetUniqueId().GetUniqueNetId(); DeadPSId.IsValid())
+		{
+			if (VoiceInterface->MuteRemoteTalker(0, *DeadPSId, false))
+			{
+				AO_LOG(LogJM, Log, TEXT("DeadPS: %s, Mute"), *DeadPlayerState->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Warning, TEXT("DeadPSId: %s, Mute Failed"), *DeadPlayerState->GetPlayerName());
+			}
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("DeadPSId is Not Valid"));
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Server_SelfDie_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (AAO_GameMode_InGameBase* AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+	{
+		AO_GameMode_InGame->LetUpdateVoiceMemberForAllClients(this);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cast Failed GameMode -> AO_GameMode_InGame"))
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Die()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_PS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
+		return;
+	}
+
+	AO_PS->bIsAlive = false;
+	Test_Server_SelfDie();
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Alive()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_PS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
+		return;
+	}
+
+	AO_PS->bIsAlive = true;
+	Test_Server_SelfDie();
+	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
@@ -184,9 +269,8 @@ void AAO_PlayerController_InGameBase::ShowPauseMenu()
 		return;
 	}
 
-	// PauseMenu->AddToViewport(10);		// TODO: JM : 어... 상현님 이거 왜 10이죠?
-	// TODO : JM : 지금 다 일반호출이라서, 나중에 델리게이트 기반으로 호출 바꿔야 할 수도 있을듯요
-	PauseMenu->AddToViewport(0);		// JM : 메뉴가 설정화면보다 위로 올라와서 zorder 내림
+	// NOTE : 기존 상현님이 하셨던 대로 ZOrder 10으로 변경 (설정은 20으로)
+	PauseMenu->AddToViewport(10);
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 	PauseMenu->SetIsFocusable(true);
 
