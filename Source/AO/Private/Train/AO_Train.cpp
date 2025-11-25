@@ -75,6 +75,8 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
+
+	OnFuelChangedDelegate.Broadcast(NewFuel);
 }
 
 void AAO_Train::FuelLeakSkillOn()

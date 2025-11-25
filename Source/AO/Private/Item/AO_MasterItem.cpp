@@ -9,7 +9,8 @@ AAO_MasterItem::AAO_MasterItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-	
+	MeshComponent->SetIsReplicated(true);
+
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
 	InteractionSphere->SetupAttachment(MeshComponent);
 	InteractionSphere->SetSphereRadius(50.f);

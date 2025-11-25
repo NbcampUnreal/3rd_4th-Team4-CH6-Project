@@ -28,7 +28,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", meta=(ExposeOnSpawn="true"))
 	FName ItemID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", Replicated)
