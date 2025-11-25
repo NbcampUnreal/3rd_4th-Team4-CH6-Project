@@ -83,6 +83,10 @@ bool AAO_LobbyInteractable::CanInteraction(const FAO_InteractionQuery& Interacti
         // 모두 초대 UI 허용
         return PC->IsLocalController();
 
+    case EAO_LobbyInteractType::Wardrobe:
+        // 모두 커스터마이징 가능
+        return true;
+
     default:
         return false;
     }
@@ -134,6 +138,27 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
     case EAO_LobbyInteractType::InviteFriends:
         {
             PC->Client_OpenInviteOverlay();
+            break;
+        }
+    case EAO_LobbyInteractType::Wardrobe:
+        {
+            // 스폰 위치는 서버에서 PreviewSpawnPoint 기준으로 계산
+            if(PreviewSpawnPoint == nullptr)
+            {
+                AO_LOG(LogJSH, Warning, TEXT("Wardrobe: PreviewSpawnPoint is null on %s"), *GetName());
+                return;
+            }
+
+            const FTransform SpawnTM = PreviewSpawnPoint->GetActorTransform();
+
+            AO_LOG(LogJSH, Log,
+                TEXT("Wardrobe: Request preview spawn for %s at %s"),
+                *GetNameSafe(PC),
+                *SpawnTM.GetLocation().ToString());
+
+            // 실제 스폰은 각 클라이언트에서 수행 (Client RPC)
+            PC->Client_SpawnWardrobePreview(SpawnTM);
+
             break;
         }
     default:

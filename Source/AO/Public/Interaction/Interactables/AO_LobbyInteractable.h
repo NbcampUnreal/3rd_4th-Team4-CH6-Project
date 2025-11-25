@@ -9,7 +9,8 @@ enum class EAO_LobbyInteractType : uint8
 {
 	ReadyToggle,
 	StartGame,
-	InviteFriends
+	InviteFriends,
+	Wardrobe
 };
 
 UCLASS()
@@ -27,4 +28,7 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AO|Lobby")
 	EAO_LobbyInteractType InteractType;
+
+	UPROPERTY(EditInstanceOnly, Category="AO|Lobby")
+	AActor* PreviewSpawnPoint;
 };

@@ -33,4 +33,8 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRequestStart();
 
+	/* 커스터마이징 스폰 */
+	UFUNCTION(Client, Reliable)
+	void Client_SpawnWardrobePreview(const FTransform& SpawnTransform);
+
 };
