@@ -28,7 +28,4 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AO|Lobby")
 	EAO_LobbyInteractType InteractType;
-
-	UPROPERTY(EditInstanceOnly, Category="AO|Lobby")
-	AActor* PreviewSpawnPoint;
 };
