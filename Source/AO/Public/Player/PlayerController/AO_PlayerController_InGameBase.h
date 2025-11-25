@@ -49,6 +49,15 @@ protected:
 	UFUNCTION()
 	void JMTestCloseSettings();
 
+public:
+	// JM : Voice Chat 각자 활성화
+	UFUNCTION(Client, Reliable)
+	void Client_StartVoiceChat();
+
+	// JM : 레벨 이동 전 Voice Chat 비활성화 (crash 가능성)
+	UFUNCTION(Client, Reliable)
+	void Client_StopVoiceChat();
+
 protected:
 	void TogglePauseMenu();
 
