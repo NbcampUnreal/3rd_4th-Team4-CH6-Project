@@ -2,6 +2,7 @@
 #include "Interaction/GAS/Task/AO_AbilityTask_GrantNearbyInteraction.h"
 #include "AbilitySystemComponent.h"
 #include "Engine/OverlapResult.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
 #include "Physics/AO_CollisionChannels.h"
 
@@ -69,18 +70,25 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 		TArray<TScriptInterface<IAO_Interface_Interactable>> Interactables;
 		for (const FOverlapResult& OverlapResult : OverlapResults)
 		{
+			AActor* OverlapActor = OverlapResult.GetActor();
+			if (!OverlapActor)
+			{
+				continue;
+			}
+
 			// Actor 자체가 Interactable인 경우
-			TScriptInterface<IAO_Interface_Interactable> InteractableActor(OverlapResult.GetActor());
+			TScriptInterface<IAO_Interface_Interactable> InteractableActor(OverlapActor);
 			if (InteractableActor)
 			{
 				Interactables.AddUnique(InteractableActor);
 			}
-			
-			// Component가 Interactable인 경우
-			TScriptInterface<IAO_Interface_Interactable> InteractableComponent(OverlapResult.GetComponent());
-			if (InteractableComponent)
+			else
 			{
-				Interactables.AddUnique(InteractableComponent);
+				// Actor에 InteractableComponent가 있는지 체크
+				if (UAO_InteractableComponent* InteractableComp = OverlapActor->FindComponentByClass<UAO_InteractableComponent>())
+				{
+					Interactables.AddUnique(TScriptInterface<IAO_Interface_Interactable>(InteractableComp));
+				}
 			}
 		}
 

@@ -21,8 +21,8 @@ void UAO_AbilityTask_WaitInteractionInputRelease::Activate()
 		return;
 	}
 	
-	UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>();
-	if (!InteractionComp)
+	TWeakObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>();
+	if (!InteractionComp.IsValid())
 	{
 		AO_LOG(LogHSJ, Error, TEXT("No InteractionComponent found"));
 		EndTask();
@@ -32,11 +32,17 @@ void UAO_AbilityTask_WaitInteractionInputRelease::Activate()
 	// 델리게이트 구독
 	InteractionComp->OnInteractInputReleased.AddDynamic(this, &UAO_AbilityTask_WaitInteractionInputRelease::OnInputReleased);
 	
-	// 폴링 시작 (안전장치 - 델리게이트 누락 대비)
+	// 폴링 시작 (안전장치 - 델리게이트 누락 대비, WeakObjectPtr 사용)
 	GetWorld()->GetTimerManager().SetTimer(
 		CheckTimerHandle,
 		[this, InteractionComp]()
 		{
+			if (!InteractionComp.IsValid())
+			{
+				OnInputReleased();
+				return;
+			}
+            
 			if (!InteractionComp->bIsHoldingInteract)
 			{
 				OnInputReleased();

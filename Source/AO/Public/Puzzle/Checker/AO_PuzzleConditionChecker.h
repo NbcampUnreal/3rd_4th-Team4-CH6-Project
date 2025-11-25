@@ -110,6 +110,26 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Puzzle")
 	FOnPuzzleProgress OnPuzzleProgress;
 
+	// 연결된 퍼즐 요소들
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Elements")
+	TArray<TObjectPtr<AActor>> LinkedElements;
+
+	// 완료 시 요소들 상호작용 비활성화
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Elements")
+	bool bDisableElementsOnComplete = true;
+
+	// 연결된 요소들 초기 상태로 복구
+	UFUNCTION(BlueprintCallable, Category="Puzzle")
+	void ResetLinkedElements();
+
+	// 연결된 요소들 상호작용 비활성화
+	UFUNCTION(BlueprintCallable, Category="Puzzle")
+	void DisableLinkedElements();
+
+	// 연결된 요소들 상호작용 활성화
+	UFUNCTION(BlueprintCallable, Category="Puzzle")
+	void EnableLinkedElements();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -132,6 +152,8 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPuzzleFailed();
+
+	bool ShouldFailPuzzle() const;
 
 private:
 	void ClearAllTimers();

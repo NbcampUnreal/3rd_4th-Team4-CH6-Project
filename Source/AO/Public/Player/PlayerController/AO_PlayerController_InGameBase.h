@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController_InGameBase.generated.h"
 
 class UAO_PauseMenuWidget;
@@ -33,6 +34,20 @@ protected:
 
 	UPROPERTY()
 	bool bPauseMenuVisible;
+	
+	// JM 코드추가 : 설정 위젯 관련
+	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
+	TSubclassOf<UAO_UserWidget> SettingsClass;
+
+	UPROPERTY()
+	UAO_UserWidget* Settings;
+
+	// JM 코드추가 : 테스트용 코드
+	UFUNCTION()
+	void JMTestOpenSettings();
+
+	UFUNCTION()
+	void JMTestCloseSettings();
 
 protected:
 	void TogglePauseMenu();

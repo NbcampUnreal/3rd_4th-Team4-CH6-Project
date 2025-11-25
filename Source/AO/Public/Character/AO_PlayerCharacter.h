@@ -8,6 +8,8 @@
 #include "AbilitySystemInterface.h"
 #include "AO_PlayerCharacter.generated.h"
 
+class UMotionWarpingComponent;
+class UAO_TraversalComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UInputMappingContext;
@@ -15,6 +17,7 @@ class UInputAction;
 struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
+class UAO_InspectionComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -50,19 +53,31 @@ protected:
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+
+	// 승조 : Inspect하는 중인지 확인
+	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
+	bool IsInspecting() const;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
-
-	// 승조 : ASC
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-	// 승조 : 상호작용 컴포넌트
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	//ms: inventory component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
+	class UAO_InventoryComponent* InventoryComp;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -79,6 +94,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
+		
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
@@ -106,7 +124,13 @@ private:
 	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
+	void StartJump();
+	void TriggerJump();
 
 	// Movement
 	void SetCurrentGait();
+	
+	//ms: inventory component input
+	void SelectInventorySlot(const FInputActionValue& Value);
+	
 };

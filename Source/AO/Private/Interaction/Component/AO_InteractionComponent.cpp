@@ -53,17 +53,8 @@ void UAO_InteractionComponent::BeginPlay()
 		{
 			if (PC->IsLocalController())
 			{
-				AO_LOG(LogHSJ, Log, TEXT("Initializing UI for local player"));
 				InitializeInteractionUI(PC);
 			}
-			else
-			{
-				AO_LOG(LogHSJ, Log, TEXT("Not local controller, skipping UI init"));
-			}
-		}
-		else
-		{
-			AO_LOG(LogHSJ, Warning, TEXT("PlayerController not found in BeginPlay, UI init may be delayed"));
 		}
 	}
 }
@@ -86,15 +77,6 @@ void UAO_InteractionComponent::ServerTriggerInteract_Implementation(AActor* Targ
 {
 	if (!TargetActor || !TargetActor->IsValidLowLevel())
 	{
-		return;
-	}
-	
-	// 클라이언트 치팅 방지를 위한 추가 거리 검증
-	const float DistSq = FVector::DistSquared(GetOwner()->GetActorLocation(), TargetActor->GetActorLocation());
-	constexpr float MaxInteractionDistanceSq = 250.0f * 250.0f;
-	if (DistSq > MaxInteractionDistanceSq)
-	{
-		AO_LOG_NET(LogHSJ, Error, TEXT("Target too far: %.1fm"), FMath::Sqrt(DistSq) / 100.0f);
 		return;
 	}
 	
@@ -142,8 +124,6 @@ void UAO_InteractionComponent::InitializeInteractionUI(APlayerController* PC)
 
 	InteractionWidget->SetWidgetController(InteractionWidgetController);
 	InteractionWidget->AddToViewport();
-	
-	AO_LOG(LogHSJ, Log, TEXT("InteractionUI initialized successfully"));
 }
 
 void UAO_InteractionComponent::GiveDefaultAbilities()
@@ -163,8 +143,6 @@ void UAO_InteractionComponent::GiveDefaultAbilities()
 
 		FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
 		ASC->GiveAbility(Spec);
-
-		AO_LOG(LogHSJ, Log, TEXT("Granted ability: %s"), *AbilityClass->GetName());
 	}
 }
 
