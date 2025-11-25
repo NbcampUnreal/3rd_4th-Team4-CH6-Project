@@ -2,6 +2,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
+#include "Kismet/GameplayStatics.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
@@ -44,21 +45,49 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
-	
+
 	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
 	if (!WorldItemActor) return;
-	
+
 	FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
-	
+
 	Slots[SelectedSlotIndex] = IncomingItem;
 	OnInventoryUpdated.Broadcast(Slots);
-	
+
 	if (PreviousItemID != "empty")
 	{
-		WorldItemActor->ItemSawp(PreviousItemID);
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+		
+		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+			AAO_MasterItem::StaticClass(),
+			SpawnTransform,
+			nullptr,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (DropItem)
+		{
+			DropItem->ItemID = PreviousItemID;
+			
+			if (WorldItemActor->ItemDataTable)
+			{
+				DropItem->ItemDataTable = WorldItemActor->ItemDataTable;
+				UE_LOG(LogTemp, Warning, TEXT("[SpawnActorDeferred] ItemDataTable Assigned successfully."));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[SpawnActorDeferred] WorldItemActor ItemDataTable is NULL, cannot assign."));
+			}
+
+			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+		}
 	}
 	else
 	{
+		// 원래 있던 월드 아이템 제거
 		WorldItemActor->Destroy();
 	}
 }

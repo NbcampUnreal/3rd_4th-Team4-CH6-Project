@@ -9,33 +9,78 @@ AAO_MasterItem::AAO_MasterItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-	MeshComponent->SetIsReplicated(true);
+	SetReplicateMovement(true);
+
+	if (MeshComponent)
+	{
+		MeshComponent->SetIsReplicated(true);
+	}
 
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
 	InteractionSphere->SetupAttachment(MeshComponent);
-	InteractionSphere->SetSphereRadius(50.f);
 	InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	MeshComponent->SetSimulatePhysics(true);        
+	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+	MeshComponent->SetEnableGravity(true);
 }
 
 void AAO_MasterItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority() && !ItemID.IsNone() && ItemDataTable)
+	if (HasAuthority())
 	{
-		static const FString ContextString(TEXT("Reading ItemDataTable"));
-		if (FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, ContextString))
+		ApplyItemData();
+	}
+}
+
+void AAO_MasterItem::OnRep_ItemID()
+{
+	ApplyItemData();
+}
+
+void AAO_MasterItem::ApplyItemData()
+{
+	if (!ItemDataTable)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
+		return;
+	}
+	if (ItemID.IsNone())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
+		return;
+	}
+
+	static const FString Context(TEXT("Item Lookup"));
+
+	if (const FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, Context))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData SUCCESS for ItemID: %s"), *ItemID.ToString());
+		// Replicated 변수에 세팅 (서버 → 클라 자동 반영)
+		ItemTags = Row->ItemTags;
+		FuelAmount = Row->FuelAmount;
+
+		// Mesh 적용
+		if (!Row->WorldMesh.IsNull())
 		{
-			ItemTags = Row->ItemTags;
-			FuelAmount = Row->FuelAmount;
-			if (!Row->WorldMesh.IsNull())
+			if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
 			{
-				if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
+				if (MeshComponent)
+				{
 					MeshComponent->SetStaticMesh(Mesh);
+				}
 			}
 		}
+	}
+	else
+	{
+		// 실패 로그 추가
+		UE_LOG(LogTemp, Error, TEXT("ApplyItemData FAILED to find row for ItemID: %s"), *ItemID.ToString());
 	}
 }
 
@@ -64,6 +109,8 @@ void AAO_MasterItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME(AAO_MasterItem, ItemTags);
 	DOREPLIFETIME(AAO_MasterItem, FuelAmount);
+	DOREPLIFETIME(AAO_MasterItem, ItemID);
+	DOREPLIFETIME(AAO_MasterItem, ItemDataTable);
 }
 
 void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
@@ -84,9 +131,4 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 	Inventory->PickupItem(ItemToAdd, this);
 
 	Destroy();
-}
-
-void AAO_MasterItem::ItemSawp(FName NewItemID)
-{
-	//
 }

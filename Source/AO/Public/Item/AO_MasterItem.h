@@ -28,25 +28,28 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", meta=(ExposeOnSpawn="true"))
+	// ⬅ 클라이언트도 받아야 하므로 ReplicatedUsing 필수
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_ItemID, meta=(ExposeOnSpawn="true"))
 	FName ItemID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", Replicated)
-	float FuelAmount = 0.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UFUNCTION()
+	void OnRep_ItemID();
+
+	void ApplyItemData();   // 서버 & 클라이언트 공용
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
-	
-	void ItemSawp(FName ItemID);
-	
+
+	// DataTable 로드 결과
+	UPROPERTY(Replicated)
+	float FuelAmount = 0.f;
+
 	UPROPERTY(Replicated)
 	FGameplayTagContainer ItemTags;
 
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const;
-
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(Server, Reliable)
 	void Server_HandleInteraction(AActor* Interactor);
-
 };
