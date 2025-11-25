@@ -17,6 +17,9 @@
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Player/PlayerState/AO_PlayerState.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Item/invenroty/AO_InputModifier.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -39,6 +42,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	// JM : VOIP Talker
+	VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
+	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh();
 	
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
@@ -56,6 +63,9 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
 	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+	//ms: inventory component
+	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
+
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -142,6 +152,22 @@ void AAO_PlayerCharacter::BeginPlay()
 			}
 		}
 	}
+
+	// JM : VOIPTalker PS 에 연결될 때까지 연결 시도
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			VOIPRegisterToPSTimerHandle,
+			this,
+			&ThisClass::TryRegisterVoiceTalker,
+			0.2f,
+			true
+		);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No World"));
+	}
 }
 
 void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -162,6 +188,10 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
 		}
+		
+		//ms_inventory key binding
+		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
+		
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -413,5 +443,63 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::TryRegisterVoiceTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (APlayerState* PS = GetPlayerState())
+	{
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(VOIPRegisterToPSTimerHandle);
+			RegisterVoiceTalker();
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));	
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No PS Yet"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerCharacter::RegisterVoiceTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (VOIPTalker)
+	{
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(GetPlayerState()))
+		{
+			VOIPTalker->RegisterWithPlayerState(AO_PS);
+			AO_LOG(LogJM, Log, TEXT("RegisterWithPlayerState Called"));
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));			
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+//ms_inventory key binding
+void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+	
+	float SlotIndexAsFloat = Value.Get<float>();
+	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
+
+	if (InventoryComp)
+	{
+		InventoryComp->ServerSetSelectedSlot(SlotIndex);
 	}
 }

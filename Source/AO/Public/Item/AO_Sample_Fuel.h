@@ -26,8 +26,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	float AddFuelAmount = 50.f;
-
-	// Soft pointer: 에디터에서 BP Ability 를 할당하려면 이걸 쓰는게 안전
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TSoftClassPtr<UAO_AddFuel_GameplayAbility> AddEnergyAbilityClass;
 

@@ -46,6 +46,9 @@ public class AO : ModuleRules
 			// Motion Warping
 			"MotionWarping",
 			"AnimationWarpingRuntime",
+			
+			// Voice Chat
+			"Voice",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

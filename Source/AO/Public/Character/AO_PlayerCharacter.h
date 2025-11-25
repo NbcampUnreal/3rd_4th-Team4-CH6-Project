@@ -7,6 +7,7 @@
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
 #include "Foley/AO_FoleyAudioBankInterface.h"
+#include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
 class UAO_PlayerCharacter_AttributeSet;
@@ -76,6 +77,8 @@ protected:
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")	// JM : VOIPTalker
+	TObjectPtr<UVOIPTalker> VOIPTalker;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
@@ -85,6 +88,8 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
+	class UAO_InventoryComponent* InventoryComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -109,7 +114,9 @@ protected:
 	TObjectPtr<UInputAction> IA_Crouch;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
-
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
+		
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Foley")
 	TObjectPtr<UAO_FoleyAudioBank> DefaultFoleyAudioBank;
 
@@ -131,6 +138,7 @@ protected:
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
+	FTimerHandle VOIPRegisterToPSTimerHandle;	// JM : VOIPTalker
 	
 private:
 	// Input Actions
@@ -148,4 +156,14 @@ private:
 
 	// Foley
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
+
+	
+// JM : VOIPTalker Register to PS
+private:
+	void TryRegisterVoiceTalker();
+	void RegisterVoiceTalker();
+	
+	//ms: inventory component input
+	void SelectInventorySlot(const FInputActionValue& Value);
+	
 };

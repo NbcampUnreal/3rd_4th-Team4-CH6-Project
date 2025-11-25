@@ -84,8 +84,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|Online")
 	void FindSessionsAuto(int32 MaxResults = 50);
 
+// Voice Chat (JM)
+public:
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void StartVoiceChat();
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void StopVoiceChat();
+
 protected:
 	IOnlineSessionPtr GetSessionInterface() const;
+	IOnlineVoicePtr GetOnlineVoiceInterface() const;	// JM
 
 	/* 세션 델리게이트 */
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
