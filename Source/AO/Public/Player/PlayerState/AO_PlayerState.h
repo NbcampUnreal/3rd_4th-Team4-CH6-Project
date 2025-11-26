@@ -61,4 +61,8 @@ protected:
 private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
+
+// JM : 생존 여부 판단용 변수 추가 (임시)
+public:
+	bool bIsAlive = true;
 };

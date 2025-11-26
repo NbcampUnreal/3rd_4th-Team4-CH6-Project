@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AO_PlayerController.h"
 #include "GameFramework/PlayerController.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController_InGameBase.generated.h"
 
@@ -14,7 +16,7 @@ class UAO_OnlineSessionSubsystem;
  * 
  */
 UCLASS()
-class AO_API AAO_PlayerController_InGameBase : public APlayerController
+class AO_API AAO_PlayerController_InGameBase : public AAO_PlayerController
 {
 	GENERATED_BODY()
 
@@ -34,29 +36,26 @@ protected:
 
 	UPROPERTY()
 	bool bPauseMenuVisible;
-	
-	// JM 코드추가 : 설정 위젯 관련
-	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
-	TSubclassOf<UAO_UserWidget> SettingsClass;
 
-	UPROPERTY()
-	UAO_UserWidget* Settings;
-
-	// JM 코드추가 : 테스트용 코드
-	UFUNCTION()
-	void JMTestOpenSettings();
-
-	UFUNCTION()
-	void JMTestCloseSettings();
-
+// JM : Voice Chat
 public:
-	// JM : Voice Chat 각자 활성화
 	UFUNCTION(Client, Reliable)
 	void Client_StartVoiceChat();
 
-	// JM : 레벨 이동 전 Voice Chat 비활성화 (crash 가능성)
 	UFUNCTION(Client, Reliable)
 	void Client_StopVoiceChat();
+
+	UFUNCTION(Client, Reliable)
+	void Client_UpdateVoiceMember(AAO_PlayerState* DeadPlayerState);
+
+	UFUNCTION(Server, Reliable)
+	void Test_Server_SelfDie();
+
+	UFUNCTION(BlueprintCallable, Category="AO|Test")
+	void Test_Die();
+
+	UFUNCTION(BlueprintCallable, Category="AO|Test")
+	void Test_Alive();
 
 protected:
 	void TogglePauseMenu();
