@@ -37,4 +37,8 @@ protected:
 private:
 	// 보드 재빌드
 	void RefreshLobbyReadyBoard();
+
+// JM : 생존 여부 판단용 변수 추가 (임시)
+public:
+	bool bIsAlive = true;
 };
