@@ -29,6 +29,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Puzzle|DecayHold")
 	float GetHoldProgressPercent() const { return MaxHoldTime > 0.f ? CurrentHoldProgress / MaxHoldTime : 0.f; }
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="DecayHold|Reaction")
+	TObjectPtr<class AAO_PuzzleReactionActor> LinkedReactionActor;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

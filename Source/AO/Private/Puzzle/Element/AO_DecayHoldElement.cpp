@@ -1,6 +1,7 @@
 // HSJ : AO_DecayHoldElement.cpp
 #include "Puzzle/Element/AO_DecayHoldElement.h"
 #include "Net/UnrealNetwork.h"
+#include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 
 AAO_DecayHoldElement::AAO_DecayHoldElement(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -87,10 +88,13 @@ void AAO_DecayHoldElement::UpdateHoldProgress()
         if (CurrentHoldProgress >= MaxHoldTime)
         {
             CurrentHoldProgress = MaxHoldTime;
-            bIsActivated = true;
-            BroadcastPuzzleEvent(true);
-            StopProgressTimer();
-            OnRep_IsActivated();
+
+        	if (!bIsActivated)
+        	{
+        		bIsActivated = true;
+        		BroadcastPuzzleEvent(true);
+        		OnRep_IsActivated();
+        	}
         }
     }
     else
@@ -99,8 +103,24 @@ void AAO_DecayHoldElement::UpdateHoldProgress()
         
         if (CurrentHoldProgress <= 0.0f)
         {
-            CurrentHoldProgress = 0.0f;
-            StopProgressTimer();
+        	CurrentHoldProgress = 0.0f;
+            
+        	// 0 도달 시 태그 제거 (중복 방지)
+        	if (bIsActivated)
+        	{
+        		bIsActivated = false;
+        		BroadcastPuzzleEvent(false);
+        		OnRep_IsActivated();
+        	}
+            
+        	StopProgressTimer();
         }
     }
+
+	// LinkedReactionActor에 진행도 전달
+	if (LinkedReactionActor)
+	{
+		float Progress = MaxHoldTime > 0.0f ? CurrentHoldProgress / MaxHoldTime : 0.0f;
+		LinkedReactionActor->SetProgress(Progress);
+	}
 }

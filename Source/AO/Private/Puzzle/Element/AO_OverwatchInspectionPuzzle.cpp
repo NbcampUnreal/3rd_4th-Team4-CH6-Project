@@ -92,6 +92,18 @@ void AAO_OverwatchInspectionPuzzle::OnInspectionMeshClicked(UPrimitiveComponent*
         return;
     }
 
+	// 외부 액터이면서 IAO_Interface_Inspectable을 구현하는지 체크(자기 자신은 제외, 사용예시:회전 퍼즐 액터)
+	if (HitActor != this && HitActor->GetClass()->ImplementsInterface(UAO_Interface_Inspectable::StaticClass()))
+	{
+		IAO_Interface_Inspectable* InspectableActor = Cast<IAO_Interface_Inspectable>(HitActor);
+		if (InspectableActor)
+		{
+			// 회전 퍼즐 등 자체적으로 클릭 처리하는 액터
+			InspectableActor->OnInspectionMeshClicked(ClickedComponent);
+			return;
+		}
+	}
+
     FGameplayTag FoundTag;
 
     // 자신의 내부 메시인지 확인
