@@ -139,6 +139,19 @@ void AAO_PlayerCharacter::BeginPlay()
 				AbilitySpec.InputID = InputAbility.Key;
 				AbilitySystemComponent->GiveAbility(AbilitySpec);
 			}
+
+			for (const auto& DefaultEffect : DefaultEffects)
+			{
+				FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+				Context.AddInstigator(this, this);
+
+				FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
+
+				if (Handle.IsValid())
+				{
+					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
+				}
+			}
 		}
 	}
 
