@@ -103,6 +103,13 @@ protected:
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnDestroyThenRecreateSession(FName SessionName, bool bWasSuccessful);
 
+public:
+	/* 스팀 초대 UI */
+	void ShowInviteUI();
+	
+	/* 호스트/클라이언트 분기용 */
+	bool IsLocalHost() const;
+	
 private:
 	/* 검색 결과 캐시 */
 	TSharedPtr<FOnlineSessionSearch> LastSearch;
@@ -141,9 +148,6 @@ private:
 	}
 	
 	static FString ToMD5(const FString& In);
-
-	/* 호스트/클라이언트 분기용 */
-	bool IsLocalHost() const;
 
 	/* 네트워크 연결 실패 에러 */
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);

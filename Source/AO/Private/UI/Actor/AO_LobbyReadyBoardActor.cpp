@@ -51,7 +51,20 @@ bool AAO_LobbyReadyBoardActor::IsEveryoneReadyExceptHost(const TArray<APlayerSta
 		return false;
 	}
 
-	APlayerState* HostPS = Players[0];
+	APlayerState* HostPS = nullptr;
+
+	for(APlayerState* PS : Players)
+	{
+		if(AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS))
+		{
+			if(AOPS->IsLobbyHost())
+			{
+				HostPS = PS;
+				break;
+			}
+		}
+	}
+
 	AO_LOG(LogJSH, Log, TEXT(" → Host is %s"), *GetNameSafe(HostPS));
 
 	if(HostPS == nullptr)
@@ -112,17 +125,9 @@ void AAO_LobbyReadyBoardActor::RebuildBoard()
 		return;
 	}
 
-	AO_LOG(LogJSH, Log, TEXT(" → GameState OK: %s"), *GS->GetName());
-
 	const TArray<APlayerState*>& Players = GS->PlayerArray;
 
-	AO_LOG(LogJSH, Log, TEXT(" → PlayerArray count = %d"), Players.Num());
-
-	APlayerState* HostPS = Players.Num() > 0 ? Players[0] : nullptr;
-	AO_LOG(LogJSH, Log, TEXT(" → Host = %s"), *GetNameSafe(HostPS));
-
 	bool bAllReadyExceptHost = IsEveryoneReadyExceptHost(Players);
-	AO_LOG(LogJSH, Log, TEXT(" → bAllReadyExceptHost = %d"), (int)bAllReadyExceptHost);
 
 	TArray<FAOLobbyReadyBoardEntry> Entries;
 	Entries.Reserve(Players.Num());
@@ -131,30 +136,42 @@ void AAO_LobbyReadyBoardActor::RebuildBoard()
 	{
 		if(PS == nullptr)
 		{
-			AO_LOG(LogJSH, Warning, TEXT(" → skip null PlayerState in loop"));
 			continue;
 		}
 
 		AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS);
 		if(AOPS == nullptr)
 		{
-			AO_LOG(LogJSH, Warning, TEXT(" → skip: cannot cast PS %s to AAO_PlayerState"), *PS->GetName());
 			continue;
 		}
 
-		AO_LOG(LogJSH, Log, TEXT(" → Add Row: %s  Ready=%d"),
-			*PS->GetPlayerName(), AOPS->IsLobbyReady());
+		const bool bIsHost = AOPS->IsLobbyHost();
+		const bool bReady = AOPS->IsLobbyReady();
+		const int32 JoinOrder = AOPS->GetLobbyJoinOrder();
 
 		FAOLobbyReadyBoardEntry Row;
-		Row.PlayerName   = PS->GetPlayerName();
-		Row.bIsHost      = (PS == HostPS);
-		Row.StatusLabel  = Row.bIsHost ? TEXT("게임시작") : TEXT("레디");
-		Row.bStatusActive = Row.bIsHost ? bAllReadyExceptHost : AOPS->IsLobbyReady();
+		Row.PlayerName    = PS->GetPlayerName();
+		Row.bIsHost       = bIsHost;
+		Row.StatusLabel   = bIsHost ? TEXT("게임시작") : TEXT("레디");
+		Row.bStatusActive = bIsHost ? bAllReadyExceptHost : bReady;
+		Row.JoinOrder     = JoinOrder;
 
 		Entries.Add(Row);
 	}
 
-	AO_LOG(LogJSH, Log, TEXT(" → Total Entries Built = %d"), Entries.Num());
+	// 항상 같은 순서로 보이게 정렬
+	Entries.Sort(
+		[](const FAOLobbyReadyBoardEntry& A, const FAOLobbyReadyBoardEntry& B)
+		{
+			// 1) 호스트는 항상 맨 위
+			if(A.bIsHost != B.bIsHost)
+			{
+				return A.bIsHost; // true 가 앞으로
+			}
+
+			// 2) 그 다음은 입장 순서 (작을수록 먼저)
+			return A.JoinOrder < B.JoinOrder;
+		});
 
 	ApplyToWidget(Entries);
 }
