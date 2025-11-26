@@ -15,25 +15,18 @@ namespace
 {
     static bool IsLobbyHostController(const AController* Controller)
     {
-        if(Controller == nullptr)
+        if (Controller == nullptr)
         {
             return false;
         }
 
-        const UWorld* World = Controller->GetWorld();
-        if(World == nullptr)
+        const AAO_PlayerState* PS = Cast<AAO_PlayerState>(Controller->PlayerState);
+        if (PS == nullptr)
         {
             return false;
         }
 
-        const AGameStateBase* GS = World->GetGameState();
-        if(GS == nullptr || GS->PlayerArray.Num() == 0)
-        {
-            return false;
-        }
-
-        const APlayerState* HostPS = GS->PlayerArray[0];
-        return HostPS != nullptr && HostPS == Controller->PlayerState;
+        return PS->IsLobbyHost();
     }
 }
 
