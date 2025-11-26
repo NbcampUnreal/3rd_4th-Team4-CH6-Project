@@ -96,9 +96,13 @@ protected:
 	TObjectPtr<UInputAction> IA_Crouch;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
-
+	//ms: about inventory
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> IA_UseItem;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
+	TObjectPtr<UInputAction> IA_DropItem;
 		
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
@@ -140,7 +144,8 @@ private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
 	
-	//ms: inventory component input
+//ms: inventory component input
 	void SelectInventorySlot(const FInputActionValue& Value);
-	
+	void UseInvenrotyItem();
+	void DropInvenrotyItem();
 };

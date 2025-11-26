@@ -36,11 +36,6 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 	UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
 }
 
-void UAO_InventoryComponent::UseSelectedItem()
-{
-	//
-}
-
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
@@ -87,9 +82,38 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 	}
 	else
 	{
-		// 원래 있던 월드 아이템 제거
 		WorldItemActor->Destroy();
 	}
+}
+
+void UAO_InventoryComponent::UseItem()
+{
+	//
+}
+
+void UAO_InventoryComponent::DropItem()
+{
+	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+	if (GetOwnerRole() != ROLE_Authority) return;
+	
+	if (Slots[SelectedSlotIndex].ItemID != "empty")
+	{
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+		
+		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+			AAO_MasterItem::StaticClass(),
+			SpawnTransform,
+			nullptr,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+	}
+
+	ClearSlot();
 }
 
 void UAO_InventoryComponent::OnRep_Slots()

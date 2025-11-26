@@ -41,11 +41,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
 	void ServerSetSelectedSlot_Implementation(int32 NewIndex);
-	
-	UFUNCTION(BlueprintCallable, Category="Inventory")
-	void UseSelectedItem();
-	
+		
 	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
+	void UseItem();
+	void DropItem();
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }

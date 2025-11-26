@@ -28,19 +28,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	// ⬅ 클라이언트도 받아야 하므로 ReplicatedUsing 필수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_ItemID, meta=(ExposeOnSpawn="true"))
 	FName ItemID;
 
 	UFUNCTION()
 	void OnRep_ItemID();
 
-	void ApplyItemData();   // 서버 & 클라이언트 공용
+	void ApplyItemData(); 
 
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
-
-	// DataTable 로드 결과
+	
 	UPROPERTY(Replicated)
 	float FuelAmount = 0.f;
 
