@@ -43,6 +43,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
     FText InteractionContent;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
+	TObjectPtr<UAnimMontage> ActiveHoldMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
+	TObjectPtr<UAnimMontage> ActiveMontage;
+
     // 상호작용 활성화 여부
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="Interaction")
     bool bInteractionEnabled = true;
