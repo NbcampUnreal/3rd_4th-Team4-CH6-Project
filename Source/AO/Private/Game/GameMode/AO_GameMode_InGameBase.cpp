@@ -9,7 +9,9 @@
 
 AAO_GameMode_InGameBase::AAO_GameMode_InGameBase()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	bUseSeamlessTravel = true;
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
