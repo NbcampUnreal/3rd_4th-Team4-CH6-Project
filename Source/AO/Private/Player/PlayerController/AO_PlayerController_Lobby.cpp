@@ -38,7 +38,7 @@ void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
 	AO_LOG(LogJSH, Warning, TEXT("Client_OpenInviteOverlay: OnlineSessionSubsystem not found"));
 }
 
-void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
+void AAO_PlayerController_Lobby::Server_SetReady_Implementation(bool bNewReady)
 {
 	if(AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
 	{
@@ -54,7 +54,7 @@ void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
 	}
 }
 
-void AAO_PlayerController_Lobby::ServerRequestStart_Implementation()
+void AAO_PlayerController_Lobby::Server_RequestStart_Implementation()
 {
 	if (UWorld* World = GetWorld())
 	{

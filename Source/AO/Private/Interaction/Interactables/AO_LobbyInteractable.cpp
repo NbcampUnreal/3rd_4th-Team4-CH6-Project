@@ -115,7 +115,7 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
             if (AAO_PlayerState* PS = PC->GetPlayerState<AAO_PlayerState>())
             {
                 const bool bNewReady = !PS->IsLobbyReady();
-                PC->ServerSetReady(bNewReady);
+                PC->Server_SetReady(bNewReady);
             }
             break;
         }
@@ -125,7 +125,7 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
             {
                 return;
             }
-            PC->ServerRequestStart();
+            PC->Server_RequestStart();
             break;
         }
     case EAO_LobbyInteractType::InviteFriends:

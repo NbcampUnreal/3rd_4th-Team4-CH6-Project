@@ -27,10 +27,10 @@ public:
 
 	/* 레디 상태를 서버에 전달 */
 	UFUNCTION(Server, Reliable)
-	void ServerSetReady(bool bNewReady);
+	void Server_SetReady(bool bNewReady);
 
 	/* 시작 요청을 서버에 전달 */
 	UFUNCTION(Server, Reliable)
-	void ServerRequestStart();
+	void Server_RequestStart();
 
 };
