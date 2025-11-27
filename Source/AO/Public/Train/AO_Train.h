@@ -6,7 +6,6 @@
 // 연료 소비 시작 함수 FuelLeakSkillOn()
 // 연료 소비 종료 함수 FuelLeakSkillOn()
 
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,6 +14,8 @@
 #include "Abilities/GameplayAbility.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "AO_Train.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFuelChanged, float, NewFuel);
 
 class UAbilitySystemComponent;
 class UAO_Fuel_AttributeSet;
@@ -39,8 +40,12 @@ public:
 
 	UFUNCTION()
 	void HandleInteractionSuccess(AActor* Interactor);
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interact")
 	class UAO_InteractableComponent* InteractableComp;
+
+	UPROPERTY(BlueprintAssignable, Category="Fuel")
+	FOnFuelChanged OnFuelChangedDelegate;
 	
 protected:
 	virtual void BeginPlay() override;
