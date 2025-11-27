@@ -60,12 +60,10 @@ void AAO_MasterItem::ApplyItemData()
 
 	if (const FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, Context))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData SUCCESS for ItemID: %s"), *ItemID.ToString());
-		// Replicated 변수에 세팅 (서버 → 클라 자동 반영)
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData SUCCESS for ItemID: %s"), *ItemID.ToString());
 		ItemTags = Row->ItemTags;
 		FuelAmount = Row->FuelAmount;
-
-		// Mesh 적용
+		
 		if (!Row->WorldMesh.IsNull())
 		{
 			if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
@@ -79,8 +77,7 @@ void AAO_MasterItem::ApplyItemData()
 	}
 	else
 	{
-		// 실패 로그 추가
-		UE_LOG(LogTemp, Error, TEXT("ApplyItemData FAILED to find row for ItemID: %s"), *ItemID.ToString());
+		//UE_LOG(LogTemp, Error, TEXT("ApplyItemData FAILED to find row for ItemID: %s"), *ItemID.ToString());
 	}
 }
 
@@ -109,7 +106,7 @@ void AAO_MasterItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME(AAO_MasterItem, ItemTags);
 	DOREPLIFETIME(AAO_MasterItem, FuelAmount);
-	DOREPLIFETIME(AAO_MasterItem, ItemID);
+	DOREPLIFETIME(AAO_MasterItem, ItemID);	
 }
 
 void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)

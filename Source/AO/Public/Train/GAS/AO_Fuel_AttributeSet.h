@@ -17,7 +17,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Fuel", ReplicatedUsing=OnRep_Fuel)
 	FGameplayAttributeData Fuel;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_Fuel_AttributeSet, Fuel)
-
+	
 protected:
 	/** Fuel 복제 시 콜백 */
 	UFUNCTION()

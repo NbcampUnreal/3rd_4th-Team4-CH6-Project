@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Item/AO_struct_FItemBase.h"
 #include "AO_InventoryComponent.generated.h"
 
 class AAO_MasterItem;
@@ -19,6 +20,9 @@ struct FInventorySlot
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FuelAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EItemType ItemType = EItemType::None;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdated, const TArray<FInventorySlot>&, Slots);
