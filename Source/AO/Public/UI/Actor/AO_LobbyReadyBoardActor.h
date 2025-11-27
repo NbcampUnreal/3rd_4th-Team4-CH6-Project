@@ -25,6 +25,9 @@ public:
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bStatusActive;
+
+	// 정렬용: 로비 입장 순서 (0부터 시작, -1이면 미할당)
+	int32 JoinOrder = -1;
 };
 
 UCLASS()

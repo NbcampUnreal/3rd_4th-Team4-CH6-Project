@@ -5,6 +5,7 @@
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/OnlineSessionNames.h"
 #include "Misc/SecureHash.h"
@@ -587,6 +588,26 @@ void UAO_OnlineSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoi
 	}
 
 	bOpInProgress = false;
+}
+
+void UAO_OnlineSessionSubsystem::ShowInviteUI()
+{
+	const IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: OSS null"));
+		return;
+	}
+
+	IOnlineExternalUIPtr ExternalUI = OSS->GetExternalUIInterface();
+	if (!ExternalUI.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: ExternalUI invalid"));
+		return;
+	}
+	
+	const int32 LocalUserNum = 0;
+	ExternalUI->ShowInviteUI(LocalUserNum, NAME_GameSession);
 }
 
 /* ==================== Destroy (호스트/클라 분리) ==================== */
