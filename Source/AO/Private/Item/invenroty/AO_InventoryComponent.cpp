@@ -67,59 +67,54 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
-    if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-    if (GetOwnerRole() != ROLE_Authority) return;
+	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+	if (GetOwnerRole() != ROLE_Authority) return;
 
-    AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
-    if (!WorldItemActor) return;
-
-    FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
-
-    Slots[SelectedSlotIndex] = IncomingItem;
-    OnInventoryUpdated.Broadcast(Slots);
+	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
+	if (!WorldItemActor) return;
 	
-    if (PreviousItemID != "empty")
-    {
-       FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-       FRotator SpawnRotation = FRotator::ZeroRotator;
-       FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-       
-    	AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-		 DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
-		 SpawnTransform,
-		  nullptr,
-          nullptr,
-          ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-       );
+	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
+	
+	Slots[SelectedSlotIndex] = IncomingItem;
+	Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
+	Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
+	OnInventoryUpdated.Broadcast(Slots);
+	
+	
+	if (OldSlot.ItemID != "empty")
+	{
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
 
-       if (DropItem)
-       {
-           DropItem->ItemID = PreviousItemID;
-       	
-           if (WorldItemActor->ItemDataTable)
-           {
-              DropItem->ItemDataTable = WorldItemActor->ItemDataTable;
-              //UE_LOG(LogTemp, Warning, TEXT("[SpawnActorDeferred] ItemDataTable Assigned successfully."));
-           }
-           else
-           {
-              //UE_LOG(LogTemp, Error, TEXT("[SpawnActorDeferred] WorldItemActor ItemDataTable is NULL, cannot assign."));
-           }
-       UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-       }
-    }
-    else
-    {
-       WorldItemActor->Destroy();
-    }
+		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+			DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+			SpawnTransform,
+			nullptr,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (DropItem)
+		{
+			DropItem->ItemID = OldSlot.ItemID;
+			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+		}
+	}
+	else
+	{
+		WorldItemActor->Destroy();
+	}
 }
 
-void UAO_InventoryComponent::UseItem()
+
+
+void UAO_InventoryComponent::UseInvenrotyItem()
 {
 	//
 }
 
-void UAO_InventoryComponent::DropItem()
+void UAO_InventoryComponent::DropInvenrotyItem()
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
@@ -197,14 +192,4 @@ void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 	
 	ServerSetSelectedSlot(SlotIndex);
 	
-}
-
-void UAO_InventoryComponent::UseInvenrotyItem()
-{
-	UseItem();
-}
-
-void UAO_InventoryComponent::DropInvenrotyItem()
-{
-	DropItem();
 }

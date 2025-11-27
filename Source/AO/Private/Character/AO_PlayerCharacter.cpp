@@ -212,6 +212,11 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		InspectionComponent->SetupInputBinding(PlayerInputComponent);
 	}
+	// ms : inventoryComp 바인딩
+	if (InventoryComp)
+	{
+		InventoryComp->SetupInputBinding(PlayerInputComponent);
+	}
 }
 
 void AAO_PlayerCharacter::Tick(float DeltaTime)

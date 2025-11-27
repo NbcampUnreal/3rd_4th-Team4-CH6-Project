@@ -3,10 +3,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "AO_PassiveContainer.generated.h"
 
 UCLASS()
-class AO_API AAO_PassiveContainer : public AActor
+class AO_API AAO_PassiveContainer : public AActor, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -18,6 +19,8 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interact")
 	class UAO_InteractableComponent* InteractableComp;
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const;
 	
 	UFUNCTION()
 	void HandleInteractionSuccess(AActor* Interactor);

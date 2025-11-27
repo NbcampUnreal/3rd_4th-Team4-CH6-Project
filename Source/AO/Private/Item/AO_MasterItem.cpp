@@ -123,6 +123,14 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 	float ServerFuelAmount = FuelAmount;
 	ItemToAdd.FuelAmount = ServerFuelAmount;
 
+	if (ItemDataTable)
+	{
+		static const FString Context(TEXT("Item Lookup"));
+		if (const FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, Context))
+		{
+			ItemToAdd.ItemType = Row->ItemType;
+		}
+	}
 	//UE_LOG(LogTemp, Warning, TEXT("DEBUG: Adding item to inventory. FuelAmount = %f"), ServerFuelAmount);
 	Inventory->PickupItem(ItemToAdd, this);
 
