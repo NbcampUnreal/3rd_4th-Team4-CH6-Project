@@ -1,7 +1,11 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
+
+#include "EnhancedInputComponent.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
+#include "Kismet/GameplayStatics.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
@@ -17,11 +21,37 @@ UAO_InventoryComponent::UAO_InventoryComponent()
 	SelectedSlotIndex = 1;
 }
 
+void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
+{
+	if (!PlayerInputComponent)
+	{
+		return;
+	}
+
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (!EIC)
+	{
+		return;
+	}
+	if (IA_Select_inventory_Slot)
+	{
+		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &UAO_InventoryComponent::SelectInventorySlot);
+	}
+	if (IA_UseItem)
+	{
+		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInvenrotyItem);
+	}
+	if (IA_DropItem)
+	{
+		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInvenrotyItem);	
+	}
+}
+
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
 {
 	if (!IsValidSlotIndex(NewIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
+		//UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
 		return;
 	}
 
@@ -32,35 +62,94 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 		OnInventoryUpdated.Broadcast(Slots);
 	}
 
-	UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
-}
-
-void UAO_InventoryComponent::UseSelectedItem()
-{
-	//
+	//UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
 }
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
+    if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+    if (GetOwnerRole() != ROLE_Authority) return;
+
+    AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
+    if (!WorldItemActor) return;
+
+    FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
+
+    Slots[SelectedSlotIndex] = IncomingItem;
+    OnInventoryUpdated.Broadcast(Slots);
+	
+    if (PreviousItemID != "empty")
+    {
+       FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+       FRotator SpawnRotation = FRotator::ZeroRotator;
+       FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+       
+    	AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+		 DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
+		 SpawnTransform,
+		  nullptr,
+          nullptr,
+          ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+       );
+
+       if (DropItem)
+       {
+           DropItem->ItemID = PreviousItemID;
+       	
+           if (WorldItemActor->ItemDataTable)
+           {
+              DropItem->ItemDataTable = WorldItemActor->ItemDataTable;
+              //UE_LOG(LogTemp, Warning, TEXT("[SpawnActorDeferred] ItemDataTable Assigned successfully."));
+           }
+           else
+           {
+              //UE_LOG(LogTemp, Error, TEXT("[SpawnActorDeferred] WorldItemActor ItemDataTable is NULL, cannot assign."));
+           }
+       UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+       }
+    }
+    else
+    {
+       WorldItemActor->Destroy();
+    }
+}
+
+void UAO_InventoryComponent::UseItem()
+{
+	//
+}
+
+void UAO_InventoryComponent::DropItem()
+{
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
 	
-	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
-	if (!WorldItemActor) return;
-	
-	FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
-	
-	Slots[SelectedSlotIndex] = IncomingItem;
-	OnInventoryUpdated.Broadcast(Slots);
-	
-	if (PreviousItemID != "empty")
+	const FInventorySlot& CurrentSlot = Slots[SelectedSlotIndex];
+
+	if (CurrentSlot.ItemID != "empty")
 	{
-		WorldItemActor->ItemSawp(PreviousItemID);
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+		
+		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+		DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
+		SpawnTransform,
+		 nullptr,
+		 nullptr,
+		 ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+	   );
+
+		if (DropItem)
+		{
+			DropItem->ItemID = CurrentSlot.ItemID;
+			// DropItem->FuelAmount = CurrentSlot.FuelAmount; 
+
+			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+		}
 	}
-	else
-	{
-		WorldItemActor->Destroy();
-	}
+
+	ClearSlot();
 }
 
 void UAO_InventoryComponent::OnRep_Slots()
@@ -96,4 +185,26 @@ void UAO_InventoryComponent::ClearSlot()
 	{
 		OnInventoryUpdated.Broadcast(Slots);
 	}
+}
+
+//ms_inventory key binding
+void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+	
+	float SlotIndexAsFloat = Value.Get<float>();
+	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
+	
+	ServerSetSelectedSlot(SlotIndex);
+	
+}
+
+void UAO_InventoryComponent::UseInvenrotyItem()
+{
+	UseItem();
+}
+
+void UAO_InventoryComponent::DropInvenrotyItem()
+{
+	DropItem();
 }

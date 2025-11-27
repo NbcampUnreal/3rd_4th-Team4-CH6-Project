@@ -6,7 +6,19 @@
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "AO_Log.h"
 
+void AAO_PlayerController_Stage::BeginPlay()
+{
+	Super::BeginPlay();
 
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			HUDWidget->AddToViewport();
+		}
+	}
+}
 
 void AAO_PlayerController_Stage::Server_RequestStageExit_Implementation()
 {
