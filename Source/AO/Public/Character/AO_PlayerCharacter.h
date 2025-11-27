@@ -116,14 +116,6 @@ protected:
 	TObjectPtr<UInputAction> IA_Crouch;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
-	//ms: about inventory
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
-	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
-	TObjectPtr<UInputAction> IA_UseItem;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
-	TObjectPtr<UInputAction> IA_DropItem;
-		
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Foley")
 	TObjectPtr<UAO_FoleyAudioBank> DefaultFoleyAudioBank;
 

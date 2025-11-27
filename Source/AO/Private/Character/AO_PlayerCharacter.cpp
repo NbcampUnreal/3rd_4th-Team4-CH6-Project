@@ -200,12 +200,7 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		{
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
-		}
-		
-		//ms_inventory key binding
-		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
-		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &AAO_PlayerCharacter::UseInvenrotyItem);
-		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &AAO_PlayerCharacter::DropInvenrotyItem);		
+		}			
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -502,28 +497,4 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
-}
-
-//ms_inventory key binding
-void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
-{
-	//UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
-	
-	float SlotIndexAsFloat = Value.Get<float>();
-	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
-
-	if (InventoryComp)
-	{
-		InventoryComp->ServerSetSelectedSlot(SlotIndex);
-	}
-}
-
-void AAO_PlayerCharacter::UseInvenrotyItem()
-{
-	InventoryComp->UseItem();
-}
-
-void AAO_PlayerCharacter::DropInvenrotyItem()
-{
-	InventoryComp->DropItem();
 }

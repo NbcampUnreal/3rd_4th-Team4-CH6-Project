@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputAction.h"
+#include "InputActionValue.h"
 #include "Components/ActorComponent.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "AO_InventoryComponent.generated.h"
@@ -35,17 +37,27 @@ class AO_API UAO_InventoryComponent : public UActorComponent
 public:
 	UAO_InventoryComponent();
 	
+	void SetupInputBinding(UInputComponent* PlayerInputComponent);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_UseItem;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_DropItem;
+	
 	UPROPERTY(ReplicatedUsing=OnRep_Slots, EditAnywhere, BlueprintReadWrite, Category="Inventory")
 	TArray<FInventorySlot> Slots;
+
 	
 	UPROPERTY(ReplicatedUsing=OnRep_SelectedIndex, BlueprintReadWrite, Category="Inventory")
 	int32 SelectedSlotIndex = 1;
-	
-	UPROPERTY(BlueprintAssignable, Category="Inventory")
-	FOnInventoryUpdated OnInventoryUpdated;
 
 	UPROPERTY(EditDefaultsOnly, Category="Inventory") 
 	TSubclassOf<AAO_MasterItem> DroppableItemClass;
+	
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnInventoryUpdated OnInventoryUpdated;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
@@ -60,6 +72,10 @@ public:
 
 	void ClearSlot();
 	
+	void SelectInventorySlot(const FInputActionValue& Value);
+	void UseInvenrotyItem();
+	void DropInvenrotyItem();
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	

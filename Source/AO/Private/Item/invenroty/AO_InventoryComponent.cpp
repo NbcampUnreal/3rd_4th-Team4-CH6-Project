@@ -1,4 +1,7 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
+
+#include "EnhancedInputComponent.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
@@ -16,6 +19,32 @@ UAO_InventoryComponent::UAO_InventoryComponent()
 	}
 
 	SelectedSlotIndex = 1;
+}
+
+void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
+{
+	if (!PlayerInputComponent)
+	{
+		return;
+	}
+
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (!EIC)
+	{
+		return;
+	}
+	if (IA_Select_inventory_Slot)
+	{
+		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &UAO_InventoryComponent::SelectInventorySlot);
+	}
+	if (IA_UseItem)
+	{
+		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInvenrotyItem);
+	}
+	if (IA_DropItem)
+	{
+		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInvenrotyItem);	
+	}
 }
 
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
@@ -156,4 +185,26 @@ void UAO_InventoryComponent::ClearSlot()
 	{
 		OnInventoryUpdated.Broadcast(Slots);
 	}
+}
+
+//ms_inventory key binding
+void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+	
+	float SlotIndexAsFloat = Value.Get<float>();
+	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
+	
+	ServerSetSelectedSlot(SlotIndex);
+	
+}
+
+void UAO_InventoryComponent::UseInvenrotyItem()
+{
+	UseItem();
+}
+
+void UAO_InventoryComponent::DropInvenrotyItem()
+{
+	DropItem();
 }
