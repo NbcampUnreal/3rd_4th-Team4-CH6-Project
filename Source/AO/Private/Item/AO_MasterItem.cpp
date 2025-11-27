@@ -110,7 +110,6 @@ void AAO_MasterItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AAO_MasterItem, ItemTags);
 	DOREPLIFETIME(AAO_MasterItem, FuelAmount);
 	DOREPLIFETIME(AAO_MasterItem, ItemID);
-	DOREPLIFETIME(AAO_MasterItem, ItemDataTable);
 }
 
 void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)

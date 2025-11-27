@@ -22,7 +22,7 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 {
 	if (!IsValidSlotIndex(NewIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
+		//UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
 		return;
 	}
 
@@ -33,57 +33,56 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 		OnInventoryUpdated.Broadcast(Slots);
 	}
 
-	UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
+	//UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
 }
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
-	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-	if (GetOwnerRole() != ROLE_Authority) return;
+    if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+    if (GetOwnerRole() != ROLE_Authority) return;
 
-	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
-	if (!WorldItemActor) return;
+    AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
+    if (!WorldItemActor) return;
 
-	FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
+    FName PreviousItemID = Slots[SelectedSlotIndex].ItemID;
 
-	Slots[SelectedSlotIndex] = IncomingItem;
-	OnInventoryUpdated.Broadcast(Slots);
+    Slots[SelectedSlotIndex] = IncomingItem;
+    OnInventoryUpdated.Broadcast(Slots);
+	
+    if (PreviousItemID != "empty")
+    {
+       FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+       FRotator SpawnRotation = FRotator::ZeroRotator;
+       FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+       
+    	AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+		 DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
+		 SpawnTransform,
+		  nullptr,
+          nullptr,
+          ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+       );
 
-	if (PreviousItemID != "empty")
-	{
-		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-		
-		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-			AAO_MasterItem::StaticClass(),
-			SpawnTransform,
-			nullptr,
-			nullptr,
-			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-		);
-
-		if (DropItem)
-		{
-			DropItem->ItemID = PreviousItemID;
-			
-			if (WorldItemActor->ItemDataTable)
-			{
-				DropItem->ItemDataTable = WorldItemActor->ItemDataTable;
-				UE_LOG(LogTemp, Warning, TEXT("[SpawnActorDeferred] ItemDataTable Assigned successfully."));
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("[SpawnActorDeferred] WorldItemActor ItemDataTable is NULL, cannot assign."));
-			}
-
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-		}
-	}
-	else
-	{
-		WorldItemActor->Destroy();
-	}
+       if (DropItem)
+       {
+           DropItem->ItemID = PreviousItemID;
+       	
+           if (WorldItemActor->ItemDataTable)
+           {
+              DropItem->ItemDataTable = WorldItemActor->ItemDataTable;
+              //UE_LOG(LogTemp, Warning, TEXT("[SpawnActorDeferred] ItemDataTable Assigned successfully."));
+           }
+           else
+           {
+              //UE_LOG(LogTemp, Error, TEXT("[SpawnActorDeferred] WorldItemActor ItemDataTable is NULL, cannot assign."));
+           }
+       UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+       }
+    }
+    else
+    {
+       WorldItemActor->Destroy();
+    }
 }
 
 void UAO_InventoryComponent::UseItem()
@@ -96,21 +95,29 @@ void UAO_InventoryComponent::DropItem()
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
 	
-	if (Slots[SelectedSlotIndex].ItemID != "empty")
+	const FInventorySlot& CurrentSlot = Slots[SelectedSlotIndex];
+
+	if (CurrentSlot.ItemID != "empty")
 	{
 		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
 		FRotator SpawnRotation = FRotator::ZeroRotator;
 		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
 		
 		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-			AAO_MasterItem::StaticClass(),
-			SpawnTransform,
-			nullptr,
-			nullptr,
-			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-		);
+		DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
+		SpawnTransform,
+		 nullptr,
+		 nullptr,
+		 ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+	   );
+
+		if (DropItem)
+		{
+			DropItem->ItemID = CurrentSlot.ItemID;
+			// DropItem->FuelAmount = CurrentSlot.FuelAmount; 
 
 			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+		}
 	}
 
 	ClearSlot();

@@ -4,6 +4,8 @@
 #include "Components/ActorComponent.h"
 #include "AO_InventoryComponent.generated.h"
 
+class AAO_MasterItem;
+
 USTRUCT(BlueprintType)
 struct FInventorySlot
 {
@@ -37,6 +39,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventoryUpdated OnInventoryUpdated;
+
+	UPROPERTY(EditDefaultsOnly, Category="Inventory") 
+	TSubclassOf<AAO_MasterItem> DroppableItemClass;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
