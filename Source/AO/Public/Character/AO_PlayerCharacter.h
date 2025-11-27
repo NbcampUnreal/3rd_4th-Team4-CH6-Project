@@ -6,9 +6,14 @@
 #include "GameFramework/Character.h"
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
+#include "Foley/AO_FoleyAudioBankInterface.h"
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_PlayerCharacter_AttributeSet;
+class UGameplayAbility;
+class UGameplayEffect;
+class UAttributeSet;
 class UMotionWarpingComponent;
 class UAO_TraversalComponent;
 class UCameraComponent;
@@ -19,6 +24,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
+class UAO_FoleyAudioBank;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -34,13 +40,15 @@ public:
 };
 
 UCLASS()
-class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInterface
+class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInterface, public IAO_FoleyAudioBankInterface
 {
 	GENERATED_BODY()
 
 public:
 	AAO_PlayerCharacter();
 
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -49,7 +57,10 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void Landed(const FHitResult& Hit) override;
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	virtual void OnJumped_Implementation() override;
+
+	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
+	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
 public:
 	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
@@ -58,6 +69,8 @@ public:
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
 	bool IsInspecting() const;
+
+	void StartSprint_GAS(bool bShouldSprint);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")
@@ -68,9 +81,6 @@ protected:
 	TObjectPtr<UVOIPTalker> VOIPTalker;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
@@ -78,9 +88,19 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
-	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	class UAO_InventoryComponent* InventoryComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TObjectPtr<UAO_PlayerCharacter_AttributeSet> AttributeSet;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TMap<int32, TSubclassOf<UGameplayAbility>> InputAbilities;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -96,10 +116,12 @@ protected:
 	TObjectPtr<UInputAction> IA_Crouch;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Walk;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputAction> IA_Select_inventory_Slot;
 		
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Foley")
+	TObjectPtr<UAO_FoleyAudioBank> DefaultFoleyAudioBank;
+
 public:
 	UPROPERTY(EditAnywhere, Category = "PlayerCharacter|Input")
 	FCharacterInputState CharacterInputState;
@@ -124,15 +146,18 @@ private:
 	// Input Actions
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void StartSprint();
-	void StopSprint();
 	void HandleCrouch();
 	void HandleWalk();
 	void StartJump();
 	void TriggerJump();
+	void HandleGameplayAbilityInputPressed(int32 InInputID);
+	void HandleGameplayAbilityInputReleased(int32 InInputID);
 
 	// Movement
 	void SetCurrentGait();
+
+	// Foley
+	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
 	
 // JM : VOIPTalker Register to PS

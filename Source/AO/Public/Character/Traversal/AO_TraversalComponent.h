@@ -25,6 +25,7 @@ protected:
 public:
 	bool TryTraversal();
 
+	UFUNCTION(BlueprintCallable, Category = "Traversal")
 	bool GetDoingTraversal() const { return bDoingTraversal; }
 
 protected:
@@ -57,6 +58,9 @@ private:
 	bool bDoingTraversal = false;
 
 private:
+	UFUNCTION()
+	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
+
 	bool GetTraversalCheckInputs();
 	bool RunCapsuleTrace(
 		const FVector& StartLocation,
@@ -68,7 +72,8 @@ private:
 		FColor DebugTraceColor);
 	void PerformTraversalAnimation();
 	void UpdateWarpTargets();
-	
-	UFUNCTION()
-	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
+	bool DetectTraversal(FTraversalCheckResult& InOutTraversalResult);
+	bool EvaluateTraversal(FTraversalCheckResult& InOutTraversalResult, TArray<UObject*>& EvaluateObjects);
+	bool SelectTraversal(FTraversalCheckResult& InOutTraversalResult, const TArray<UObject*>& EvaluateObjects);
+	void RequestTraversalNetworking(const FTraversalCheckResult& Result);
 };
