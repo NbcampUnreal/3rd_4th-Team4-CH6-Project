@@ -11,12 +11,9 @@
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
-#include "AO_Log.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Puzzle/Element/AO_InspectionPuzzle.h"
 
@@ -706,10 +703,6 @@ void UAO_InspectionComponent::UpdateHoverHighlight(UPrimitiveComponent* NewHover
     // 이전 하이라이트 해제
     if (CurrentHoveredComponent.IsValid() && CurrentHoveredComponent.Get() != NewHoveredComponent)
     {
-        // if (UMeshComponent* MeshComp = Cast<UMeshComponent>(CurrentHoveredComponent.Get()))
-        // {
-        //     MeshComp->SetRenderCustomDepth(false);
-        // }
     	CurrentHoveredComponent->SetRenderCustomDepth(false);
     }
 
@@ -718,10 +711,6 @@ void UAO_InspectionComponent::UpdateHoverHighlight(UPrimitiveComponent* NewHover
     
     if (CurrentHoveredComponent.IsValid())
     {
-    	UE_LOG(LogTemp, Warning, TEXT("Hover: %s, Class: %s"), 
-			*CurrentHoveredComponent->GetName(),
-			*CurrentHoveredComponent->GetClass()->GetName());
-    	
         if (UMeshComponent* MeshComp = Cast<UMeshComponent>(CurrentHoveredComponent.Get()))
         {
             MeshComp->SetRenderCustomDepth(true);

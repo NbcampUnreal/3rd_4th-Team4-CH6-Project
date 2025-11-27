@@ -47,10 +47,6 @@ void AAO_PuzzleReactionActor::BeginPlay()
                 EGameplayTagEventType::NewOrRemoved
             ).AddUObject(this, &AAO_PuzzleReactionActor::OnTriggerTagChanged);
         }
-        else
-        {
-            AO_LOG_NET(LogHSJ, Warning, TEXT("TriggerTag is invalid"));
-        }
     }
 }
 
