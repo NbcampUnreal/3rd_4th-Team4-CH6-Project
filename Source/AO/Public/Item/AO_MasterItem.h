@@ -29,17 +29,20 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_ItemID, meta=(ExposeOnSpawn="true"))
 	FName ItemID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", Replicated)
-	float FuelAmount = 0.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UFUNCTION()
+	void OnRep_ItemID();
+
+	void ApplyItemData(); 
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
 	
-	void ItemSawp(FName ItemID);
-	
+	UPROPERTY(Replicated)
+	float FuelAmount = 0.f;
+
 	UPROPERTY(Replicated)
 	FGameplayTagContainer ItemTags;
 
