@@ -16,6 +16,8 @@ AAO_MasterItem::AAO_MasterItem()
 	InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	PickupComponent = CreateDefaultSubobject<UAO_PickupComponent>(TEXT("PickupComp"));
 }
 
 void AAO_MasterItem::BeginPlay()
