@@ -97,20 +97,18 @@ void AAO_PuzzleReactionActor::SetProgress(float Progress)
 
 void AAO_PuzzleReactionActor::OnTriggerTagChanged(const FGameplayTag Tag, int32 NewCount)
 {
-    if (!HasAuthority()) return;
+	if (!HasAuthority()) return;
 
-    // HoldActive는 SetProgress()로 제어하므로 스킵
-    if (ReactionMode == EPuzzleReactionMode::HoldActive) return;
+	if (ReactionMode == EPuzzleReactionMode::HoldActive) return;
 
-    // Tag 추가 시 활성화, 제거 시 비활성화
-    if (NewCount > 0)
-    {
-        ActivateReaction();
-    }
-    else
-    {
-        DeactivateReaction();
-    }
+	if (NewCount > 0)
+	{
+		ActivateReaction();
+	}
+	else
+	{
+		DeactivateReaction();
+	}
 }
 
 void AAO_PuzzleReactionActor::ActivateReaction()
