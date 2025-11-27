@@ -63,18 +63,20 @@ FAO_InspectionCameraSettings AAO_OverwatchInspectionPuzzle::GetInspectionCameraS
 
 bool AAO_OverwatchInspectionPuzzle::IsValidClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const
 {
-    if (!HitActor)
-    {
-        return false;
-    }
+	if (!HitActor || !Component)
+	{
+		return false;
+	}
 
-    for (const FAO_ExternalMeshMapping& Mapping : ExternalMeshMappings)
-    {
-        if (Mapping.TargetActor == HitActor)
-        {
-            return true;
-        }
-    }
+	FName ComponentName = Component->GetFName();
+
+	for (const FAO_ExternalMeshMapping& Mapping : ExternalMeshMappings)
+	{
+		if (Mapping.TargetActor == HitActor && Mapping.ComponentName == ComponentName)
+		{
+			return true;
+		}
+	}
 
     return false;
 }

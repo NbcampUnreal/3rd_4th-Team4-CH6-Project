@@ -65,9 +65,12 @@ public:
 
     // 외부 클릭 대상 유효성 검사 (GA_Inspect_Click에서 사용)
     bool IsValidExternalClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const;
+	// 내부 컴포넌트 검사
+	bool IsInternalClickableComponent(UPrimitiveComponent* Component) const;
 
 protected:
     virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
     void OnExitPressed();
@@ -104,7 +107,24 @@ public:
     UPROPERTY(EditAnywhere, Category = "Inspection")
     float CameraBlendTime = 0.5f;
 
+	TWeakObjectPtr<UPrimitiveComponent> CachedHoverComponent;
+	TWeakObjectPtr<AActor> CachedHoverActor;
+
 private:
+	void StartHoverTrace();
+	void StopHoverTrace();
+	void PerformHoverTrace();
+	void UpdateHoverHighlight(UPrimitiveComponent* NewHoveredComponent);
+
+	FTimerHandle HoverTraceTimerHandle;
+	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;
+    
+	UPROPERTY(EditAnywhere, Category = "Inspection|Hover")
+	float HoverTraceRate = 0.1f;
+    
+	UPROPERTY(EditAnywhere, Category = "Inspection|Hover")
+	float HoverTraceRange = 10000.0f;
+	
     UPROPERTY(Replicated)
     TObjectPtr<AActor> CurrentInspectedActor;
 

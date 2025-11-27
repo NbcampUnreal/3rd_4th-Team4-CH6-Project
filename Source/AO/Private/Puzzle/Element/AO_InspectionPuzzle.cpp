@@ -25,6 +25,18 @@ void AAO_InspectionPuzzle::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AAO_InspectionPuzzle, bInteractionEnabled);
 }
 
+bool AAO_InspectionPuzzle::IsInternalComponentClickable(FName ComponentName) const
+{
+	for (const FAO_InspectionElementMapping& Mapping : ElementMappings)
+	{
+		if (Mapping.MeshComponentName == ComponentName)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void AAO_InspectionPuzzle::BeginPlay()
 {
     Super::BeginPlay();
