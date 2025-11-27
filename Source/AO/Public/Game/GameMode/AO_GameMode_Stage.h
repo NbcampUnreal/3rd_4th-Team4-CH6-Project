@@ -17,4 +17,6 @@ class AO_API AAO_GameMode_Stage : public AAO_GameMode_InGameBase
 public:
 	AAO_GameMode_Stage();
 
+	void HandleStageExitRequest(AController* Requester);
+
 };

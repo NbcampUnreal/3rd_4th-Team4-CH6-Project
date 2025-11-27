@@ -13,4 +13,8 @@ UCLASS()
 class AO_API AAO_PlayerController_Stage : public AAO_PlayerController_InGameBase
 {
 	GENERATED_BODY()
+
+public:
+	UFUNCTION(Server, Reliable)
+    void Server_RequestStageExit();
 };
