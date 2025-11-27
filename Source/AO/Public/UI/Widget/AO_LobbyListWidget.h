@@ -40,6 +40,7 @@ protected:
 	UPROPERTY(meta=(BindWidget)) UButton* Btn_Refresh = nullptr;
 	UPROPERTY(meta=(BindWidget)) UButton* Btn_Close   = nullptr;
 	UPROPERTY(meta=(BindWidget)) UScrollBox* Scroll_SessionList = nullptr;
+	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_InfoMessage = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_LobbyListEntryWidget> LobbyEntryClass;
@@ -81,6 +82,9 @@ private:
 	UPROPERTY() FString CurrentSearch = TEXT("");
 	UPROPERTY() int32 PageIndex = 0;
 	UPROPERTY() TArray<int32> FilteredIndices;
+
+	/* 이전 검색 개수 기억 (안내 메시지) */
+	int32 LastResultCount = -1;
 
 	void RebuildFilter();
 	void ClampAndUpdatePage();
