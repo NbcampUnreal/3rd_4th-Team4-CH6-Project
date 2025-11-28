@@ -62,6 +62,7 @@ void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 
 void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::HandleSeamlessTravelPlayer(C);
 
 	if(C == nullptr)
@@ -94,6 +95,8 @@ void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
 	AOPS->SetIsLobbyHost(bIsHost);
 
 	NotifyLobbyBoardChanged();
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::Logout(AController* Exiting)
@@ -102,13 +105,6 @@ void AAO_GameMode_Lobby::Logout(AController* Exiting)
 
 	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
 	NotifyLobbyBoardChanged();
-}
-
-void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	Super::HandleSeamlessTravelPlayer(C);
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
