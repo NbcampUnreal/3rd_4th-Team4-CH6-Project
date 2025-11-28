@@ -7,6 +7,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
+#include "Game/GameInstance/AO_GameInstance.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 
@@ -234,9 +235,31 @@ void AAO_GameMode_Lobby::NotifyLobbyBoardChanged()
 
 void AAO_GameMode_Lobby::TravelToStage()
 {
-	if (UWorld* World = GetWorld())
+	UWorld* World = GetWorld();
+	if(World == nullptr)
 	{
-		FString Path = "/Game/AVaOut/Maps/LV_Meadow?listen";
-		World->ServerTravel(Path);
+		return;
 	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Lobby: TravelToStage: GameInstance is not UAO_GameInstance"));
+		return;
+	}
+
+	// 새 판 시작 : 스테이지 인덱스 / 연료 초기화
+	AO_GI->ResetRun();
+
+	const FName StageMapName = AO_GI->GetCurrentStageMap();
+	if(StageMapName.IsNone())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Lobby: TravelToStage: StageMapName is None"));
+		return;
+	}
+
+	const FString Path = StageMapName.ToString() + TEXT("?listen");
+	AO_LOG(LogJSH, Log, TEXT("Lobby: TravelToStage → %s"), *Path);
+
+	World->ServerTravel(Path);
 }

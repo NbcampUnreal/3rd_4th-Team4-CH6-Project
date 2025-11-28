@@ -16,4 +16,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+public:
+	// 휴게공간에서 "다음으로 진행" 상호작용 시 호출
+	void HandleRestExitRequest(AController* Requester);
 };

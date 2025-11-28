@@ -18,28 +18,93 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		return;
 	}
 
-	UGameInstance* GI = GetGameInstance();
-	UAO_GameInstance* AO_GI = GI ? Cast<UAO_GameInstance>(GI) : nullptr;
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		return;
+	}
 
-	if(!AO_GI)
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
 	{
 		AO_LOG(LogJSH, Warning, TEXT("StageExit: GameInstance is not UAO_GameInstance"));
 		return;
 	}
 
 	const float Fuel = AO_GI->SharedTrainFuel;
+	constexpr float RequiredFuel = 20.0f;
 
-	if(Fuel < 20.0f)
+	if(Fuel < RequiredFuel)
 	{
-		AO_LOG(LogJSH, Warning, TEXT("StageExit: Not enough fuel (%.1f / 20.0)"), Fuel);
+		AO_LOG(LogJSH, Log, TEXT("StageExit: Not enough fuel. Fuel=%.1f, Required=%.1f"), Fuel, RequiredFuel);
 		return;
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
 
-	if(UWorld* World = GetWorld())
+	FName TargetMapName;
+
+	// 마지막 스테이지면 → 로비로 귀환 (엔딩 분기는 로비에서 처리)
+	if(AO_GI->IsLastStage())
 	{
-		const FString NextMap = TEXT("/Game/AVaOut/Maps/LV_RestRoom?listen");
-		World->ServerTravel(NextMap);
+		TargetMapName = AO_GI->GetLobbyMap();
+
+		// 다음 판은 다시 처음부터
+		AO_GI->ResetRun();
 	}
+	else
+	{
+		// 아니면 휴게공간으로 이동
+		TargetMapName = AO_GI->GetRestMap();
+	}
+
+	if(TargetMapName.IsNone())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageExit: TargetMapName is None"));
+		return;
+	}
+
+	const FString Path = TargetMapName.ToString() + TEXT("?listen");
+	World->ServerTravel(Path);
+}
+
+void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
+{
+	if(!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFail: GameInstance is not UAO_GameInstance"));
+		return;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
+		Requester ? *Requester->GetName() : TEXT("None"),
+		AO_GI->SharedTrainFuel,
+		AO_GI->CurrentStageIndex);
+
+	// 다음 판은 항상 처음부터
+	AO_GI->ResetRun();
+
+	const FName LobbyMapName = AO_GI->GetLobbyMap();
+	if(LobbyMapName.IsNone())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFail: LobbyMapName is None"));
+		return;
+	}
+
+	const FString Path = LobbyMapName.ToString() + TEXT("?listen");
+	AO_LOG(LogJSH, Log, TEXT("StageFail: Travel to %s"), *Path);
+
+	World->ServerTravel(Path);
 }
