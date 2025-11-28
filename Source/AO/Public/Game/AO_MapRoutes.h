@@ -8,7 +8,7 @@ namespace AO_MapRoutes
 	// 스테이지 맵 경로들 (필요에 따라 수정)
 	static constexpr const TCHAR* STAGE_MAPS[] =
 	{
-		TEXT("/Game/AVaOut/Train/TrainGASTest"),
+		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow"),
 		TEXT("/Game/AVaOut/Train/TrainGASTest"),
 		TEXT("/Game/AVaOut/Train/TrainGASTest"),
 	};
