@@ -7,6 +7,8 @@
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
 #include "Foley/AO_FoleyAudioBankInterface.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Item/PassiveContainer/AO_PassiveComponent.h"
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
@@ -89,7 +91,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
-	class UAO_InventoryComponent* InventoryComp;
+	TObjectPtr<UAO_InventoryComponent> InventoryComp;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
+	TObjectPtr<UAO_PassiveComponent> PassiveComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;

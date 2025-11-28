@@ -11,7 +11,7 @@ void UAO_Fuel_AttributeSet::OnRep_Fuel(const FGameplayAttributeData& OldFuel)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAO_Fuel_AttributeSet, Fuel, OldFuel);
 
-	UE_LOG(LogTemp, Warning, TEXT("🔥 Fuel changed: %.1f → %.1f"), OldFuel.GetCurrentValue(), Fuel.GetCurrentValue());
+	//UE_LOG(LogTemp, Warning, TEXT("🔥 Fuel changed: %.1f → %.1f"), OldFuel.GetCurrentValue(), Fuel.GetCurrentValue());
 }
 
 void UAO_Fuel_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

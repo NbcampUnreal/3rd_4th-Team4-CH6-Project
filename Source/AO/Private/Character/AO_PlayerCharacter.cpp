@@ -65,6 +65,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
+	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
 }
 
@@ -211,6 +212,11 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (InspectionComponent)
 	{
 		InspectionComponent->SetupInputBinding(PlayerInputComponent);
+	}
+	// ms : inventoryComp 바인딩
+	if (InventoryComp)
+	{
+		InventoryComp->SetupInputBinding(PlayerInputComponent);
 	}
 }
 

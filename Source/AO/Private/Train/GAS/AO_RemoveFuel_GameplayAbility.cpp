@@ -51,7 +51,7 @@ void UAO_RemoveFuel_GameplayAbility::ActivateAbility(
 
 	Train->OnFuelChangedDelegate.Broadcast(NewFuel);
 	
-	UE_LOG(LogTemp, Warning, TEXT("EnergyLeak Activated, GE applied"));
+	//UE_LOG(LogTemp, Warning, TEXT("EnergyLeak Activated, GE applied"));
 }
 
 void UAO_RemoveFuel_GameplayAbility::EndAbility(
