@@ -86,6 +86,11 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		return;
 	}
 
+	if (!bHandleToggleInOnInteractionSuccess)
+	{
+		return;
+	}
+
 	// ElementType에 따른 상태 변경
 	switch (ElementType)
 	{

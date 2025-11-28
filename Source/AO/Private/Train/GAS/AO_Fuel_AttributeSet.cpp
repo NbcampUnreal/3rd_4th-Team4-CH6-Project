@@ -3,7 +3,7 @@
 
 UAO_Fuel_AttributeSet::UAO_Fuel_AttributeSet()
 {
-	Fuel.SetBaseValue(0.f);
+	Fuel.SetBaseValue(50.f);
 	Fuel.SetCurrentValue(0.f);
 }
 

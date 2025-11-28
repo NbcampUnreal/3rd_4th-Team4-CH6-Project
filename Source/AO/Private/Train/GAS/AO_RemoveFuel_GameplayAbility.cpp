@@ -1,5 +1,7 @@
 #include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 #include "AbilitySystemComponent.h"
+#include "Train/GAS/AO_Fuel_AttributeSet.h"
+#include "Train/AO_Train.h"
 
 UAO_RemoveFuel_GameplayAbility::UAO_RemoveFuel_GameplayAbility()
 {
@@ -37,7 +39,18 @@ void UAO_RemoveFuel_GameplayAbility::ActivateAbility(
 		
 		ActiveGEHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
 	}
+	
+	//연료 감소시 ui broadcast
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC) return;
+	const UAO_Fuel_AttributeSet* FuelSet = ASC->GetSet<UAO_Fuel_AttributeSet>();
+	if (!FuelSet) return;
+	float NewFuel = FuelSet->GetFuel();
+	AAO_Train* Train = Cast<AAO_Train>(GetAvatarActorFromActorInfo());
+	if (!Train) return;
 
+	Train->OnFuelChangedDelegate.Broadcast(NewFuel);
+	
 	UE_LOG(LogTemp, Warning, TEXT("EnergyLeak Activated, GE applied"));
 }
 

@@ -71,11 +71,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	// 즉시 실행 (상호작용 Duration = 0 설정이면)
 	if (InteractionInfo.Duration <= 0.f)
 	{
-		if (ExecuteInteraction())
-		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-		}
-		else
+		if (!ExecuteInteraction())
 		{
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		}
@@ -90,6 +86,8 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 			CharacterMovement->StopMovementImmediately();
 		}
 	}
+
+	RotateToTarget();
 
 	// UI: 홀딩 프로그레스 표시
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
@@ -107,11 +105,11 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 		}
 	}
 	
-	// 애니메이션: 홀딩 시작
-	if (UAnimMontage* ActiveStartMontage = InteractionInfo.ActiveStartMontage)
+	// 애니메이션: 홀딩 자세
+	if (UAnimMontage* HoldMontage = InteractionInfo.ActiveHoldMontage)
 	{
 		if (UAbilityTask_PlayMontageAndWait* PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("InteractMontage"), ActiveStartMontage))
+			this, TEXT("HoldMontage"), HoldMontage))
 		{
 			PlayMontageTask->ReadyForActivation();
 		}
@@ -158,6 +156,10 @@ void UAO_GameplayAbility_Interact_Execute::EndAbility(const FGameplayAbilitySpec
 		{
 			World->GetTimerManager().ClearTimer(DurationTimerHandle);
 		}
+		if (MontageTimerHandle.IsValid())
+		{
+			World->GetTimerManager().ClearTimer(MontageTimerHandle);
+		}
 	}
 	
 	// 홀딩 종료 알림
@@ -199,19 +201,57 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 	{
 		return false;
 	}
-
-	// 애니메이션: 홀딩 종료
-	if (UAnimMontage* ActiveEndMontage = InteractionInfo.ActiveEndMontage)
+	
+	// 타겟 방향으로 회전
+	if (InteractionInfo.Duration <= 0.f)
 	{
-		if (UAbilityTask_PlayMontageAndWait* PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("InteractMontage"), ActiveEndMontage))
+		RotateToTarget();
+	}
+
+	bool bHasMontage = false;
+	float MontageLength = 0.f;
+
+	// 애니메이션: 상호작용 완료 액션
+	if (UAnimMontage* CompletionMontage = InteractionInfo.ActiveMontage)
+	{
+		// Interaction 컴포넌트에서 멀티캐스트, AnimInstance에 직접 재생
+		AActor* AvatarActor = GetAvatarActorFromActorInfo();
+		if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
 		{
-			PlayMontageTask->ReadyForActivation();
+			InteractionComp->MulticastPlayInteractionMontage(CompletionMontage);
+			
+			MontageLength = CompletionMontage->GetPlayLength() + 0.5f;
+			bHasMontage = true;
 		}
 	}
 
-	// Finalize 이벤트 발생, 상호작용 당하는 대상이 AbilityTriggers에서 Finalize 이벤트를 듣고 있음
-	// 그러면 Finalize 이벤트 이후 당하는 대상이 ActivateAbility 실행
+	// Finalize 이벤트 전송
+	bool bSuccess = SendFinalizeEvent();
+	
+	// 몽타주가 있으면 완료 후 종료, 없으면 바로 종료
+	if (bHasMontage)
+	{
+		// 몽타주 완료 후 어빌리티 종료
+		if (UWorld* World = GetWorld())
+		{
+			FTimerDelegate TimerDelegate;
+			TimerDelegate.BindWeakLambda(this, [this]()
+			{
+				EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+			});
+			World->GetTimerManager().SetTimer(MontageTimerHandle, TimerDelegate, MontageLength, false);
+		}
+	}
+	else if (bSuccess)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
+	
+	return bSuccess;
+}
+
+bool UAO_GameplayAbility_Interact_Execute::SendFinalizeEvent()
+{
 	FGameplayEventData Payload;
 	Payload.EventTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
 	Payload.Instigator = GetAvatarActorFromActorInfo();
@@ -230,8 +270,26 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 			);
 		}
 	}
-
 	return false;
+}
+
+void UAO_GameplayAbility_Interact_Execute::RotateToTarget()
+{
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!Character || !InteractableActor)
+	{
+		return;
+	}
+
+	// 타겟 방향 계산
+	FVector ToTarget = InteractableActor->GetActorLocation() - Character->GetActorLocation();
+	ToTarget.Z = 0.f;
+	
+	if (!ToTarget.IsNearlyZero())
+	{
+		FRotator TargetRotation = ToTarget.Rotation();
+		Character->SetActorRotation(TargetRotation);
+	}
 }
 
 void UAO_GameplayAbility_Interact_Execute::OnInvalidInteraction()
@@ -246,11 +304,7 @@ void UAO_GameplayAbility_Interact_Execute::OnInteractionInputReleased()
 
 void UAO_GameplayAbility_Interact_Execute::OnDurationEnded()
 {
-	if (ExecuteInteraction())
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	}
-	else
+	if (!ExecuteInteraction())
 	{
 		AO_LOG(LogHSJ, Error, TEXT("ExecuteInteraction failed"));
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);

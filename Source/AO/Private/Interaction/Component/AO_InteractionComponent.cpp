@@ -5,6 +5,7 @@
 #include "AO_Log.h"
 #include "EnhancedInputComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/Character.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
 #include "Interaction/UI/AO_InteractionWidget.h"
 #include "Interaction/UI/AO_InteractionWidgetController.h"
@@ -161,6 +162,25 @@ void UAO_InteractionComponent::OnInteractReleased()
 	bIsHoldingInteract = false;
 	OnInteractInputReleased.Broadcast();
 	ServerNotifyInteractReleased();
+}
+
+void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(UAnimMontage* MontageToPlay)
+{
+	if (!MontageToPlay)
+	{
+		return;
+	}
+
+	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	if (!Character)
+	{
+		return;
+	}
+
+	if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
+	}
 }
 
 UAbilitySystemComponent* UAO_InteractionComponent::GetOwnerAbilitySystemComponent() const

@@ -1,4 +1,4 @@
-// AO_EQC_Player.h
+// KSJ : AO_EQC_Player.h
 
 #pragma once
 
@@ -6,15 +6,16 @@
 #include "EnvironmentQuery/EnvQueryContext.h"
 #include "AO_EQC_Player.generated.h"
 
+/**
+ * EQS 컨텍스트: 월드 내의 모든 유효한 플레이어 캐릭터(Pawn) 반환
+ */
 UCLASS()
 class AO_API UAO_EQC_Player : public UEnvQueryContext
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, Category = "EQS")
-	FName PlayerActorBBKeyName = TEXT("PlayerActor");
+	UAO_EQC_Player();
 
-protected:
 	virtual void ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryContextData& ContextData) const override;
 };

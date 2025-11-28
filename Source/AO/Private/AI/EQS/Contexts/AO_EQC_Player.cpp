@@ -1,87 +1,41 @@
-#include "AO/Public/AI/EQS/Contexts/AO_EQC_Player.h"
-#include "AIController.h"
-#include "BehaviorTree/BlackboardComponent.h"
+// KSJ : AO_EQC_Player.cpp
+
+#include "AI/EQS/Contexts/AO_EQC_Player.h"
 #include "EnvironmentQuery/EnvQueryTypes.h"
 #include "EnvironmentQuery/Items/EnvQueryItemType_Actor.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
-#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 
-void UAO_EQC_Player::ProvideContext(FEnvQueryInstance& QueryInstance,
-                                    FEnvQueryContextData& ContextData) const
+UAO_EQC_Player::UAO_EQC_Player()
 {
-	const UObject* OwnerObj = QueryInstance.Owner.Get();
-	const AActor* OwnerActor = Cast<AActor>(OwnerObj);
+}
 
-	const AAIController* AICon = nullptr;
+void UAO_EQC_Player::ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryContextData& ContextData) const
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
 
-	if (const AAIController* AsAICon = Cast<AAIController>(OwnerActor))
-	{
-		AICon = AsAICon;
-	}
-	else if (const APawn* AsPawn = Cast<APawn>(OwnerActor))
-	{
-		AICon = Cast<AAIController>(AsPawn->GetController());
-	}
+	TArray<AActor*> ResultActors;
 
-	const UBlackboardComponent* BB = AICon ? AICon->GetBlackboardComponent() : nullptr;
-	const AActor* PlayerActor = nullptr;
-	
-	if (BB != nullptr && PlayerActorBBKeyName.IsNone() == false)
+	// 모든 플레이어 컨트롤러 순회 (멀티플레이어 대응)
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		if (const UObject* Obj = BB->GetValueAsObject(PlayerActorBBKeyName))
+		APlayerController* PC = It->Get();
+		if (PC)
 		{
-			PlayerActor = Cast<AActor>(Obj);
-		}
-	}
-	
-	if (PlayerActor == nullptr)
-	{
-		UWorld* World = GEngine
-			? GEngine->GetWorldFromContextObject(QueryInstance.Owner.Get(), EGetWorldErrorMode::ReturnNull)
-			: nullptr;
-
-		if (World != nullptr)
-		{
-			const AActor* QuerierActor = OwnerActor;
-			const FVector Origin = QuerierActor ? QuerierActor->GetActorLocation() : FVector::ZeroVector;
-
-			float BestDistSq = TNumericLimits<float>::Max();
-			APawn* BestPawn = nullptr;
-
-			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+			APawn* MyPawn = PC->GetPawn();
+			if (MyPawn)
 			{
-				const APlayerController* PC = It->Get();
-				if (PC == nullptr)
-				{
-					continue;
-				}
-
-				APawn* Pawn = PC->GetPawn();
-				if (Pawn == nullptr)
-				{
-					continue;
-				}
-
-				if (!Origin.IsNearlyZero())
-				{
-					const float DistSq = FVector::DistSquared(Origin, Pawn->GetActorLocation());
-					if (DistSq >= BestDistSq)
-					{
-						continue;
-					}
-
-					BestDistSq = DistSq;
-				}
-
-				BestPawn = Pawn;
+				// 살아있는지 확인 (필요하다면 Health 체크 추가 가능)
+				ResultActors.AddUnique(MyPawn);
 			}
-
-			PlayerActor = BestPawn;
 		}
 	}
-	
-	if (PlayerActor != nullptr)
+
+	// EQS에 결과 전달
+	if (ResultActors.Num() > 0)
 	{
-		UEnvQueryItemType_Actor::SetContextHelper(ContextData, PlayerActor);
+		UEnvQueryItemType_Actor::SetContextHelper(ContextData, ResultActors);
 	}
 }

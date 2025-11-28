@@ -61,255 +61,30 @@ bool UAO_TraversalComponent::TryTraversal()
 		AO_LOG(LogKH, Warning, TEXT("Traversal is already in progress"));
 		return false;
 	}
-	
-	if (!GetTraversalCheckInputs())
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get inputs for traversal check"));
-		return false;
-	}
 
-	FVector ActorLocation = GetOwner()->GetActorLocation();
-	UCapsuleComponent* CapsuleComponent = Cast<UCapsuleComponent>(GetOwner()->GetComponentByClass(UCapsuleComponent::StaticClass()));
-	if (!CapsuleComponent)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get CapsuleComponent"));
-		return false;
-	}
-	float CapsuleRadius = CapsuleComponent->GetScaledCapsuleRadius();
-	float CapsuleHalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
 	FTraversalCheckResult TraversalCheckResult;
-	
-	// Perform a trace in the actor's forward direction to find a traversable object
-	FHitResult HitResult;
-	FVector TraceStart = ActorLocation + TraversalInput.TraceOriginOffset;
-	FVector TraceEnd = TraceStart + TraversalInput.TraceForwardDirection * TraversalInput.TraceForwardDistance + TraversalInput.TraceEndOffset;
 
-	RunCapsuleTrace(
-		TraceStart,
-		TraceEnd,
-		TraversalInput.TraceRadius,
-		TraversalInput.TraceHalfHeight,
-		HitResult,
-		FColor::Black,
-		FColor::Green);
-
-	if (!HitResult.bBlockingHit)
+	// Detect Traversable Objects and acquire Information for Traversal 
+	if (!DetectTraversal(TraversalCheckResult))
 	{
-		if (DrawDebugLevel >= 1)
-		{
-			AO_LOG(LogKH, Display, TEXT("No blocking hit found"));
-		}
 		return false;
 	}
 
-	// Get the front and back ledge transforms from the traversable component
-	UAO_TraversableComponent* TraversableComponent = Cast<UAO_TraversableComponent>(
-		HitResult.GetActor()->GetComponentByClass(UAO_TraversableComponent::StaticClass()));
-	if (!TraversableComponent)
+	// Evaluate Traversal Conditions by Chooser Table
+	TArray<UObject*> EvaluateObjects;
+	if (!EvaluateTraversal(TraversalCheckResult, EvaluateObjects))
 	{
-		if (DrawDebugLevel >= 1)
-		{
-			AO_LOG(LogKH, Display, TEXT("No TraversableComponent found on hit actor"));
-		}
 		return false;
 	}
 
-	TraversalCheckResult.HitComponent = HitResult.GetComponent();
-	TraversableComponent->GetLedgeTransforms(HitResult.ImpactPoint, ActorLocation, TraversalCheckResult);
-
-	if (!TraversalCheckResult.bHasFrontLedge)
+	// Select the best Traversal Action by Motion Matching
+	if (!SelectTraversal(TraversalCheckResult, EvaluateObjects))
 	{
-		AO_LOG(LogKH, Display, TEXT("No front ledge found"));
 		return false;
 	}
 	
-	if (DrawDebugLevel >= 1)
-	{
-		if (TraversalCheckResult.bHasFrontLedge)
-		{
-			DrawDebugSphere(GetWorld(), TraversalCheckResult.FrontLedgeLocation, 10.f, 12,	FColor::Green, false, DrawDebugDuration, 0, 1.0f);
-		}
-
-		if (TraversalCheckResult.bHasBackLedge)
-		{
-			DrawDebugSphere(GetWorld(), TraversalCheckResult.BackLedgeLocation, 10.f, 12,	FColor::Cyan, false, DrawDebugDuration, 0, 1.0f);
-		}
-		else
-		{
-			AO_LOG(LogKH, Display, TEXT("No back ledge found"));
-		}
-	}
-	
-	// Perform a trace from the actors location up to the front ledge location to determine if there is room for the actor to move up to it
-	FVector RoomCheckFrontLedgeLocation = TraversalCheckResult.FrontLedgeLocation + TraversalCheckResult.FrontLedgeNormal * (CapsuleRadius + 2.0f);
-	RoomCheckFrontLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
-
-	FHitResult RoomCheckFrontHitResult;
-	RunCapsuleTrace(
-		ActorLocation,
-		RoomCheckFrontLedgeLocation,
-		CapsuleRadius,
-		CapsuleHalfHeight,
-		RoomCheckFrontHitResult,
-		FColor::Red,
-		FColor::Green);
-
-	if (RoomCheckFrontHitResult.bBlockingHit)
-	{
-		AO_LOG(LogKH, Display, TEXT("No room for actor to move up to front ledge"));
-		return false;
-	}
-
-	// Save the height of the obstacle
-	TraversalCheckResult.ObstacleHeight = abs((ActorLocation.Z - CapsuleHalfHeight) - TraversalCheckResult.FrontLedgeLocation.Z);
-	
-	// Perform a trace across the top of the obstacle from the front ledge to the back ledge to see if theres room for the actor to move across it.
-	FVector RoomCheckBackLedgeLocation = TraversalCheckResult.BackLedgeLocation + TraversalCheckResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
-	RoomCheckBackLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
-
-	FHitResult RoomCheckBackHitResult;
-	bool bRoomCheckBackHit = RunCapsuleTrace(
-		RoomCheckFrontLedgeLocation,
-		RoomCheckBackLedgeLocation,
-		CapsuleRadius,
-		CapsuleHalfHeight,
-		RoomCheckBackHitResult,
-		FColor::Red,
-		FColor::Green);
-
-	if (bRoomCheckBackHit)
-	{
-		TraversalCheckResult.ObstacleDepth = (RoomCheckBackHitResult.ImpactPoint - TraversalCheckResult.FrontLedgeLocation).Size2D();
-		TraversalCheckResult.bHasBackLedge = false;
-	}
-	else
-	{
-		TraversalCheckResult.ObstacleDepth = (TraversalCheckResult.FrontLedgeLocation - TraversalCheckResult.BackLedgeLocation).Size2D();
-
-		// Trace downward from the back ledge location to find the floor
-		FVector BackFloorTrace = TraversalCheckResult.BackLedgeLocation + TraversalCheckResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
-		BackFloorTrace.Z -= 50.f;
-		FHitResult BackFloorHitResult;
-		RunCapsuleTrace(
-			RoomCheckBackLedgeLocation,
-			BackFloorTrace,
-			CapsuleRadius,
-			CapsuleHalfHeight,
-			BackFloorHitResult,
-			FColor::Red,
-			FColor::Green);
-
-		if (BackFloorHitResult.bBlockingHit)
-		{
-			TraversalCheckResult.bHasBackFloor = true;
-			TraversalCheckResult.BackFloorLocation = BackFloorHitResult.ImpactPoint;
-			TraversalCheckResult.BackLedgeHeight = abs(BackFloorHitResult.ImpactPoint.Z - TraversalCheckResult.BackLedgeLocation.Z);
-		}
-		else
-		{
-			TraversalCheckResult.bHasBackFloor = false;
-		}
-	}
-	
-	// Evaluate a chooser to select all montages that match the conditions of the traversal check.
-	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(Owner);
-	if (!PlayerCharacter)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to cast Owner to AAO_PlayerCharacter"));
-		return false;
-	}
-
-	if (!AnimChooserTable)
-	{
-		AO_LOG(LogKH, Warning, TEXT("AnimChooserTable is null"));
-		return false;
-	}
-
-	const FInstancedStruct ResultInstances = UChooserFunctionLibrary::MakeEvaluateChooser(AnimChooserTable);
-	FChooserEvaluationContext EvaluationContext;
-
-	FInstancedStruct InputStruct;
-	InputStruct.InitializeAs<FTraversalChooserInput>();
-	FTraversalChooserInput& InputData = InputStruct.GetMutable<FTraversalChooserInput>();
-	FTraversalChooserInput ChooserInput = FTraversalChooserInput(
-		TraversalCheckResult.ActionType,
-		TraversalCheckResult.bHasFrontLedge,
-		TraversalCheckResult.bHasBackLedge,
-		TraversalCheckResult.bHasBackFloor,
-		TraversalCheckResult.ObstacleHeight,
-		TraversalCheckResult.ObstacleDepth,
-		TraversalCheckResult.BackLedgeHeight,
-		CharacterMovement->MovementMode,
-		PlayerCharacter->Gait,
-		CharacterMovement->Velocity.Size2D());
-	InputData = ChooserInput;
-	EvaluationContext.Params.Add(InputStruct);
-
-	FInstancedStruct OutputStruct;
-	OutputStruct.InitializeAs<FTraversalChooserOutput>();
-	FTraversalChooserOutput& OutputData = OutputStruct.GetMutable<FTraversalChooserOutput>();
-	EvaluationContext.Params.Add(OutputStruct);
-	
-	TArray<UObject*> EvaluateObjects = UChooserFunctionLibrary::EvaluateObjectChooserBaseMulti(
-		 EvaluationContext, ResultInstances, UAnimMontage::StaticClass());
-
-	TraversalCheckResult.ActionType = OutputData.ActionType;
-	if (TraversalCheckResult.ActionType == ETraversalActionType::None)
-	{
-		AO_LOG(LogKH, Display, TEXT("No valid traversal action found"));
-		return false;
-	}
-
-	// Debug Traversal Result
-	if (DrawDebugLevel >= 1)
-	{
-		AO_LOG(LogKH, Display, TEXT("Has Front Ledge: %s"), TraversalResult.bHasFrontLedge ? TEXT("true") : TEXT("false"));
-		AO_LOG(LogKH, Display, TEXT("Has Back Ledge: %s"), TraversalResult.bHasBackLedge ? TEXT("true") : TEXT("false"));
-		AO_LOG(LogKH, Display, TEXT("Has Back Floor: %s"), TraversalResult.bHasBackFloor ? TEXT("true") : TEXT("false"));
-		AO_LOG(LogKH, Display, TEXT("Obstacle Height: %f"), TraversalResult.ObstacleHeight);
-		AO_LOG(LogKH, Display, TEXT("Obstacle Depth: %f"), TraversalResult.ObstacleDepth);
-		AO_LOG(LogKH, Display, TEXT("Back Ledge Height: %f"), TraversalResult.BackLedgeHeight);
-	}
-
-	// Perform a Motion Match on all the montages that were chosen by the chooser to find the best result.
-	// This match will elect the best montage AND the best entry frame (start time) based on the distance to the ledge, and the current characters pose.
-	FPoseSearchContinuingProperties ContinuingProperties;
-	FPoseSearchFutureProperties FutureProperties;
-	FPoseSearchBlueprintResult MotionMatchResult;
-	UPoseSearchLibrary::MotionMatch(
-		Character->GetMesh()->GetAnimInstance(),
-		EvaluateObjects,
-		FName(TEXT("PoseHistory")),
-		ContinuingProperties,
-		FutureProperties,
-		MotionMatchResult);
-
-	UAnimMontage* SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
-	if (!SelectedAnim)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
-		return false;
-	}
-
-	if (DrawDebugLevel >= 1)
-	{
-		AO_LOG(LogKH, Display, TEXT("Selected Anim: %s"), *SelectedAnim->GetName());
-	}
-	
-	TraversalCheckResult.ChosenMontage = SelectedAnim;
-	TraversalCheckResult.StartTime = MotionMatchResult.SelectedTime;
-	TraversalCheckResult.PlayRate = MotionMatchResult.WantedPlayRate;
-
 	TraversalResult = TraversalCheckResult;
-	
-	if (Owner->HasAuthority())
-	{
-		MulticastRPC_PlayTraversal(TraversalResult);
-	}
-	else
-	{
-		ServerRPC_PlayTraversal(TraversalResult);
-	}
+	RequestTraversalNetworking(TraversalCheckResult);
 	
 	return true;
 }
@@ -324,6 +99,7 @@ void UAO_TraversalComponent::MulticastRPC_PlayTraversal_Implementation(const FTr
 void UAO_TraversalComponent::ServerRPC_PlayTraversal_Implementation(const FTraversalCheckResult InTraversalResult)
 {
 	TraversalResult = InTraversalResult;
+	
 	MulticastRPC_PlayTraversal(TraversalResult);
 }
 
@@ -530,6 +306,279 @@ void UAO_TraversalComponent::UpdateWarpTargets()
 	else
 	{
 		MotionWarping->RemoveWarpTarget(FName(TEXT("BackFloor")));
+	}
+}
+
+bool UAO_TraversalComponent::DetectTraversal(FTraversalCheckResult& InOutTraversalResult)
+{
+	if (!GetTraversalCheckInputs())
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to get inputs for traversal check"));
+		return false;
+	}
+
+	FVector ActorLocation = GetOwner()->GetActorLocation();
+	UCapsuleComponent* CapsuleComponent = Cast<UCapsuleComponent>(GetOwner()->GetComponentByClass(UCapsuleComponent::StaticClass()));
+	if (!CapsuleComponent)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to get CapsuleComponent"));
+		return false;
+	}
+	float CapsuleRadius = CapsuleComponent->GetScaledCapsuleRadius();
+	float CapsuleHalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
+	
+	// Perform a trace in the actor's forward direction to find a traversable object
+	FHitResult HitResult;
+	FVector TraceStart = ActorLocation + TraversalInput.TraceOriginOffset;
+	FVector TraceEnd = TraceStart + TraversalInput.TraceForwardDirection * TraversalInput.TraceForwardDistance + TraversalInput.TraceEndOffset;
+
+	RunCapsuleTrace(
+		TraceStart,
+		TraceEnd,
+		TraversalInput.TraceRadius,
+		TraversalInput.TraceHalfHeight,
+		HitResult,
+		FColor::Black,
+		FColor::Green);
+
+	if (!HitResult.bBlockingHit)
+	{
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No blocking hit found"));
+		}
+		return false;
+	}
+
+	// Get the front and back ledge transforms from the traversable component
+	UAO_TraversableComponent* TraversableComponent = Cast<UAO_TraversableComponent>(
+		HitResult.GetActor()->GetComponentByClass(UAO_TraversableComponent::StaticClass()));
+	if (!TraversableComponent)
+	{
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No TraversableComponent found on hit actor"));
+		}
+		return false;
+	}
+
+	InOutTraversalResult.HitComponent = HitResult.GetComponent();
+	TraversableComponent->GetLedgeTransforms(HitResult.ImpactPoint, ActorLocation, InOutTraversalResult);
+
+	if (!InOutTraversalResult.bHasFrontLedge)
+	{
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No front ledge found"));
+		}
+		return false;
+	}
+	
+	if (DrawDebugLevel >= 2)
+	{
+		if (InOutTraversalResult.bHasFrontLedge)
+		{
+			DrawDebugSphere(GetWorld(), InOutTraversalResult.FrontLedgeLocation, 10.f, 12,	FColor::Green, false, DrawDebugDuration, 0, 1.0f);
+		}
+
+		if (InOutTraversalResult.bHasBackLedge)
+		{
+			DrawDebugSphere(GetWorld(), InOutTraversalResult.BackLedgeLocation, 10.f, 12,	FColor::Cyan, false, DrawDebugDuration, 0, 1.0f);
+		}
+		else
+		{
+			AO_LOG(LogKH, Display, TEXT("No back ledge found"));
+		}
+	}
+	
+	// Perform a trace from the actors location up to the front ledge location to determine if there is room for the actor to move up to it
+	FVector RoomCheckFrontLedgeLocation = InOutTraversalResult.FrontLedgeLocation + InOutTraversalResult.FrontLedgeNormal * (CapsuleRadius + 2.0f);
+	RoomCheckFrontLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
+
+	FHitResult RoomCheckFrontHitResult;
+	RunCapsuleTrace(
+		ActorLocation,
+		RoomCheckFrontLedgeLocation,
+		CapsuleRadius,
+		CapsuleHalfHeight,
+		RoomCheckFrontHitResult,
+		FColor::Red,
+		FColor::Green);
+
+	if (RoomCheckFrontHitResult.bBlockingHit)
+	{
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No room for actor to move up to front ledge"));
+		}
+		return false;
+	}
+
+	// Save the height of the obstacle
+	InOutTraversalResult.ObstacleHeight = abs((ActorLocation.Z - CapsuleHalfHeight) - InOutTraversalResult.FrontLedgeLocation.Z);
+	
+	// Perform a trace across the top of the obstacle from the front ledge to the back ledge to see if theres room for the actor to move across it.
+	FVector RoomCheckBackLedgeLocation = InOutTraversalResult.BackLedgeLocation + InOutTraversalResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
+	RoomCheckBackLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
+
+	FHitResult RoomCheckBackHitResult;
+	bool bRoomCheckBackHit = RunCapsuleTrace(
+		RoomCheckFrontLedgeLocation,
+		RoomCheckBackLedgeLocation,
+		CapsuleRadius,
+		CapsuleHalfHeight,
+		RoomCheckBackHitResult,
+		FColor::Red,
+		FColor::Green);
+
+	if (bRoomCheckBackHit)
+	{
+		InOutTraversalResult.ObstacleDepth = (RoomCheckBackHitResult.ImpactPoint - InOutTraversalResult.FrontLedgeLocation).Size2D();
+		InOutTraversalResult.bHasBackLedge = false;
+	}
+	else
+	{
+		InOutTraversalResult.ObstacleDepth = (InOutTraversalResult.FrontLedgeLocation - InOutTraversalResult.BackLedgeLocation).Size2D();
+
+		// Trace downward from the back ledge location to find the floor
+		FVector BackFloorTrace = InOutTraversalResult.BackLedgeLocation + InOutTraversalResult.BackLedgeNormal * (CapsuleRadius + 2.0f);
+		BackFloorTrace.Z -= 50.f;
+		FHitResult BackFloorHitResult;
+		RunCapsuleTrace(
+			RoomCheckBackLedgeLocation,
+			BackFloorTrace,
+			CapsuleRadius,
+			CapsuleHalfHeight,
+			BackFloorHitResult,
+			FColor::Red,
+			FColor::Green);
+
+		if (BackFloorHitResult.bBlockingHit)
+		{
+			InOutTraversalResult.bHasBackFloor = true;
+			InOutTraversalResult.BackFloorLocation = BackFloorHitResult.ImpactPoint;
+			InOutTraversalResult.BackLedgeHeight = abs(BackFloorHitResult.ImpactPoint.Z - InOutTraversalResult.BackLedgeLocation.Z);
+		}
+		else
+		{
+			InOutTraversalResult.bHasBackFloor = false;
+		}
+	}
+
+	// Debug Traversal Result
+	if (DrawDebugLevel >= 1)
+	{
+		AO_LOG(LogKH, Display, TEXT("Has Front Ledge: %s"), InOutTraversalResult.bHasFrontLedge ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Has Back Ledge: %s"), InOutTraversalResult.bHasBackLedge ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Has Back Floor: %s"), InOutTraversalResult.bHasBackFloor ? TEXT("true") : TEXT("false"));
+		AO_LOG(LogKH, Display, TEXT("Obstacle Height: %f"), InOutTraversalResult.ObstacleHeight);
+		AO_LOG(LogKH, Display, TEXT("Obstacle Depth: %f"), InOutTraversalResult.ObstacleDepth);
+		AO_LOG(LogKH, Display, TEXT("Back Ledge Height: %f"), InOutTraversalResult.BackLedgeHeight);
+	}
+
+	return true;
+}
+
+bool UAO_TraversalComponent::EvaluateTraversal(FTraversalCheckResult& InOutTraversalResult, TArray<UObject*>& EvaluateObjects)
+{
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(Owner);
+	if (!PlayerCharacter)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to cast Owner to AAO_PlayerCharacter"));
+		return false;
+	}
+
+	if (!AnimChooserTable)
+	{
+		AO_LOG(LogKH, Warning, TEXT("AnimChooserTable is null"));
+		return false;
+	}
+	
+	// Evaluate a chooser to select all montages that match the conditions of the traversal check.
+	const FInstancedStruct ResultInstances = UChooserFunctionLibrary::MakeEvaluateChooser(AnimChooserTable);
+	FChooserEvaluationContext EvaluationContext;
+
+	FInstancedStruct InputStruct;
+	InputStruct.InitializeAs<FTraversalChooserInput>();
+	FTraversalChooserInput& InputData = InputStruct.GetMutable<FTraversalChooserInput>();
+	FTraversalChooserInput ChooserInput = FTraversalChooserInput(
+		InOutTraversalResult.ActionType,
+		InOutTraversalResult.bHasFrontLedge,
+		InOutTraversalResult.bHasBackLedge,
+		InOutTraversalResult.bHasBackFloor,
+		InOutTraversalResult.ObstacleHeight,
+		InOutTraversalResult.ObstacleDepth,
+		InOutTraversalResult.BackLedgeHeight,
+		CharacterMovement->MovementMode,
+		PlayerCharacter->Gait,
+		CharacterMovement->Velocity.Size2D());
+	InputData = ChooserInput;
+	EvaluationContext.Params.Add(InputStruct);
+
+	FInstancedStruct OutputStruct;
+	OutputStruct.InitializeAs<FTraversalChooserOutput>();
+	FTraversalChooserOutput& OutputData = OutputStruct.GetMutable<FTraversalChooserOutput>();
+	EvaluationContext.Params.Add(OutputStruct);
+	
+	EvaluateObjects = UChooserFunctionLibrary::EvaluateObjectChooserBaseMulti(
+		 EvaluationContext, ResultInstances, UAnimMontage::StaticClass());
+
+	InOutTraversalResult.ActionType = OutputData.ActionType;
+	if (InOutTraversalResult.ActionType == ETraversalActionType::None)
+	{
+		if (DrawDebugLevel >= 1)
+		{
+			AO_LOG(LogKH, Display, TEXT("No valid traversal action found"));
+		}
+		return false;
+	}
+	
+	return true;
+}
+
+bool UAO_TraversalComponent::SelectTraversal(FTraversalCheckResult& InOutTraversalResult, const TArray<UObject*>& EvaluateObjects)
+{
+	// Perform a Motion Match on all the montages that were chosen by the chooser to find the best result.
+	// This match will elect the best montage AND the best entry frame (start time) based on the distance to the ledge, and the current characters pose.
+	FPoseSearchContinuingProperties ContinuingProperties;
+	FPoseSearchFutureProperties FutureProperties;
+	FPoseSearchBlueprintResult MotionMatchResult;
+	UPoseSearchLibrary::MotionMatch(
+		Character->GetMesh()->GetAnimInstance(),
+		EvaluateObjects,
+		FName(TEXT("PoseHistory")),
+		ContinuingProperties,
+		FutureProperties,
+		MotionMatchResult);
+
+	UAnimMontage* SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
+	if (!SelectedAnim)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
+		return false;
+	}
+
+	if (DrawDebugLevel >= 1)
+	{
+		AO_LOG(LogKH, Display, TEXT("Selected Anim: %s"), *SelectedAnim->GetName());
+	}
+	
+	InOutTraversalResult.ChosenMontage = SelectedAnim;
+	InOutTraversalResult.StartTime = MotionMatchResult.SelectedTime;
+	InOutTraversalResult.PlayRate = MotionMatchResult.WantedPlayRate;
+
+	return true;
+}
+
+void UAO_TraversalComponent::RequestTraversalNetworking(const FTraversalCheckResult& Result)
+{
+	if (Owner->HasAuthority())
+	{
+		MulticastRPC_PlayTraversal(TraversalResult);
+	}
+	else
+	{
+		ServerRPC_PlayTraversal(TraversalResult);
 	}
 }
 
