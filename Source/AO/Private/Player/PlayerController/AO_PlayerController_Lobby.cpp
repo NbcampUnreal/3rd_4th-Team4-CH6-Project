@@ -10,11 +10,15 @@
 
 AAO_PlayerController_Lobby::AAO_PlayerController_Lobby()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_Lobby::BeginPlay()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::BeginPlay();
+	AO_LOG(LogJM, Log, TEXT("End"));
 
 	// 메인 메뉴에서 넘어올 때 UIOnly 상태를 확실하게 정리
 	FInputModeGameOnly Mode;
@@ -22,6 +26,13 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	bShowMouseCursor = false;
 
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
+}
+
+void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::EndPlay(EndPlayReason);
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
