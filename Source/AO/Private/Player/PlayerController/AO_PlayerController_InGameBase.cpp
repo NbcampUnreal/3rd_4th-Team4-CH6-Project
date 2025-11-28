@@ -9,6 +9,7 @@
 #include "Engine/GameInstance.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_InGameBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "Interfaces/VoiceInterface.h"
@@ -324,15 +325,29 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()
 {
 	HidePauseMenu();
 
-	if (UAO_OnlineSessionSubsystem* Sub = GetOnlineSessionSub())
+	if(UAO_OnlineSessionSubsystem* Sub = GetOnlineSessionSub())
 	{
+		// 세션을 떠나기 전에 GameInstance의 세션 데이터 초기화
+		if(UWorld* World = GetWorld())
+		{
+			if(UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+			{
+				AO_GI->ResetSessionData();
+			}
+		}
+
 		Sub->DestroyCurrentSession();
 		return;
 	}
 
 	// 서브시스템 없으면 안전하게 메인 메뉴로
-	if (UWorld* World = GetWorld())
+	if(UWorld* World = GetWorld())
 	{
+		if(UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+		{
+			AO_GI->ResetSessionData();
+		}
+
 		UGameplayStatics::OpenLevel(World, FName(TEXT("/Game/AVaOut/Maps/LV_MainMenu")), true);
 	}
 }

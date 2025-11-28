@@ -19,6 +19,7 @@ public:
 
 public:
 	void PostLogin(APlayerController* NewPlayer) override;
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	void Logout(AController* Exiting) override;
 
 public:

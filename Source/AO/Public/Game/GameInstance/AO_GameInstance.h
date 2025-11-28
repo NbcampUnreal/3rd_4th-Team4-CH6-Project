@@ -23,6 +23,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Route")
 	int32 CurrentStageIndex;
 
+	// 세션 동안 호스트로 유지될 플레이어의 UniqueNetId 문자열
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Lobby")
+	FString LobbyHostNetIdStr;
+
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
 	UFUNCTION(BlueprintCallable, Category="AO|Route")
@@ -47,4 +51,14 @@ public:
 	// 다음 스테이지로 인덱스를 증가 (성공 시 true, 더 이상 없으면 false)
 	UFUNCTION(BlueprintCallable, Category="AO|Route")
 	bool TryAdvanceStageIndex();
+
+	// ===== 세션 단위 데이터 리셋 (메인메뉴로 나갈 때 사용) =====
+	UFUNCTION(BlueprintCallable, Category="AO|Session")
+	void ResetSessionData();
+
+	// ===== 로비 호스트 관련 헬퍼 =====
+	void ClearLobbyHostInfo();
+	bool HasLobbyHost() const;
+	void SetLobbyHostFromPlayerState(const class APlayerState* PlayerState);
+	bool IsLobbyHostPlayerState(const class APlayerState* PlayerState) const;
 };

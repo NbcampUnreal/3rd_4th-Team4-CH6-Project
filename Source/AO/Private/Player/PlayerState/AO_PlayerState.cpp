@@ -11,6 +11,7 @@ AAO_PlayerState::AAO_PlayerState()
 {
 	bLobbyIsReady = false;
 	LobbyJoinOrder = -1;
+	bIsLobbyHost = false;
 }
 
 void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -19,6 +20,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME(AAO_PlayerState, bLobbyIsReady);
 	DOREPLIFETIME(AAO_PlayerState, LobbyJoinOrder);
+	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -69,15 +71,31 @@ int32 AAO_PlayerState::GetLobbyJoinOrder() const
 	return LobbyJoinOrder;
 }
 
+void AAO_PlayerState::SetIsLobbyHost(bool bNewIsHost)
+{
+	if(bIsLobbyHost == bNewIsHost)
+	{
+		return;
+	}
+
+	bIsLobbyHost = bNewIsHost;
+
+	OnRep_IsLobbyHost();
+}
+
 bool AAO_PlayerState::IsLobbyHost() const
 {
-	// 0번 순서를 호스트로 간주 (처음 입장한 사람)
-	return LobbyJoinOrder == 0;
+	return bIsLobbyHost;
 }
 
 void AAO_PlayerState::OnRep_LobbyJoinOrder()
 {
 	// 호스트 / 순서 변경 시에도 보드 갱신
+	RefreshLobbyReadyBoard();
+}
+
+void AAO_PlayerState::OnRep_IsLobbyHost()
+{
 	RefreshLobbyReadyBoard();
 }
 

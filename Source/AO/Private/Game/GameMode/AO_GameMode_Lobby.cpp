@@ -26,11 +26,70 @@ void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 	// 로비에 이미 있는 플레이어들의 JoinOrder 를 보고 NextLobbyJoinOrder 재계산
 	UpdateNextLobbyJoinOrderFromExistingPlayers();
 
-	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여
+	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여 + 호스트 여부 결정
 	if(NewPlayer != nullptr && NewPlayer->PlayerState != nullptr)
 	{
 		AssignJoinOrderIfNeeded(NewPlayer->PlayerState);
+
+		UWorld* World = GetWorld();
+		if(World != nullptr)
+		{
+			UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+			AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(NewPlayer->PlayerState);
+
+			if(AO_GI != nullptr && AOPS != nullptr)
+			{
+				// 1) 아직 호스트가 정해져 있지 않으면 → 이 사람을 호스트로 기록
+				if(AO_GI->HasLobbyHost() == false)
+				{
+					AO_GI->SetLobbyHostFromPlayerState(AOPS);
+					AOPS->SetIsLobbyHost(true);
+				}
+				else
+				{
+					// 2) 이미 GI에 호스트가 있으면 → UniqueNetId 비교로 호스트 여부 설정
+					const bool bIsHost = AO_GI->IsLobbyHostPlayerState(AOPS);
+					AOPS->SetIsLobbyHost(bIsHost);
+				}
+			}
+		}
 	}
+
+	NotifyLobbyBoardChanged();
+}
+
+void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
+{
+	Super::HandleSeamlessTravelPlayer(C);
+
+	if(C == nullptr)
+	{
+		return;
+	}
+
+	AAO_PlayerState* AOPS = C->GetPlayerState<AAO_PlayerState>();
+	if(AOPS == nullptr)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
+	{
+		return;
+	}
+
+	// 필요하다면 로비 복귀 시에도 JoinOrder 재부여
+	AssignJoinOrderIfNeeded(AOPS);
+
+	const bool bIsHost = AO_GI->IsLobbyHostPlayerState(AOPS);
+	AOPS->SetIsLobbyHost(bIsHost);
 
 	NotifyLobbyBoardChanged();
 }
