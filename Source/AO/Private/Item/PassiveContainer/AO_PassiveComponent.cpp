@@ -51,11 +51,16 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 	{
 		SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, Payload->EventMagnitude);
 
-		float ConfirmValue = SpecHandle.Data->GetSetByCallerMagnitude(PassiveAmountTag, false, -999);
+		/*
+		 float ConfirmValue = SpecHandle.Data->GetSetByCallerMagnitude(PassiveAmountTag, false, -999);
 		UE_LOG(LogTemp, Warning, TEXT("SetByCaller %s Final Value = %f"),
-			*PassiveAmountTag.ToString(), ConfirmValue);
+			*PassiveAmountTag.ToString(), ConfirmValue); 
+		*/
 
+		/*
 		UE_LOG(LogTemp, Warning, TEXT("Applying GE to -> %s"), *ASC->GetOwner()->GetName());
+		*/
+		
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 	}
 	else

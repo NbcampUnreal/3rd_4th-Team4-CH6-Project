@@ -2,8 +2,10 @@
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbilityTypes.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AAO_PassiveContainer::AAO_PassiveContainer()
 {
@@ -99,10 +101,28 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 	EventData.Instigator = Interactor;
 	EventData.EventMagnitude = AddPassive;
 	
+	/* 단일타켓
 	UAbilitySystemComponent* TargetASC = Interactor->FindComponentByClass<UAbilitySystemComponent>();
 	if (TargetASC)
 	{
 		TargetASC->HandleGameplayEvent(ActivationEventTag, &EventData);
 	}
+	*/
+
+	// 전체적용
+	TArray<AActor*> Players;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAO_PlayerCharacter::StaticClass(), Players);
+
+	for (AActor* Player : Players)
+	{
+		if (!Player) continue;
+
+		UAbilitySystemComponent* PlayerASC = Player->FindComponentByClass<UAbilitySystemComponent>();
+		if (PlayerASC)
+		{
+			PlayerASC->HandleGameplayEvent(ActivationEventTag, &EventData);
+		}
+	}
+	
 	Inventory->ClearSlot();	
 }

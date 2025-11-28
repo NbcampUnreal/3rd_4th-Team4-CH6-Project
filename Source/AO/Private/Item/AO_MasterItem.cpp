@@ -14,6 +14,10 @@ AAO_MasterItem::AAO_MasterItem()
 	if (MeshComponent)
 	{
 		MeshComponent->SetIsReplicated(true);
+		MeshComponent->SetSimulatePhysics(true);        
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+		MeshComponent->SetEnableGravity(true);
 	}
 
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
@@ -21,11 +25,6 @@ AAO_MasterItem::AAO_MasterItem()
 	InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-
-	MeshComponent->SetSimulatePhysics(true);        
-	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
-	MeshComponent->SetEnableGravity(true);
 }
 
 void AAO_MasterItem::BeginPlay()
@@ -40,8 +39,12 @@ void AAO_MasterItem::BeginPlay()
 
 void AAO_MasterItem::OnRep_ItemID()
 {
-	ApplyItemData();
+	if (MeshComponent)
+	{
+		ApplyItemData();
+	}
 }
+
 
 void AAO_MasterItem::ApplyItemData()
 {
@@ -68,9 +71,12 @@ void AAO_MasterItem::ApplyItemData()
 		{
 			if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
 			{
-				if (MeshComponent)
+				if (MeshComponent && Mesh)
 				{
-					MeshComponent->SetStaticMesh(Mesh);
+					if (MeshComponent->GetStaticMesh() != Mesh)
+					{
+						MeshComponent->SetStaticMesh(Mesh);
+					}
 				}
 			}
 		}
