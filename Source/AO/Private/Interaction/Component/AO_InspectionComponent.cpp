@@ -11,13 +11,11 @@
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
-#include "AO_Log.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
+#include "Puzzle/Element/AO_InspectionPuzzle.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -71,6 +69,20 @@ void UAO_InspectionComponent::ServerProcessInspectionClick_Implementation(AActor
 void UAO_InspectionComponent::BeginPlay()
 {
     Super::BeginPlay();
+}
+
+void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// 모든 타이머 클리어
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
+	}
+    
+	// 하이라이트 해제
+	UpdateHoverHighlight(nullptr);
 }
 
 void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
@@ -317,6 +329,9 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
     InputMode.SetHideCursorDuringCapture(false);
     PC->SetInputMode(InputMode);
+
+	// Hover trace 시작
+	StartHoverTrace();
 }
 
 // Inspection 나가기 처리 (카메라 복원, UI 설정)
@@ -326,6 +341,9 @@ void UAO_InspectionComponent::ClientExitInspection()
     {
         return;
     }
+
+	// Hover trace 중지 및 하이라이트 해제
+	StopHoverTrace();
 
     AActor* Owner = GetOwner();
     if (!Owner)
@@ -569,6 +587,151 @@ FVector UAO_InspectionComponent::ClampCameraPosition(const FVector& NewPosition)
         FMath::Clamp(NewPosition.Y, InitialCameraLocation.Y - Extent.Y, InitialCameraLocation.Y + Extent.Y),
         FMath::Clamp(NewPosition.Z, InitialCameraLocation.Z - Extent.Z, InitialCameraLocation.Z + Extent.Z)
     );
+}
+
+void UAO_InspectionComponent::StartHoverTrace()
+{
+    if (!GetWorld()) return;
+
+    TWeakObjectPtr<UAO_InspectionComponent> WeakThis(this);
+    
+    GetWorld()->GetTimerManager().SetTimer(
+        HoverTraceTimerHandle,
+        FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+        {
+            if (UAO_InspectionComponent* StrongThis = WeakThis.Get())
+            {
+                StrongThis->PerformHoverTrace();
+            }
+        }),
+        HoverTraceRate,
+        true
+    );
+}
+
+void UAO_InspectionComponent::StopHoverTrace()
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
+    }
+
+    // 마지막 하이라이트 해제
+    UpdateHoverHighlight(nullptr);
+}
+
+void UAO_InspectionComponent::PerformHoverTrace()
+{
+	if (!bIsInspecting || !CurrentInspectedActor) return;
+
+    AActor* Owner = GetOwner();
+    if (!Owner) return;
+
+    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+    if (!PC || !PC->IsLocalController()) return;
+
+    // 마우스 커서 위치에서 Trace
+    FVector2D MousePosition;
+    if (!PC->GetMousePosition(MousePosition.X, MousePosition.Y))
+    {
+        return;
+    }
+
+    FVector WorldLocation, WorldDirection;
+    if (!PC->DeprojectScreenPositionToWorld(MousePosition.X, MousePosition.Y, WorldLocation, WorldDirection))
+    {
+        return;
+    }
+
+    FVector TraceStart = WorldLocation;
+    FVector TraceEnd = WorldLocation + (WorldDirection * HoverTraceRange);
+
+    FHitResult HitResult;
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(Owner);
+
+    bool bHit = GetWorld()->LineTraceSingleByChannel(
+        HitResult,
+        TraceStart,
+        TraceEnd,
+        ECC_Visibility,
+        QueryParams
+    );
+
+    if (bHit && HitResult.GetComponent() && HitResult.GetActor())
+    {
+    	AActor* HitActor = HitResult.GetActor();
+    	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+        
+    	// 자기 자신(InspectionPuzzle)이면 내부 메시인지 확인
+    	if (HitActor == CurrentInspectedActor)
+    	{
+    		// 내부 메시인지 ElementMappings로 확인
+    		if (IsInternalClickableComponent(HitComponent))
+    		{
+    			UpdateHoverHighlight(HitComponent);
+    			CachedHoverComponent = HitComponent;
+    			CachedHoverActor = HitActor;
+    			return;
+    		}
+            
+    		// 내부 메시가 아니면 패널 배경이므로 제외
+    		UpdateHoverHighlight(nullptr);
+    		CachedHoverComponent = nullptr;
+    		CachedHoverActor = nullptr;
+    		return;
+    	}
+    	
+    	// 외부 메시 체크
+    	if (IsValidExternalClickTarget(HitActor, HitComponent))
+    	{
+    		UpdateHoverHighlight(HitComponent);
+    		CachedHoverComponent = HitComponent;
+    		CachedHoverActor = HitActor;
+    		return;
+    	}
+    }
+
+    // Hit 없거나 유효하지 않으면 하이라이트 해제
+    UpdateHoverHighlight(nullptr);
+	CachedHoverComponent = nullptr;
+	CachedHoverActor = nullptr;
+}
+
+void UAO_InspectionComponent::UpdateHoverHighlight(UPrimitiveComponent* NewHoveredComponent)
+{
+    // 이전 하이라이트 해제
+    if (CurrentHoveredComponent.IsValid() && CurrentHoveredComponent.Get() != NewHoveredComponent)
+    {
+    	CurrentHoveredComponent->SetRenderCustomDepth(false);
+    }
+
+    // 새 하이라이트 적용
+    CurrentHoveredComponent = NewHoveredComponent;
+    
+    if (CurrentHoveredComponent.IsValid())
+    {
+        if (UMeshComponent* MeshComp = Cast<UMeshComponent>(CurrentHoveredComponent.Get()))
+        {
+            MeshComp->SetRenderCustomDepth(true);
+            MeshComp->SetCustomDepthStencilValue(250);
+        }
+    }
+}
+
+bool UAO_InspectionComponent::IsInternalClickableComponent(UPrimitiveComponent* Component) const
+{
+	if (!Component || !CurrentInspectedActor) 
+	{
+		return false;
+	}
+
+	if (AAO_InspectionPuzzle* InspectionPuzzle = Cast<AAO_InspectionPuzzle>(CurrentInspectedActor))
+	{
+		return InspectionPuzzle->IsInternalComponentClickable(Component->GetFName());
+	}
+
+	return false;
 }
 
 bool UAO_InspectionComponent::IsValidExternalClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const

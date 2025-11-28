@@ -20,5 +20,5 @@ protected:
 	float InteractionScanRange = 500.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="AO|Interaction")
-	float InteractionScanRate = 0.1f;
+	float InteractionScanRate = 0.2f;
 };

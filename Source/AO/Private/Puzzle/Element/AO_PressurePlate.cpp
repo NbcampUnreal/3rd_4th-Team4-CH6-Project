@@ -21,12 +21,22 @@ void AAO_PressurePlate::BeginPlay()
 {
     Super::BeginPlay();
 
+	if (MeshComponent)
+	{
+		InitialMeshLocation = MeshComponent->GetRelativeLocation();
+	}
+
     if (OverlapTrigger)
     {
-        OverlapTrigger->SetBoxExtent(TriggerExtent);
         OverlapTrigger->OnComponentBeginOverlap.AddDynamic(this, &AAO_PressurePlate::OnOverlapBegin);
         OverlapTrigger->OnComponentEndOverlap.AddDynamic(this, &AAO_PressurePlate::OnOverlapEnd);
     }
+}
+
+void AAO_PressurePlate::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	Super::EndPlay(EndPlayReason);
 }
 
 bool AAO_PressurePlate::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
@@ -37,8 +47,14 @@ bool AAO_PressurePlate::CanInteraction(const FAO_InteractionQuery& InteractionQu
 
 void AAO_PressurePlate::ResetToInitialState()
 {
-    Super::ResetToInitialState();
-    OverlappingActors.Empty();
+	Super::ResetToInitialState();
+    
+	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+    
+	if (MeshComponent)
+	{
+		MeshComponent->SetRelativeLocation(InitialMeshLocation);
+	}
 }
 
 void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
@@ -60,6 +76,10 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
         bIsActivated = true;
         BroadcastPuzzleEvent(true);
         OnRep_IsActivated();
+
+    	// 눌리는 애니메이션
+    	TargetMeshLocation = InitialMeshLocation - FVector(0, 0, PressDepth);
+    	StartPlateAnimation();
     }
 }
 
@@ -76,5 +96,57 @@ void AAO_PressurePlate::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, A
         bIsActivated = false;
         BroadcastPuzzleEvent(false);
         OnRep_IsActivated();
+
+    	// 원위치 애니메이션
+    	TargetMeshLocation = InitialMeshLocation;
+    	StartPlateAnimation();
     }
+}
+
+void AAO_PressurePlate::StartPlateAnimation()
+{
+	if (!MeshComponent) return;
+    
+	TWeakObjectPtr<AAO_PressurePlate> WeakThis(this);
+    
+	GetWorldTimerManager().SetTimer(
+		PlateAnimationTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (AAO_PressurePlate* StrongThis = WeakThis.Get())
+			{
+				StrongThis->UpdatePlateAnimation();
+			}
+		}),
+		0.016f,
+		true
+	);
+}
+
+void AAO_PressurePlate::UpdatePlateAnimation()
+{
+	if (!MeshComponent) return;
+    
+	FVector CurrentLocation = MeshComponent->GetRelativeLocation();
+	FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetMeshLocation, 0.016f, AnimationSpeed);
+    
+	MeshComponent->SetRelativeLocation(NewLocation);
+    
+	if (FVector::Dist(NewLocation, TargetMeshLocation) < 0.1f)
+	{
+		MeshComponent->SetRelativeLocation(TargetMeshLocation);
+		GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	}
+}
+
+void AAO_PressurePlate::OnRep_IsActivated()
+{
+	Super::OnRep_IsActivated();
+    
+	// 클라이언트에서도 애니메이션 재생
+	if (!HasAuthority() && MeshComponent)
+	{
+		TargetMeshLocation = bIsActivated ? (InitialMeshLocation - FVector(0, 0, PressDepth)) : InitialMeshLocation;
+		StartPlateAnimation();
+	}
 }

@@ -23,9 +23,11 @@ public:
 
 	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void ResetToInitialState() override;
+	virtual void OnRep_IsActivated() override;
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UFUNCTION()
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
@@ -35,13 +37,24 @@ protected:
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+	void StartPlateAnimation();
+	void UpdatePlateAnimation();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UBoxComponent> OverlapTrigger;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate")
-	FVector TriggerExtent = FVector(50.f, 50.f, 20.f);
 
 	// Overlap 중인 액터들 추적
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> OverlappingActors;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate|Animation", meta=(ClampMin="1.0"))
+	float PressDepth = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate|Animation", meta=(ClampMin="0.1"))
+	float AnimationSpeed = 5.0f;
+
+private:
+	FVector InitialMeshLocation;
+	FVector TargetMeshLocation;
+	FTimerHandle PlateAnimationTimerHandle;
 };

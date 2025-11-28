@@ -19,10 +19,9 @@ protected:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 
-	// 상호작용 실행
 	bool ExecuteInteraction();
+	bool SendFinalizeEvent();
 
-	// Task 콜백
 	UFUNCTION()
 	void OnInvalidInteraction();
 
@@ -33,10 +32,14 @@ protected:
 	void OnInteractionInputReleased();
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Interaction")
-	float AcceptanceAngle = 65.f;
+	float AcceptanceAngle = 120.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Interaction")
-	float AcceptanceDistance = 10.f;
+	float AcceptanceDistance = 100.f;
 
+private:
+	void RotateToTarget();
+	
 	FTimerHandle DurationTimerHandle;
+	FTimerHandle MontageTimerHandle;
 };

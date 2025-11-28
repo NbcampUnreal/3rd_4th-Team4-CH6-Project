@@ -75,6 +75,9 @@ public:
 	virtual void SetInteractionEnabled(bool bEnabled) override;
 	virtual bool IsInteractionEnabled() const override { return bInteractionEnabled; }
 
+	// 내부 클릭 가능한 컴포넌트인지 확인
+	UFUNCTION(BlueprintPure, Category="Inspection")
+	bool IsInternalComponentClickable(FName ComponentName) const;
 
 protected:
     virtual void BeginPlay() override;
