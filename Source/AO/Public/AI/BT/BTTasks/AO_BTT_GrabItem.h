@@ -1,27 +1,23 @@
-// AO_BTT_GrabItem.h
+// KSJ : AO_BTT_GrabItem.h
+
+#pragma once
 
 #include "CoreMinimal.h"
-#include "BehaviorTree/BTTaskNode.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
+#include "BehaviorTree/Tasks/BTTask_BlackboardBase.h"
 #include "AO_BTT_GrabItem.generated.h"
 
-class AAO_TestPickupItem;
-
+/**
+ * Crab 전용 Task: 블랙보드에 지정된 아이템을 줍는다.
+ */
 UCLASS()
-class AO_API UAO_BTT_GrabItem : public UBTTaskNode
+class AO_API UAO_BTT_GrabItem : public UBTTask_BlackboardBase
 {
 	GENERATED_BODY()
 
 public:
 	UAO_BTT_GrabItem();
-
-protected:
-	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& Comp, uint8* NodeMemory) override;
-
-public:
-	UPROPERTY(EditAnywhere, Category = "BlackBoard")
-	struct FBlackboardKeySelector TargetItemKey;
-
-	UPROPERTY(EditAnywhere, Category = "BlackBoard")
-	struct FBlackboardKeySelector HasItemKey;
+	
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
+	virtual uint16 GetInstanceMemorySize() const override;
 };
