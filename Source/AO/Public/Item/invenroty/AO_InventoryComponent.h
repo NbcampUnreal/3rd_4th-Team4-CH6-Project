@@ -34,6 +34,8 @@ class AO_API UAO_InventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
+
+	
 public:
 	UAO_InventoryComponent();
 	
@@ -63,18 +65,16 @@ public:
 	void ServerSetSelectedSlot(int32 NewIndex);
 	void ServerSetSelectedSlot_Implementation(int32 NewIndex);
 		
+	
+	void SelectInventorySlot(const FInputActionValue& Value);
 	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
-	void UseItem();
-	void DropItem();
+	void UseInventoryItem();
+	void DropInventoryItem();
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }
 
 	void ClearSlot();
-	
-	void SelectInventorySlot(const FInputActionValue& Value);
-	void UseInvenrotyItem();
-	void DropInvenrotyItem();
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

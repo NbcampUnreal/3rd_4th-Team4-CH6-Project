@@ -14,6 +14,10 @@ AAO_MasterItem::AAO_MasterItem()
 	if (MeshComponent)
 	{
 		MeshComponent->SetIsReplicated(true);
+		MeshComponent->SetSimulatePhysics(true);        
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+		MeshComponent->SetEnableGravity(true);
 	}
 
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
@@ -43,19 +47,23 @@ void AAO_MasterItem::BeginPlay()
 
 void AAO_MasterItem::OnRep_ItemID()
 {
-	ApplyItemData();
+	if (MeshComponent)
+	{
+		ApplyItemData();
+	}
 }
+
 
 void AAO_MasterItem::ApplyItemData()
 {
 	if (!ItemDataTable)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
 		return;
 	}
 	if (ItemID.IsNone())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
 		return;
 	}
 
@@ -71,9 +79,12 @@ void AAO_MasterItem::ApplyItemData()
 		{
 			if (UStaticMesh* Mesh = Row->WorldMesh.LoadSynchronous())
 			{
-				if (MeshComponent)
+				if (MeshComponent && Mesh)
 				{
-					MeshComponent->SetStaticMesh(Mesh);
+					if (MeshComponent->GetStaticMesh() != Mesh)
+					{
+						MeshComponent->SetStaticMesh(Mesh);
+					}
 				}
 			}
 		}
@@ -126,6 +137,14 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 	float ServerFuelAmount = FuelAmount;
 	ItemToAdd.FuelAmount = ServerFuelAmount;
 
+	if (ItemDataTable)
+	{
+		static const FString Context(TEXT("Item Lookup"));
+		if (const FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, Context))
+		{
+			ItemToAdd.ItemType = Row->ItemType;
+		}
+	}
 	//UE_LOG(LogTemp, Warning, TEXT("DEBUG: Adding item to inventory. FuelAmount = %f"), ServerFuelAmount);
 	Inventory->PickupItem(ItemToAdd, this);
 
