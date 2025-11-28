@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameMode.h"
+#include "AO_GameMode_InGameBase.h"
 #include "AO_GameMode_Lobby.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class AO_API AAO_GameMode_Lobby : public AGameMode
+class AO_API AAO_GameMode_Lobby : public AAO_GameMode_InGameBase
 {
 	GENERATED_BODY()
 
@@ -18,8 +18,13 @@ public:
 	AAO_GameMode_Lobby();
 
 public:
+	// TODO: virtual 키워드 붙여도 될까요? (주만 → 상현)
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
+
+	// JM : 생명주기 테스트용
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	/* PC가 레디/레디해제 했을 때 호출 (서버) */
@@ -28,7 +33,7 @@ public:
 	/* PC가 시작을 요청했을 때 호출 (서버) */
 	void RequestStartFrom(AController* Controller);
 
-	/* 상태 변경 감지 */
+	/* 상태 변경 감지 → 레디 보드에 반영 */
 	void NotifyLobbyBoardChanged();
 
 protected:
@@ -36,7 +41,7 @@ protected:
 	UPROPERTY()
 	TSet<TObjectPtr<AController>> ReadyPlayers;
 
-	/* 현재 호스트 컨트롤러(PlayerArray[0] 기준) */
+	/* 현재 호스트 컨트롤러(입장 순서 0번 기준) */
 	AController* GetHostController() const;
 
 	/* 호스트를 제외한 모두가 레디인지 확인 */
@@ -44,4 +49,16 @@ protected:
 
 	/* 실제 스테이지로 이동 처리 */
 	void TravelToStage();
+
+	/* ========== 로비 입장 순서 관리 ========== */
+
+protected:
+	// 다음에 입장하는 플레이어에게 부여할 순번
+	int32 NextLobbyJoinOrder;
+
+	// 현재 PlayerState 들을 보고 NextLobbyJoinOrder 재계산
+	void UpdateNextLobbyJoinOrderFromExistingPlayers();
+
+	// 아직 순번을 못 받은 PlayerState 에 순번 부여
+	void AssignJoinOrderIfNeeded(APlayerState* PlayerState);
 };

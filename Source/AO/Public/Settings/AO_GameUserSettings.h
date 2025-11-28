@@ -32,23 +32,20 @@ public:
 	
 public:
 	/* 오디오 볼륨, 마우스 감도 등은 UGameUserSettings에서 기본적으로 제공하지 않기 때문에 확장함 */
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Audio")
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float MasterVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Audio")
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float MusicVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Audio")
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float SFXVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Gameplay")
-	float MouseSensitivity = 1.0f;
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
+	float UIVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Gameplay")
-	bool bInvertYAxis = false;
-
-	UPROPERTY(Config, BlueprintReadWrite, Category = "Settings|Gameplay")
-	FString GameLanguage = TEXT("ko");	// 기본언어 : 한국어
-
-	
+	// TODO: 추가 옵셜 설정하기
+	// 마우스 민감도 (float)
+	// 마우스 y축 반전 (bool)
+	// 언어(text)
 };

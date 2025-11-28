@@ -9,11 +9,15 @@
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
-#include "GameFramework/PlayerState.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 
@@ -38,6 +42,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	// JM : VOIP Talker
+	VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
+	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh();
 	
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
@@ -46,18 +54,18 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
-	// 승조: AbilitySystemComponent 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+	AttributeSet = CreateDefaultSubobject<UAO_PlayerCharacter_AttributeSet>(TEXT("AttributeSet"));
 
-	// 승조: InteractionComponent 생성
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
 	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
+	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
 }
 
@@ -66,19 +74,86 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
+{
+	if (!DefaultFoleyAudioBank)
+	{
+		AO_LOG(LogKH, Error, TEXT("DefaultFoleyAudioBank is null"));
+		return nullptr;
+	}
+	return DefaultFoleyAudioBank;
+}
+
+bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
+{
+	if (GetCharacterMovement()->IsMovingOnGround() || TraversalComponent->GetDoingTraversal())
+	{
+		return true;
+	}
+	return false;
+}
+
 bool AAO_PlayerCharacter::IsInspecting() const
 {
 	return InspectionComponent && InspectionComponent->IsInspecting();
+}
+
+void AAO_PlayerCharacter::StartSprint_GAS(bool bShouldSprint)
+{
+	if (bShouldSprint)
+	{
+		CharacterInputState.bWantsToSprint = true;
+		CharacterInputState.bWantsToWalk = false;
+	}
+	else
+	{
+		CharacterInputState.bWantsToSprint = false;
+	}
+
+	SetCurrentGait();
+
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
 }
 
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 승조 : ASC 초기화
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+		if (HasAuthority())
+		{
+			for (const auto& DefaultAbility : DefaultAbilities)
+			{
+				FGameplayAbilitySpec AbilitySpec(DefaultAbility);
+				AbilitySystemComponent->GiveAbility(AbilitySpec);
+			}
+
+			for (const auto& InputAbility : InputAbilities)
+			{
+				FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
+				AbilitySpec.InputID = InputAbility.Key;
+				AbilitySystemComponent->GiveAbility(AbilitySpec);
+			}
+
+			for (const auto& DefaultEffect : DefaultEffects)
+			{
+				FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+				Context.AddInstigator(this, this);
+
+				FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
+
+				if (Handle.IsValid())
+				{
+					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
+				}
+			}
+		}
 	}
 
 	if (IsLocallyControlled())
@@ -90,6 +165,22 @@ void AAO_PlayerCharacter::BeginPlay()
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
 		}
+	}
+
+	// JM : VOIPTalker PS 에 연결될 때까지 연결 시도
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			VOIPRegisterToPSTimerHandle,
+			this,
+			&ThisClass::TryRegisterVoiceTalker,
+			0.2f,
+			true
+		);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No World"));
 	}
 }
 
@@ -103,14 +194,14 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::Look);
 		EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartJump);
 		EIC->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::TriggerJump);
-		EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AAO_PlayerCharacter::StartSprint);
-		EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::StopSprint);
 		EIC->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleCrouch);
 		EIC->BindAction(IA_Walk, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleWalk);
-		
-		//ms_inventory key binding
-		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &AAO_PlayerCharacter::SelectInventorySlot);
-		
+
+		if (IsValid(AbilitySystemComponent))
+		{
+			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
+			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
+		}			
 	}
 	
 	// 승조 : InteractionComponent에서 Interaction 따로 바인딩
@@ -121,6 +212,11 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (InspectionComponent)
 	{
 		InspectionComponent->SetupInputBinding(PlayerInputComponent);
+	}
+	// ms : inventoryComp 바인딩
+	if (InventoryComp)
+	{
+		InventoryComp->SetupInputBinding(PlayerInputComponent);
 	}
 }
 
@@ -149,6 +245,11 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
+	PlayAudioEvent(
+		FGameplayTag::RequestGameplayTag(FName("Foley.Event.Land")),
+		UKismetMathLibrary::MapRangeClamped(GetCharacterMovement()->Velocity.Z, -500.f, -900.f, 0.5f, 1.5f),
+		1.f);
+		
 	if (HasAuthority())
 	{
 		LandVelocity = GetCharacterMovement()->Velocity;
@@ -160,6 +261,16 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 			bJustLanded = false;
 		}, 0.3f, false);
 	}
+}
+
+void AAO_PlayerCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+
+	PlayAudioEvent(
+		FGameplayTag::RequestGameplayTag(FName("Foley.Event.Jump")),
+		UKismetMathLibrary::MapRangeClamped(GetCharacterMovement()->Velocity.Size2D(), 0.f, 500.f, 0.5f, 1.0f),
+		1.f);
 }
 
 void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
@@ -199,30 +310,6 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 	{
 		AddControllerYawInput(InputValue.X);
 		AddControllerPitchInput(InputValue.Y);
-	}
-}
-
-void AAO_PlayerCharacter::StartSprint()
-{
-	CharacterInputState.bWantsToSprint = true;
-	CharacterInputState.bWantsToWalk = false;
-	SetCurrentGait();
-
-	if (!HasAuthority())
-	{
-		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
-	}
-}
-
-void AAO_PlayerCharacter::StopSprint()
-{
-	CharacterInputState.bWantsToSprint = false;
-	CharacterInputState.bWantsToWalk = false;
-	SetCurrentGait();
-	
-	if (!HasAuthority())
-	{
-		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
 	}
 }
 
@@ -266,6 +353,36 @@ void AAO_PlayerCharacter::TriggerJump()
 	}
 }
 
+void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
+{
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
+	if (Spec)
+	{
+		Spec->InputPressed = true;
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
+		}
+		else
+		{
+			AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+		}
+	}
+}
+
+void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
+{
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
+	if (Spec)
+	{
+		Spec->InputPressed = false;
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
+		}
+	}
+}
+
 void AAO_PlayerCharacter::HandleCrouch()
 {
 	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
@@ -302,6 +419,24 @@ void AAO_PlayerCharacter::SetCurrentGait()
 	OnRep_Gait();
 }
 
+void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier, float PitchMultiplier)
+{
+	TObjectPtr<UAO_FoleyAudioBank> FoleyAudioBank = Execute_GetFoleyAudioBank(this);
+	if (!FoleyAudioBank)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to get FoleyAudioBank"));
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		FoleyAudioBank->GetSoundFromFoleyEvent(Value),
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		VolumeMultiplier,
+		PitchMultiplier);
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -326,16 +461,46 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	}
 }
 
-//ms_inventory key binding
-void AAO_PlayerCharacter::SelectInventorySlot(const FInputActionValue& Value)
+void AAO_PlayerCharacter::TryRegisterVoiceTalker()
 {
-	UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
-	
-	float SlotIndexAsFloat = Value.Get<float>();
-	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
-
-	if (InventoryComp)
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (APlayerState* PS = GetPlayerState())
 	{
-		InventoryComp->ServerSetSelectedSlot(SlotIndex);
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(VOIPRegisterToPSTimerHandle);
+			RegisterVoiceTalker();
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));	
+		}
 	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No PS Yet"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerCharacter::RegisterVoiceTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (VOIPTalker)
+	{
+		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(GetPlayerState()))
+		{
+			VOIPTalker->RegisterWithPlayerState(AO_PS);
+			AO_LOG(LogJM, Log, TEXT("RegisterWithPlayerState Called"));
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));			
+		}
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
 }

@@ -20,6 +20,14 @@ struct FResolutionInfo
 	FString DisplayName = TEXT(""); // 표시할 이름 (1920 x 1080 (FHD))
 };
 
+UENUM(BlueprintType)
+enum class EAudioType : uint8
+{
+	Master		UMETA(DisplayName = "Master Volume"),
+	Music		UMETA(DisplayName = "Music Volume"),
+	SFX			UMETA(DisplayName = "SFX Volume"),
+	UI			UMETA(DisplayName = "UI Volume"),
+};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsApplied);
 
@@ -37,93 +45,90 @@ public:
 	virtual void Deinitialize() override;
 
 public:
-	UFUNCTION(BlueprintPure, Category = "Game Settings")	
+	UFUNCTION(BlueprintPure, Category = "AO|GameSettings")	
 	UAO_GameUserSettings* GetGameUserSettings() const;		// StalePointer를 방지하기 위해 캐싱하는 것보다 매번 Get 하는게 낫다(성능차이 없음) 
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Apply")
+	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void ApplyAndSaveAllSettings();
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Apply")
+	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void ApplyResolutionSettings();		// 무거움 (화면 새로고침)
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Apply")
+	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void ApplyNonResolutionSettings();		// 가벼움
 
-	/*UFUNCTION(BlueprintCallable, Category = "Game Settings")
-	void RevertAndApplyDefaultSettings();*/
-
 	// 기본값으로 초기화
-	UFUNCTION(BlueprintCallable, Category = "Game Settings")
+	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void SetToDefaults();
 
 
 	
 	// Scalability (0 ~ 4, low ~ cine)
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetOverallScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetAntiAliasingScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetViewDistanceScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetShadowScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetGlobalIlluminationScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetReflectionScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetTextureScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetVisualEffectScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetPostProcessingScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetFoliageScalability(EScalabilityLevel NewLevel);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetShadingScalability(EScalabilityLevel NewLevel);
 
 	// VSync
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Graphics")
+	UFUNCTION(BlueprintCallable, Category = "AO|Graphics")
 	void SetVSyncEnabled(bool bEnable);
 
 	// Screen Mode
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
 	void SetFullscreenMode(EWindowMode::Type InFullscreenMode);
 
 	// Screen Resolution
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
 	void SetScreenResolutionByIndex(int32 ResolutionIndex);
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
 	TArray<FResolutionInfo> GetSupportedScreenResolutionInfos() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
 	int32 GetCurrentResolutionIndex() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
+	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
 	FIntPoint GetAppliedScreenResolution() const;
 
 	
 	
 	// 커스텀 추가기능
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Audio")
-	void SetMasterVolume(float NewVolume);
-
-	UFUNCTION(BlueprintCallable, Category = "Game Settings|Gameplay")
-	void SetMouseSensitivity(float NewSensitivity);
+	UFUNCTION(BlueprintPure, Category = "AO|Audio")
+	float GetAudioVolume(EAudioType AudioType) const;
 	
+	UFUNCTION(BlueprintCallable, Category = "AO|Audio")
+	void SetAudioVolume(EAudioType AudioType, float NewVolume);
+
 public:
-	UPROPERTY(BlueprintAssignable, Category = "Game Settings|Events")
+	UPROPERTY(BlueprintAssignable, Category = "AO|Events")
 	FOnSettingsApplied OnSettingsApplied;		// 설정이 성공적으로 적용되고 저장되었을 때 호출되는 델리게이트
 
 private:

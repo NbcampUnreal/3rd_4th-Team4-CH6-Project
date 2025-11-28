@@ -7,28 +7,106 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	PlayerControllerClass = AAO_PlayerController_Lobby::StaticClass();
 	bUseSeamlessTravel = true;
+
+	NextLobbyJoinOrder = 0;
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-	
+
+	// 로비에 이미 있는 플레이어들의 JoinOrder 를 보고 NextLobbyJoinOrder 재계산
+	UpdateNextLobbyJoinOrderFromExistingPlayers();
+
+	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여
+	if(NewPlayer != nullptr && NewPlayer->PlayerState != nullptr)
+	{
+		AssignJoinOrderIfNeeded(NewPlayer->PlayerState);
+	}
+
 	NotifyLobbyBoardChanged();
 }
 
 void AAO_GameMode_Lobby::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
-	
+
+	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
 	NotifyLobbyBoardChanged();
 }
 
+void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::HandleSeamlessTravelPlayer(C);
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::EndPlay(EndPlayReason);
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+/* ========== 로비 입장 순서 관리 ========== */
+
+void AAO_GameMode_Lobby::UpdateNextLobbyJoinOrderFromExistingPlayers()
+{
+	if (GameState == nullptr)
+	{
+		return;
+	}
+
+	int32 MaxOrder = -1;
+
+	for (APlayerState* PS : GameState->PlayerArray)
+	{
+		if (AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS))
+		{
+			const int32 Order = AOPS->GetLobbyJoinOrder();
+			if (Order >= 0 && Order > MaxOrder)
+			{
+				MaxOrder = Order;
+			}
+		}
+	}
+
+	NextLobbyJoinOrder = MaxOrder + 1;
+}
+
+void AAO_GameMode_Lobby::AssignJoinOrderIfNeeded(APlayerState* PlayerState)
+{
+	AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PlayerState);
+	if (AOPS == nullptr)
+	{
+		return;
+	}
+
+	// 이미 순서를 가진 플레이어면(예: 스테이지 갔다가 로비로 돌아온 경우) 건너뜀
+	if (AOPS->GetLobbyJoinOrder() >= 0)
+	{
+		return;
+	}
+
+	AOPS->SetLobbyJoinOrder(NextLobbyJoinOrder);
+	++NextLobbyJoinOrder;
+
+	AO_LOG(LogJSH, Log, TEXT("Lobby: Assign JoinOrder=%d to %s"),
+		AOPS->GetLobbyJoinOrder(),
+		*PlayerState->GetPlayerName());
+}
+
+/* ========== 레디 상태/호스트/시작 처리 ========== */
 void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
 {
 	if (!Controller)
@@ -55,10 +133,20 @@ void AAO_GameMode_Lobby::SetPlayerReady(AController* Controller, bool bReady)
 
 AController* AAO_GameMode_Lobby::GetHostController() const
 {
-	// PlayerArray[0] 를 호스트로 간주
-	if (GameState && GameState->PlayerArray.Num() > 0 && GameState->PlayerArray[0])
+	if (!GameState)
 	{
-		return GameState->PlayerArray[0]->GetOwner<AController>();
+		return nullptr;
+	}
+
+	for (APlayerState* PS : GameState->PlayerArray)
+	{
+		if (AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(PS))
+		{
+			if (AOPS->IsLobbyHost())
+			{
+				return PS->GetOwner<AController>();
+			}
+		}
 	}
 
 	return nullptr;
@@ -131,6 +219,10 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 		AO_LOG(LogJSH, Warning, TEXT("Lobby: Not everyone is ready, cannot start"));
 		return;
 	}
+
+	// JM : 레벨 이동 전에 보이스 채팅 비활성화 (Crash 발생 방지) - 이게 UX 안좋을것 같은데... 달리 방법이...
+	// 근데 자꾸 크래쉬 발생해서 넣긴 했음...
+	StopVoiceChatForAllClients();
 
 	AO_LOG(LogJSH, Log, TEXT("Lobby: All players ready, starting stage"));
 	TravelToStage();

@@ -5,12 +5,14 @@
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/OnlineSessionNames.h"
 #include "Misc/SecureHash.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "AO/AO_Log.h"
+#include "Interfaces/VoiceInterface.h"	// JM : VoiceInterface
 
 namespace
 {
@@ -75,6 +77,17 @@ void UAO_OnlineSessionSubsystem::Deinitialize()
 		GEngine->OnNetworkFailure().Remove(NetFailHandle);
 		NetFailHandle.Reset();
 	}
+
+	// JM : 종료시 보이스 세션 정리 로직
+	if (IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface())
+	{
+		VoiceInterface->Shutdown();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cant Get Voice Interface"));
+	}
+	
 	
 	Super::Deinitialize();
 }
@@ -96,6 +109,19 @@ IOnlineSessionPtr UAO_OnlineSessionSubsystem::GetSessionInterface() const
 	return nullptr;
 }
 
+IOnlineVoicePtr UAO_OnlineSessionSubsystem::GetOnlineVoiceInterface() const
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		AO_LOG(LogJM, Log, TEXT("return OSS::Voice Interface"));
+		return OSS->GetVoiceInterface();
+	}
+	AO_LOG(LogJM, Warning, TEXT("OSS is Null: return nullptr"));
+	return nullptr;
+}
+
+// JM NOTE : 이렇게 Depth 가 깊어지는 경우 Early Return 방식을 쓰면 코드가 조금 더 깔끔해집니다
 bool UAO_OnlineSessionSubsystem::IsLocalHost() const
 {
 	if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
@@ -149,6 +175,9 @@ void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
 {
 	AO_LOG(LogJSH, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
 		static_cast<int32>(FailureType), *ErrorString);
+
+	// 연결 끊어지면 보이스 채팅 중지
+	StopVoiceChat();
 
 	// 세션 정리: 이후 조인/호스트 재시도 꼬임 방지
 	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
@@ -561,6 +590,26 @@ void UAO_OnlineSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoi
 	bOpInProgress = false;
 }
 
+void UAO_OnlineSessionSubsystem::ShowInviteUI()
+{
+	const IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: OSS null"));
+		return;
+	}
+
+	IOnlineExternalUIPtr ExternalUI = OSS->GetExternalUIInterface();
+	if (!ExternalUI.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: ExternalUI invalid"));
+		return;
+	}
+	
+	const int32 LocalUserNum = 0;
+	ExternalUI->ShowInviteUI(LocalUserNum, NAME_GameSession);
+}
+
 /* ==================== Destroy (호스트/클라 분리) ==================== */
 void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 {
@@ -586,6 +635,9 @@ void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 		}
 		return;
 	}
+
+	// JM : 세션 이탈시 보이스 채팅 나가기
+	StopVoiceChat();
 
 	const bool bIsHost = IsLocalHost();
 
@@ -882,4 +934,70 @@ void UAO_OnlineSessionSubsystem::FindSessionsAuto(int32 MaxResults)
 		static_cast<int32>(bLAN),
 		MaxResults);
 	FindSessions(MaxResults, bLAN);
+}
+
+/* ==================== Voice Chat (JM) ================ */
+void UAO_OnlineSessionSubsystem::StartVoiceChat()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
+		return;
+	}
+	// VoiceInterface->Init();		// TODO: 이번에 실험적으로 추가해봄
+	VoiceInterface->RegisterLocalTalker(0);
+	VoiceInterface->StartNetworkedVoice(0);
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::StopVoiceChat()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
+		return;
+	}
+
+	VoiceInterface->ClearVoicePackets();			// 권장사항(추가됨)
+	VoiceInterface->StopNetworkedVoice(0);
+	VoiceInterface->RemoveAllRemoteTalkers();	// 이거 추가하니까 크래시 안남
+	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
+	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
+
+	/* Unregister를 0.2초 뒤에 해서 정리될 시간을 줌 (필요시 추가) */
+	/* TWeakObjectPtr<UAO_OnlineSessionSubsystem> WeakThis(this);
+	if (UWorld* World = GetWorld())
+	{
+		FTimerHandle DelayHandle;
+		World->GetTimerManager().SetTimer(
+			DelayHandle,
+			[WeakThis]()
+			{
+				if (!WeakThis.IsValid())
+				{
+					return;
+				}
+				if (WeakThis->GetOnlineVoiceInterface().IsValid())
+				{
+					WeakThis.Pin()->GetOnlineVoiceInterface()->UnregisterLocalTalker(0);
+					AO_LOG(LogJM, Log, TEXT("Do Unregister Local Talker"));
+				}
+			},
+			0.2f,
+			false
+		);
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("No World, but try to unregister local talker"));
+		VoiceInterface->UnregisterLocalTalker(0);
+	}
+	*/
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
 }

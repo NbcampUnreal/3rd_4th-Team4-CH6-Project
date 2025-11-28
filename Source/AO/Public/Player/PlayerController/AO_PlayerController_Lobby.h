@@ -19,24 +19,19 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void SetupInputComponent() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	// JM : 생명주기 테스트용
 
-protected:
-	/** 클라이언트 측에서 자기 레디 상태를 기억하는 용도(디버그용) */
-	UPROPERTY()
-	bool bIsReady;
+public:
+	/* 스팀 초대 오버레이 UI 열기 */
+	UFUNCTION(Client, Reliable)
+	void Client_OpenInviteOverlay();
 
-	/** 2키 입력 처리 (클라이언트) */
-	void OnPressed_ReadyKey();
-
-	/** 3키 입력 처리 (클라이언트) */
-	void OnPressed_StartKey();
-
-	/** 레디 상태를 서버에 전달 */
+	/* 레디 상태를 서버에 전달 */
 	UFUNCTION(Server, Reliable)
-	void ServerSetReady(bool bNewReady);
+	void Server_SetReady(bool bNewReady);
 
-	/** 시작 요청을 서버에 전달 */
+	/* 시작 요청을 서버에 전달 */
 	UFUNCTION(Server, Reliable)
-	void ServerRequestStart();
+	void Server_RequestStart();
+
 };

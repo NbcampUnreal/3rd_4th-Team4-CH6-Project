@@ -5,14 +5,20 @@
 #include "Game/GameMode/AO_GameMode_Lobby.h"
 #include "AO/AO_Log.h"
 #include "Player/PlayerState/AO_PlayerState.h"
+#include "Engine/GameInstance.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_PlayerController_Lobby::AAO_PlayerController_Lobby()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_Lobby::BeginPlay()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::BeginPlay();
+	AO_LOG(LogJM, Log, TEXT("End"));
 
 	// 메인 메뉴에서 넘어올 때 UIOnly 상태를 확실하게 정리
 	FInputModeGameOnly Mode;
@@ -22,42 +28,29 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 }
 
-void AAO_PlayerController_Lobby::SetupInputComponent()
+void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::SetupInputComponent();
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::EndPlay(EndPlayReason);
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
 
-	if (InputComponent)
+void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
+{
+	if(const UGameInstance* GI = GetGameInstance())
 	{
-		// 2키: 레디 토글
-		InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::OnPressed_ReadyKey);
-
-		// 3키: 호스트 시작 요청
-		InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::OnPressed_StartKey);
+		if(UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
+		{
+			Sub->ShowInviteUI();
+			return;
+		}
 	}
+
+	AO_LOG(LogJSH, Warning, TEXT("Client_OpenInviteOverlay: OnlineSessionSubsystem not found"));
 }
 
-void AAO_PlayerController_Lobby::OnPressed_ReadyKey()
+void AAO_PlayerController_Lobby::Server_SetReady_Implementation(bool bNewReady)
 {
-	bIsReady = !bIsReady;
-
-	AO_LOG(LogJSH, Log, TEXT("LobbyPC: Ready key pressed (%s), NewReady=%d"),
-		*GetName(),
-		static_cast<int32>(bIsReady));
-
-	ServerSetReady(bIsReady);
-}
-
-void AAO_PlayerController_Lobby::OnPressed_StartKey()
-{
-	AO_LOG(LogJSH, Log, TEXT("LobbyPC: Start key pressed (%s)"), *GetName());
-
-	ServerRequestStart();
-}
-
-void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
-{
-	bIsReady = bNewReady;
-
 	if(AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
 	{
 		PS->SetLobbyReady(bNewReady);
@@ -72,7 +65,7 @@ void AAO_PlayerController_Lobby::ServerSetReady_Implementation(bool bNewReady)
 	}
 }
 
-void AAO_PlayerController_Lobby::ServerRequestStart_Implementation()
+void AAO_PlayerController_Lobby::Server_RequestStart_Implementation()
 {
 	if (UWorld* World = GetWorld())
 	{
