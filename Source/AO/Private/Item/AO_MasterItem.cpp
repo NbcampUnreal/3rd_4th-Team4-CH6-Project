@@ -131,8 +131,3 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 
 	Destroy();
 }
-
-void AAO_MasterItem::ItemSawp(FName NewItemID)
-{
-	//
-}
