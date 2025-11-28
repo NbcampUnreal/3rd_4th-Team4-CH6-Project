@@ -24,25 +24,25 @@ void UAO_PassiveComponent::BeginPlay()
 
 void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Payload)
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnGameplayEventReceived() Triggered"));
+	//UE_LOG(LogTemp, Warning, TEXT("OnGameplayEventReceived() Triggered"));
 
 	if (!Payload || !PassiveEffectClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Payload NULL or PassiveEffectClass NOT set"));
+		//UE_LOG(LogTemp, Warning, TEXT("Payload NULL or PassiveEffectClass NOT set"));
 		return;
 	}
 
 	UAbilitySystemComponent* ASC = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
 	if (!ASC)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ASC NOT Found on Owner"));
+		//UE_LOG(LogTemp, Warning, TEXT("ASC NOT Found on Owner"));
 		return;
 	}
 
 	static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.PassiveAmount"));
 
-	UE_LOG(LogTemp, Warning, TEXT("Passive Event Received: EventMagnitude = %f"), Payload->EventMagnitude);
-	UE_LOG(LogTemp, Warning, TEXT("Using GE Class: %s"), *PassiveEffectClass->GetName());
+	//UE_LOG(LogTemp, Warning, TEXT("Passive Event Received: EventMagnitude = %f"), Payload->EventMagnitude);
+	//UE_LOG(LogTemp, Warning, TEXT("Using GE Class: %s"), *PassiveEffectClass->GetName());
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PassiveEffectClass, 1.f, Context);
@@ -65,6 +65,6 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SpecHandle INVALID!"));
+		//UE_LOG(LogTemp, Warning, TEXT("SpecHandle INVALID!"));
 	}
 }

@@ -58,12 +58,12 @@ void AAO_MasterItem::ApplyItemData()
 {
 	if (!ItemDataTable)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
 		return;
 	}
 	if (ItemID.IsNone())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
 		return;
 	}
 

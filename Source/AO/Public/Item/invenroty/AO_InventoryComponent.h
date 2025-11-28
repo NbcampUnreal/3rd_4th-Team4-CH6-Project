@@ -34,6 +34,8 @@ class AO_API UAO_InventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
+
+	
 public:
 	UAO_InventoryComponent();
 	
