@@ -34,6 +34,10 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyInteractReleased();
+
+	// 상호작용 몽타주 재생 멀티캐스트
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayInteractionMontage(UAnimMontage* MontageToPlay);
 	
 	UFUNCTION(BlueprintPure, Category="Interaction")
 	UAO_InteractionWidgetController* GetInteractionWidgetController() const 

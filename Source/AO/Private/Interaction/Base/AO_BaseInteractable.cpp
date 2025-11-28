@@ -25,6 +25,8 @@ FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_Interacti
 	Info.Content = InteractionContent;
 	Info.Duration = InteractionDuration;
 	Info.AbilityToGrant = UGA_Interact_Base::StaticClass();
+	Info.ActiveHoldMontage  = ActiveHoldMontage;
+	Info.ActiveMontage  = ActiveMontage;
 	return Info;
 }
 

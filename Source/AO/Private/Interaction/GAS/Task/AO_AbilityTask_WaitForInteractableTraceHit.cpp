@@ -320,9 +320,17 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::HighlightInteractables(
 	}
 
 	// CustomDepth 설정으로 하이라이트 on/off
-	// (포스트프로세스에서 CustomDepth=1인 오브젝트를 외곽선 표시)
+	// (포스트프로세스에서 CustomDepth=250인 오브젝트를 외곽선 표시)
 	for (UMeshComponent* MeshComponent : MeshComponents)
 	{
-		MeshComponent->SetRenderCustomDepth(bShouldHighlight);
+		if (bShouldHighlight)
+		{
+			MeshComponent->SetRenderCustomDepth(true);
+			MeshComponent->SetCustomDepthStencilValue(250);
+		}
+		else
+		{
+			MeshComponent->SetRenderCustomDepth(false);
+		}
 	}
 }

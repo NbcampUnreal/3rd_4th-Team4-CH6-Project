@@ -112,4 +112,7 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentHolder;	// 현재 홀딩 중인 액터
+
+	UPROPERTY(EditAnywhere, Category="Puzzle")
+	bool bHandleToggleInOnInteractionSuccess = true;
 };

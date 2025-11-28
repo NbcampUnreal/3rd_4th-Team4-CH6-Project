@@ -48,4 +48,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
+	TObjectPtr<UAnimMontage> ActiveHoldMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
+	TObjectPtr<UAnimMontage> ActiveMontage;
 };
