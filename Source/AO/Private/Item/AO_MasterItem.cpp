@@ -18,9 +18,12 @@ AAO_MasterItem::AAO_MasterItem()
 
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
 	InteractionSphere->SetupAttachment(MeshComponent);
+	InteractionSphere->SetSphereRadius(50.f);
 	InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	PickupComponent = CreateDefaultSubobject<UAO_PickupComponent>(TEXT("PickupComp"));
 
 	MeshComponent->SetSimulatePhysics(true);        
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

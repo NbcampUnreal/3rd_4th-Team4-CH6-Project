@@ -9,6 +9,7 @@
 #include "CoreMinimal.h"
 #include "Interaction/Base/AO_BaseInteractable.h"
 #include "Components/SphereComponent.h"
+#include "AI/Item/AO_PickupComponent.h"
 #include "AO_MasterItem.generated.h"
 
 UCLASS()
@@ -46,8 +47,13 @@ public:
 	FGameplayTagContainer ItemTags;
 
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(Server, Reliable)
 	void Server_HandleInteraction(AActor* Interactor);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAO_PickupComponent* PickupComponent;
+
 };

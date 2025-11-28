@@ -1,55 +1,41 @@
-// AO_EQC_LastSeenLocation.cpp
+// KSJ : AO_EQC_LastSeenLocation.cpp
 
 #include "AI/EQS/Contexts/AO_EQC_LastSeenLocation.h"
-#include "AIController.h"
-#include "BehaviorTree/BlackboardComponent.h"
 #include "EnvironmentQuery/EnvQueryTypes.h"
 #include "EnvironmentQuery/Items/EnvQueryItemType_Point.h"
-#include "GameFramework/Pawn.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "AIController.h"
+#include "AO_Log.h"
 
-void UAO_EQC_LastSeenLocation::ProvideContext(FEnvQueryInstance& QueryInstance,
-											  FEnvQueryContextData& ContextData) const
+UAO_EQC_LastSeenLocation::UAO_EQC_LastSeenLocation()
 {
-	const UObject* OwnerObj = QueryInstance.Owner.Get();
-	const AActor* OwnerActor = Cast<AActor>(OwnerObj);
+}
 
-	const AAIController* AICon = nullptr;
+void UAO_EQC_LastSeenLocation::ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryContextData& ContextData) const
+{
+	AActor* QueryOwner = Cast<AActor>(QueryInstance.Owner.Get());
+	if (!QueryOwner) return;
 
-	if(const AAIController* AsAICon = Cast<AAIController>(OwnerActor))
+	// 쿼리 주체(Querier)가 AIController인지 Pawn인지 확인
+	AAIController* AICon = Cast<AAIController>(QueryOwner);
+	if (!AICon)
 	{
-		AICon = AsAICon;
-	}
-	else if(const APawn* AsPawn = Cast<APawn>(OwnerActor))
-	{
-		AICon = Cast<AAIController>(AsPawn->GetController());
-	}
-
-	const UBlackboardComponent* BB =
-		AICon ? AICon->GetBlackboardComponent() : nullptr;
-
-	FVector LastSeenLocation = FVector::ZeroVector;
-	bool bHasLocation = false;
-
-	if(BB != nullptr)
-	{
-		static const FName LastSeenKeyName(TEXT("LastSeenLocation"));
-
-		const FVector Value = BB->GetValueAsVector(LastSeenKeyName);
-		if(Value.IsNearlyZero() == false)
+		// Pawn이라면 Controller를 가져옴
+		if (APawn* Pawn = Cast<APawn>(QueryOwner))
 		{
-			LastSeenLocation = Value;
-			bHasLocation = true;
+			AICon = Cast<AAIController>(Pawn->GetController());
 		}
 	}
-	
-	if(!bHasLocation && OwnerActor != nullptr)
-	{
-		LastSeenLocation = OwnerActor->GetActorLocation();
-		bHasLocation = true;
-	}
 
-	if(bHasLocation)
+	if (AICon && AICon->GetBlackboardComponent())
 	{
-		UEnvQueryItemType_Point::SetContextHelper(ContextData, LastSeenLocation);
+		// 블랙보드에서 벡터 값 가져오기 (KeyName: LastKnownPlayerLocation)
+		// 주의: Blackboard Key 이름이 틀리면 0,0,0이 반환됨
+		FVector LastLocation = AICon->GetBlackboardComponent()->GetValueAsVector(TEXT("LastKnownPlayerLocation"));
+		
+		if (LastLocation != FVector::ZeroVector)
+		{
+			UEnvQueryItemType_Point::SetContextHelper(ContextData, LastLocation);
+		}
 	}
 }
