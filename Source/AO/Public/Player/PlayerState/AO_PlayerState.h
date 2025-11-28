@@ -20,6 +20,10 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_PlayerName() override;
 
+	// JM : 생명주기 테스트용
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	/* ==================== 로비 레디 상태 ==================== */
 
 	// 로비 Ready 플래그 설정

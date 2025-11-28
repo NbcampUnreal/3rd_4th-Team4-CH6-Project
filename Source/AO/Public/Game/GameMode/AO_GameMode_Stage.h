@@ -18,6 +18,12 @@ public:
 	AAO_GameMode_Stage();
 
 public:
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
 	// 스테이지 출발 상호작용 시 서버에서 호출할 함수
 	void HandleStageExitRequest(AController* Requester);
 

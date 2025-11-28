@@ -43,51 +43,16 @@ void UAO_GameplayAbility_Inspect_Click::ActivateAbility(
 		return;
 	}
 
-    APlayerController* PC = Cast<APlayerController>(AvatarActor->GetOwner());
-    if (!PC)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    // 마우스 커서 위치에서 Trace
-    FVector2D MousePosition;
-    if (!PC->GetMousePosition(MousePosition.X, MousePosition.Y))
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    FVector WorldLocation, WorldDirection;
-    if (!PC->DeprojectScreenPositionToWorld(MousePosition.X, MousePosition.Y, WorldLocation, WorldDirection))
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    FVector TraceStart = WorldLocation;
-    FVector TraceEnd = WorldLocation + (WorldDirection * ClickTraceRange);
-
-    FHitResult HitResult;
-    FCollisionQueryParams QueryParams;
-    QueryParams.AddIgnoredActor(AvatarActor);
-
-    bool bHit = GetWorld()->LineTraceSingleByChannel(
-        HitResult,
-        TraceStart,
-        TraceEnd,
-        ECC_Visibility,
-        QueryParams
-    );
-
-	if (bHit && HitResult.GetComponent() && HitResult.GetActor())
+	if (InspectionComp->CachedHoverComponent.IsValid() && 
+		InspectionComp->CachedHoverActor.IsValid())
 	{
-		// InspectionComponent가 유효성 검사 담당
-		if (InspectionComp->IsValidExternalClickTarget(HitResult.GetActor(), HitResult.GetComponent()))
-		{
-			InspectionComp->ServerProcessInspectionClick(HitResult.GetActor(), HitResult.GetComponent()->GetFName());
-		}
+		InspectionComp->ServerProcessInspectionClick(
+			InspectionComp->CachedHoverActor.Get(), 
+			InspectionComp->CachedHoverComponent->GetFName()
+		);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
 	}
 
-    EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 }

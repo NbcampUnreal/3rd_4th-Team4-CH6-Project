@@ -18,7 +18,8 @@ class AO_API AAO_DecayHoldElement : public AAO_PuzzleElement
 
 public:
 	AAO_DecayHoldElement(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-
+	
+	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void OnInteractActiveStarted(AActor* Interactor) override;
 	virtual void OnInteractActiveEnded(AActor* Interactor) override;
 	virtual void ResetToInitialState() override;
@@ -27,25 +28,36 @@ public:
 	float GetHoldProgress() const { return CurrentHoldProgress; }
 
 	UFUNCTION(BlueprintPure, Category="Puzzle|DecayHold")
-	float GetHoldProgressPercent() const { return MaxHoldTime > 0.f ? CurrentHoldProgress / MaxHoldTime : 0.f; }
+	float GetHoldProgressPercent() const 
+	{ 
+		return PuzzleInteractionInfo.Duration > 0.f ? CurrentHoldProgress / PuzzleInteractionInfo.Duration : 0.f; 
+	}
 
-protected:
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="DecayHold", meta=(ClampMin="0.1"))
-	float MaxHoldTime = 6.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="DecayHold|Reaction")
+	TObjectPtr<class AAO_PuzzleReactionActor> LinkedReactionActor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="DecayHold", meta=(ClampMin="0.1"))
 	float DecayRate = 1.0f;
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="DecayHold")
 	float CurrentHoldProgress = 0.0f;
 
 private:
-	void UpdateHoldProgress();
+	void UpdateProgress();
 	void StartProgressTimer();
 	void StopProgressTimer();
+    
+	bool IsAnyoneHolding() const;
+	void HandleToggleCompletion();
 
-	FTimerHandle HoldProgressTimerHandle;
+	FTimerHandle ProgressTimerHandle;
+    
+	// HoldActive에서 Duration 도달 시 홀드 유지용
+	UPROPERTY(Replicated)
+	TArray<TWeakObjectPtr<AActor>> ManualHoldActors;
 };

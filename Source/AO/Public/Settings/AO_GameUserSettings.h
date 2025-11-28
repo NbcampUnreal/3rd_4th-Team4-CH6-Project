@@ -41,14 +41,11 @@ public:
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float SFXVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Gameplay")
-	float MouseSensitivity = 1.0f;
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
+	float UIVolume = 1.0f;
 
-	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Gameplay")
-	bool bInvertYAxis = false;
-
-	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Gameplay")
-	FString GameLanguage = TEXT("ko");	// 기본언어 : 한국어
-
-	
+	// TODO: 추가 옵셜 설정하기
+	// 마우스 민감도 (float)
+	// 마우스 y축 반전 (bool)
+	// 언어(text)
 };

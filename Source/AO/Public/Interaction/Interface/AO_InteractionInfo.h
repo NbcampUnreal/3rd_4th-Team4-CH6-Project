@@ -42,11 +42,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UGameplayAbility> AbilityToGrant;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> ActiveStartMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> ActiveHoldMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> ActiveEndMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> ActiveMontage; 
 
 	// 모든 멤버 변수를 비교하여 완전히 동일한 경우에만 true 반환, 상호작용 정보 변화 감지에 사용
 	FORCEINLINE bool operator==(const FAO_InteractionInfo& Other) const
@@ -56,8 +56,8 @@ public:
 			Content.IdenticalTo(Other.Content) &&
 			Duration == Other.Duration &&
 			AbilityToGrant == Other.AbilityToGrant &&
-			ActiveStartMontage == Other.ActiveStartMontage &&
-			ActiveEndMontage == Other.ActiveEndMontage;
+			ActiveHoldMontage == Other.ActiveHoldMontage &&
+			ActiveMontage == Other.ActiveMontage;
 	}
 
 	FORCEINLINE bool operator!=(const FAO_InteractionInfo& Other) const

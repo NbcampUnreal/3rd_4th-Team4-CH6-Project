@@ -9,10 +9,4 @@ UAO_GameUserSettings* UAO_GameUserSettings::GetGameUserSettings()
 
 void UAO_GameUserSettings::ApplyCustomSettings()
 {
-	AO_LOG(LogJM, Log, TEXT("Start (MasterVolume : %f, MusicVolume : %f, SFXVolume : %f, MouseSensitivity : %f, bInvertYAxis : %d, GameLanguage : %s"),
-		MasterVolume, MusicVolume, SFXVolume, MouseSensitivity, bInvertYAxis, *GameLanguage);
-
-	
-	
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
