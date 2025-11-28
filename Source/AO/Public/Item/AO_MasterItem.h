@@ -9,6 +9,7 @@
 #include "CoreMinimal.h"
 #include "Interaction/Base/AO_BaseInteractable.h"
 #include "Components/SphereComponent.h"
+#include "AI/Item/AO_PickupComponent.h"
 #include "AO_MasterItem.generated.h"
 
 UCLASS()
@@ -28,17 +29,20 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_ItemID, meta=(ExposeOnSpawn="true"))
 	FName ItemID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", Replicated)
-	float FuelAmount = 0.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
+	UFUNCTION()
+	void OnRep_ItemID();
+
+	void ApplyItemData(); 
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
 	
-	void ItemSawp(FName ItemID);
-	
+	UPROPERTY(Replicated)
+	float FuelAmount = 0.f;
+
 	UPROPERTY(Replicated)
 	FGameplayTagContainer ItemTags;
 
@@ -48,5 +52,8 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_HandleInteraction(AActor* Interactor);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAO_PickupComponent* PickupComponent;
 
 };

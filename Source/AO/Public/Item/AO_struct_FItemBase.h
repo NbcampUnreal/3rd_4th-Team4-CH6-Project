@@ -11,6 +11,7 @@ enum class EItemType : uint8
 	Fuel,
 	Consumable,
 	Weapon,
+	Passive
 };
 
 USTRUCT(BlueprintType)
@@ -21,6 +22,9 @@ struct AO_API FAO_struct_FItemBase : public FTableRowBase
 public:
 	FAO_struct_FItemBase();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EItemType ItemType = EItemType::None;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName ItemID;
 
@@ -40,16 +44,10 @@ public:
 	int32 ItemPrice = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsConsumable = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsFuel = false;
-
+	int32 PassiveAmount = 0;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTagContainer ItemTags;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EItemType ItemType = EItemType::None;
 };
 
 inline FAO_struct_FItemBase::FAO_struct_FItemBase()
