@@ -99,10 +99,10 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 	EventData.Instigator = Interactor;
 	EventData.EventMagnitude = AddPassive;
 	
-	ASC->HandleGameplayEvent(
-	   ActivationEventTag, 
-	   &EventData
-	);
-
+	UAbilitySystemComponent* TargetASC = Interactor->FindComponentByClass<UAbilitySystemComponent>();
+	if (TargetASC)
+	{
+		TargetASC->HandleGameplayEvent(ActivationEventTag, &EventData);
+	}
 	Inventory->ClearSlot();	
 }
