@@ -39,11 +39,11 @@ void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputCompo
 	}
 	if (IA_UseItem)
 	{
-		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInvenrotyItem);
+		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInventoryItem);
 	}
 	if (IA_DropItem)
 	{
-		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInvenrotyItem);	
+		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInventoryItem);	
 	}
 }
 
@@ -109,12 +109,12 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 
 
 
-void UAO_InventoryComponent::UseInvenrotyItem()
+void UAO_InventoryComponent::UseInventoryItem()
 {
 	//
 }
 
-void UAO_InventoryComponent::DropInvenrotyItem()
+void UAO_InventoryComponent::DropInventoryItem()
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;

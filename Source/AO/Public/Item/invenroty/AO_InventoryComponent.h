@@ -68,8 +68,8 @@ public:
 	
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
-	void UseInvenrotyItem();
-	void DropInvenrotyItem();
+	void UseInventoryItem();
+	void DropInventoryItem();
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }
