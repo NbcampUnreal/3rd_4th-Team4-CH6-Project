@@ -9,6 +9,8 @@
 
 AAO_PlayerState::AAO_PlayerState()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	AO_LOG(LogJM, Log, TEXT("End"));
 	bLobbyIsReady = false;
 	LobbyJoinOrder = -1;
 }
@@ -92,6 +94,20 @@ void AAO_PlayerState::OnRep_PlayerName()
 
 	// 보드에 표시되는 이름 갱신
 	RefreshLobbyReadyBoard();
+}
+
+void AAO_PlayerState::BeginPlay()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::BeginPlay();
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::EndPlay(EndPlayReason);
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 /* ==================== 보드 재빌드 ==================== */

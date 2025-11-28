@@ -12,10 +12,12 @@
 
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	PlayerControllerClass = AAO_PlayerController_Lobby::StaticClass();
 	bUseSeamlessTravel = true;
 
 	NextLobbyJoinOrder = 0;
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
@@ -40,6 +42,20 @@ void AAO_GameMode_Lobby::Logout(AController* Exiting)
 
 	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
 	NotifyLobbyBoardChanged();
+}
+
+void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::HandleSeamlessTravelPlayer(C);
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::EndPlay(EndPlayReason);
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 /* ========== 로비 입장 순서 관리 ========== */

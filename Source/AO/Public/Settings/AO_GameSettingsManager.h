@@ -20,6 +20,14 @@ struct FResolutionInfo
 	FString DisplayName = TEXT(""); // 표시할 이름 (1920 x 1080 (FHD))
 };
 
+UENUM(BlueprintType)
+enum class EAudioType : uint8
+{
+	Master		UMETA(DisplayName = "Master Volume"),
+	Music		UMETA(DisplayName = "Music Volume"),
+	SFX			UMETA(DisplayName = "SFX Volume"),
+	UI			UMETA(DisplayName = "UI Volume"),
+};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsApplied);
 
@@ -48,9 +56,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void ApplyNonResolutionSettings();		// 가벼움
-
-	/*UFUNCTION(BlueprintCallable, Category = "AO")
-	void RevertAndApplyDefaultSettings();*/
 
 	// 기본값으로 초기화
 	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
@@ -116,12 +121,12 @@ public:
 	
 	
 	// 커스텀 추가기능
-	UFUNCTION(BlueprintCallable, Category = "AO|Audio")
-	void SetMasterVolume(float NewVolume);
-
-	UFUNCTION(BlueprintCallable, Category = "AO|Gameplay")
-	void SetMouseSensitivity(float NewSensitivity);
+	UFUNCTION(BlueprintPure, Category = "AO|Audio")
+	float GetAudioVolume(EAudioType AudioType) const;
 	
+	UFUNCTION(BlueprintCallable, Category = "AO|Audio")
+	void SetAudioVolume(EAudioType AudioType, float NewVolume);
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "AO|Events")
 	FOnSettingsApplied OnSettingsApplied;		// 설정이 성공적으로 적용되고 저장되었을 때 호출되는 델리게이트

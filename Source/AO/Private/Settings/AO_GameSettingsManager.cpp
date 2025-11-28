@@ -55,24 +55,6 @@ void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-/*
-void UAO_GameSettingsManager::RevertAndApplyDefaultSettings()
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
-	{
-		Settings->LoadSettings();		// 이스크에 저장된 마지막 설정값으로 되돌림
-		// Settings->SetToDefaults();		// 만약 완전한 초기화를 원한다면 실행 (TODO: 이건 따로 뺴야겠군)
-		ApplyAndSaveAllSettings();		// 적용 및 저장
-		AO_LOG(LogJM, Log, TEXT("Settings reverted to last saved state and Applied"));
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
-}*/
-
 void UAO_GameSettingsManager::ApplyResolutionSettings()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -374,27 +356,54 @@ FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 	return FIntPoint(1920, 1080);	// 포인터가 유효하지 않으면 1920x1080 해상도 반환
 }
 
-
-void UAO_GameSettingsManager::SetMasterVolume(float NewVolume)
+float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
-	{
-		Settings->MasterVolume = FMath::Clamp(NewVolume, 0.0f, 1.0f);		// TODO: 향후 Magic Number 수정필요
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
-	}
-	AO_LOG(LogJM, Log, TEXT("End"));
+ 	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+ 	{
+ 		switch (AudioType)
+ 		{
+ 		case EAudioType::Master:
+ 			return Settings->MasterVolume;
+ 		case EAudioType::Music:
+ 			return Settings->MusicVolume;
+ 		case EAudioType::SFX:
+ 			return Settings->SFXVolume;
+ 		case EAudioType::UI:
+ 			return Settings->UIVolume;
+ 		default:
+ 			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
+ 			return 1.0;
+ 		}
+ 	}
+	AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+ 	return 1.0;
 }
 
-void UAO_GameSettingsManager::SetMouseSensitivity(float NewSensitivity)
+void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const float NewVolume)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
-		Settings->MouseSensitivity = FMath::Clamp(NewSensitivity, 0.1f, 5.0f);	// TODO: 향후 Magic Number 수정 필요
+		const float ClampedVolume = FMath::Clamp(NewVolume, 0.0f, 1.0f);
+		switch (AudioType)
+		{
+		case EAudioType::Master:
+			Settings->MasterVolume = ClampedVolume;
+			break;
+		case EAudioType::Music:
+			Settings->MusicVolume = ClampedVolume;
+			break;
+		case EAudioType::SFX:
+			Settings->SFXVolume = ClampedVolume;
+			break;
+		case EAudioType::UI:
+			Settings->UIVolume = ClampedVolume;
+			break;
+		default:
+			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
+			break;
+		}
 	}
 	else
 	{
