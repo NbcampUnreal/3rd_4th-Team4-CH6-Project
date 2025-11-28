@@ -371,6 +371,8 @@ float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
  			return Settings->SFXVolume;
  		case EAudioType::UI:
  			return Settings->UIVolume;
+ 		case EAudioType::Voice:
+ 			return Settings->VoiceVolume;
  		default:
  			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
  			return 1.0;
@@ -399,6 +401,9 @@ void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const f
 			break;
 		case EAudioType::UI:
 			Settings->UIVolume = ClampedVolume;
+			break;
+		case EAudioType::Voice:
+			Settings->VoiceVolume = ClampedVolume;
 			break;
 		default:
 			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
