@@ -35,9 +35,6 @@ void AAO_PlayerState::SetLobbyReady(bool bNewReady)
 	}
 
 	bLobbyIsReady = bNewReady;
-
-	// 서버에서도 바로 갱신
-	OnRep_LobbyIsReady();
 }
 
 bool AAO_PlayerState::IsLobbyReady() const
@@ -64,8 +61,6 @@ void AAO_PlayerState::SetLobbyJoinOrder(int32 InOrder)
 	}
 
 	LobbyJoinOrder = InOrder;
-
-	OnRep_LobbyJoinOrder();
 }
 
 int32 AAO_PlayerState::GetLobbyJoinOrder() const
@@ -81,8 +76,6 @@ void AAO_PlayerState::SetIsLobbyHost(bool bNewIsHost)
 	}
 
 	bIsLobbyHost = bNewIsHost;
-
-	OnRep_IsLobbyHost();
 }
 
 bool AAO_PlayerState::IsLobbyHost() const
