@@ -33,15 +33,16 @@ public:
 	UFUNCTION(Server, Reliable)
     void Server_RequestStageExit();
 
+	/* ----------테스트용 임시 코드------------*/
+public:
 	// 서버로 실패 요청 보내는 RPC
 	UFUNCTION(Server, Reliable)
 	void Server_RequestStageFail();
-
-
-	// 테스트용 임시 코드
+	
 protected:
 	void SetupInputComponent() override;
 	
 	// O 키 입력 처리 (클라이언트)
 	void HandleStageFailInput();
+	/* --------------------------------------*/
 };
