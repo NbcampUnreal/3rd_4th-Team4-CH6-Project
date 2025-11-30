@@ -42,6 +42,9 @@ public:
 	// 로비 입장 순서 조회
 	int32 GetLobbyJoinOrder() const;
 
+	// 호스트 플래그 설정 (서버 전용)
+	void SetIsLobbyHost(bool bNewIsHost);
+
 	// 호스트 여부 (입장 순서 0번을 호스트로 간주)
 	bool IsLobbyHost() const;
 
@@ -54,6 +57,10 @@ protected:
 	UPROPERTY(ReplicatedUsing=OnRep_LobbyJoinOrder)
 	int32 LobbyJoinOrder;
 
+	// 호스트 여부 (세션 동안 유지, GameInstance 기반)
+	UPROPERTY(ReplicatedUsing=OnRep_IsLobbyHost)
+	bool bIsLobbyHost;
+
 	// 레디 상태가 복제될 때 호출
 	UFUNCTION()
 	void OnRep_LobbyIsReady();
@@ -61,6 +68,10 @@ protected:
 	// 입장 순서가 복제될 때 호출
 	UFUNCTION()
 	void OnRep_LobbyJoinOrder();
+
+	// 호스트 플래그가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_IsLobbyHost();
 
 private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청

@@ -1,5 +1,6 @@
 #include "Train/AO_Train.h"
 #include "AbilitySystemComponent.h"
+#include "Game/GameInstance/AO_GameInstance.h" //JSH: GI에 연료 저장
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "Train/GAS/AO_AddFuel_GameplayAbility.h"
@@ -66,6 +67,18 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	const float Delta = NewFuel - OldFuel;
 
 	TotalFuelGained += Delta;
+
+	// JSH: GI에 연료 동기화
+	if(HasAuthority())
+	{
+		if(UGameInstance* GI = GetGameInstance())
+		{
+			if(UAO_GameInstance* AO_GI = Cast<UAO_GameInstance>(GI))
+			{
+				AO_GI->SharedTrainFuel = NewFuel;
+			}
+		}
+	}
 
 	if (Delta > 0.f)
 	{
