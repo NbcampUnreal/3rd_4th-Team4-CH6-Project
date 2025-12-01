@@ -255,6 +255,15 @@ void AAO_PlayerController_InGameBase::TogglePauseMenu()
 
 	if (bPauseMenuVisible)
 	{
+		// JM : ESC 누르면 설정창도 같이 닫히게 하기
+		if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		{
+			DelegateManager->OnSettingsClose.Broadcast();
+		}
+		else
+		{
+			AO_LOG(LogJM, Warning, TEXT("Can't Get Delegate Manager"));
+		}
 		HidePauseMenu();
 	}
 	else
