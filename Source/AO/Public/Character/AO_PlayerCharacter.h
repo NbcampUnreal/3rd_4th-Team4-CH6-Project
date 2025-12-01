@@ -12,6 +12,7 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UCustomizableObjectInstance;
 class UAO_PlayerCharacter_AttributeSet;
 class UGameplayAbility;
 class UGameplayEffect;
@@ -27,6 +28,7 @@ class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
 class UAO_FoleyAudioBank;
+class UCustomizableSkeletalComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -90,6 +92,7 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
@@ -105,6 +108,18 @@ protected:
 	TMap<int32, TSubclassOf<UGameplayAbility>> InputAbilities;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+
+	//세훈: Customizable Object Instance
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> BaseSkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> BodySkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> HeadSkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UCustomizableSkeletalComponent> BodyComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UCustomizableSkeletalComponent> HeadComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;

@@ -20,6 +20,8 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
+#include "MuCO/CustomizableSkeletalComponent.h"
+#include "MuCO/CustomizableObjectInstance.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -67,6 +69,21 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
+	//세훈: Customizable Object Instance
+	BaseSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BaseSkeletalMesh"));
+	BaseSkeletalMesh->SetupAttachment(GetMesh());
+	
+	BodySkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodySkeletalMesh"));
+	BodySkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	BodyComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("BodyComponent"));
+	BodyComponent->SetupAttachment(BodySkeletalMesh);
+	BodyComponent->SetComponentName(FName("Body"));
+	
+	HeadSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadSkeletalMesh"));
+	HeadSkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	HeadComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("HeadComponent"));
+	HeadComponent->SetupAttachment(HeadSkeletalMesh);
+	HeadComponent->SetComponentName(FName("Head"));
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const

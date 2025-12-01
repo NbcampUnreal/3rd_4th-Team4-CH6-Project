@@ -49,6 +49,9 @@ public class AO : ModuleRules
 			
 			// Voice Chat
 			"Voice",
+			
+			// Mutable
+			"CustomizableObject",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
