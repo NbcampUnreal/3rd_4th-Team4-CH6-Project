@@ -34,13 +34,33 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 		return;
 	}
 
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = Character->GetAbilitySystemComponent()->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		AO_LOG(LogKH, Error, TEXT("Failed to get AttributeSet"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	const float CurrentStamina = AttributeSet->GetStamina();
+	const float MaxStamina = AttributeSet->GetMaxStamina();
+
+	if (bIsStaminaLockOut && CurrentStamina < MaxStamina * RequiredStaminaPercent)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (bIsStaminaLockOut && CurrentStamina >= MaxStamina * RequiredStaminaPercent)
+	{
+		bIsStaminaLockOut = false;
+	}
+	
 	Character->StartSprint_GAS(true);
 
-	if (const UAO_PlayerCharacter_AttributeSet* AttributeSet = Character->GetAbilitySystemComponent()->GetSet<UAO_PlayerCharacter_AttributeSet>())
-	{
-		Character->GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStaminaAttribute())
-			.AddUObject(this, &UAO_GameplayAbility_Sprint::OnStaminaChanged);
-	}
+	Character->GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStaminaAttribute())
+		.AddUObject(this, &UAO_GameplayAbility_Sprint::OnStaminaChanged);
+	
 }
 
 void UAO_GameplayAbility_Sprint::InputReleased(const FGameplayAbilitySpecHandle Handle,
@@ -79,6 +99,8 @@ void UAO_GameplayAbility_Sprint::OnStaminaChanged(const FOnAttributeChangeData& 
 {
 	if (Data.NewValue <= 0.f)
 	{
+		bIsStaminaLockOut = true;
+		
 		K2_EndAbility();
 	}
 }
