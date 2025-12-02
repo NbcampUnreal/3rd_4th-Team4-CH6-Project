@@ -191,5 +191,5 @@ void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
 	
 	ServerSetSelectedSlot(SlotIndex);
-	
+	OnSelectSlotUpdated.Broadcast(SlotIndex);
 }

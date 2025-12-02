@@ -28,6 +28,7 @@ struct FInventorySlot
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdated, const TArray<FInventorySlot>&, Slots);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectSlotUpdated, const int32, SelectedSlotIndex);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class AO_API UAO_InventoryComponent : public UActorComponent
@@ -60,6 +61,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventoryUpdated OnInventoryUpdated;
+
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnSelectSlotUpdated OnSelectSlotUpdated;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
