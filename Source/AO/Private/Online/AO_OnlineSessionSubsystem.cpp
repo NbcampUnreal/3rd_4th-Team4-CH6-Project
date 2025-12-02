@@ -949,6 +949,7 @@ void UAO_OnlineSessionSubsystem::StartVoiceChat()
 	// VoiceInterface->Init();		// TODO: 이번에 실험적으로 추가해봄
 	VoiceInterface->RegisterLocalTalker(0);
 	VoiceInterface->StartNetworkedVoice(0);
+	bIsEnableVoiceChat = true;
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -968,6 +969,7 @@ void UAO_OnlineSessionSubsystem::StopVoiceChat()
 	VoiceInterface->RemoveAllRemoteTalkers();	// 이거 추가하니까 크래시 안남
 	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
 	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
+	bIsEnableVoiceChat = false;
 
 	/* Unregister를 0.2초 뒤에 해서 정리될 시간을 줌 (필요시 추가) */
 	/* TWeakObjectPtr<UAO_OnlineSessionSubsystem> WeakThis(this);
