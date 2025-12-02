@@ -19,11 +19,14 @@ public:
 	AAO_GameMode_InGameBase();
 	
 public:
+	// virtual void PostLogin(APlayerController* NewPlayer) override;	// JM : 실패
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 
 public:
 	void StopVoiceChatForAllClients() const;
 	void LetUpdateVoiceMemberForAllClients(const AAO_PlayerController_InGameBase* DeadPlayerController);
+
+	void Test_LetUnmuteVoiceMemberForSurvivor(const AAO_PlayerController_InGameBase* AlivePC);
 
 private:
 	static void LetStartVoiceChat(AController*& C);

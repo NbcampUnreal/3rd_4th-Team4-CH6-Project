@@ -13,6 +13,7 @@
 #include "Engine/EngineBaseTypes.h"
 #include "AO/AO_Log.h"
 #include "Interfaces/VoiceInterface.h"	// JM : VoiceInterface
+#include "Player/PlayerState/AO_PlayerState.h"
 
 namespace
 {
@@ -1000,6 +1001,99 @@ void UAO_OnlineSessionSubsystem::StopVoiceChat()
 		VoiceInterface->UnregisterLocalTalker(0);
 	}
 	*/
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::MuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!TargetPS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
+		return;
+	}
+	
+	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
+	if (!TargetPSId.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
+		return;
+	}
+	
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
+		return;
+	}
+
+	if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+	{
+		AO_LOG(LogJM, Log, TEXT("PS(%s) Muted"), *TargetPS->GetPlayerName());
+	}
+	else
+	{
+		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Mute 시도)
+		AO_LOG(LogJM, Warning, TEXT("Mute Failed. Try RegisterRemoteTalker & Mute Again"));
+		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
+		if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+		{
+			AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Muted Successfully"), *TargetPS->GetPlayerName());
+		}
+		else
+		{
+			AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Mute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!TargetPS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
+		return;
+	}
+	
+	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
+	if (!TargetPSId.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
+		return;
+	}
+	
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
+		return;
+	}
+
+	if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+	{
+		AO_LOG(LogJM, Log, TEXT("PS(%s) Unmuted"), *TargetPS->GetPlayerName());
+	}
+	else
+	{
+		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Mute 시도)
+		AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
+		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
+		// TODO : 등록만 하고 unmute는 안해도 될 듯? (기본이 unmute 상태라?)
+		/*if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+		{
+			AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Unmuted Successfully"), *TargetPS->GetPlayerName());
+		}
+		else
+		{
+			AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Unmute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+		}*/
+	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }

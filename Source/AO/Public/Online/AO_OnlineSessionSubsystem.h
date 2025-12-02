@@ -6,6 +6,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSessionSettings.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "AO_OnlineSessionSubsystem.generated.h"
 
 namespace AO_SessionKeys
@@ -93,6 +94,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
 	void StopVoiceChat();
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void MuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide);
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void UnmuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide);
 
 protected:
 	IOnlineSessionPtr GetSessionInterface() const;
