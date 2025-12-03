@@ -6,6 +6,7 @@
 #include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 {
@@ -13,6 +14,29 @@ UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 	SetAssetTags(SprintTag);
 
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+}
+
+bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
+	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	const TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
+
+	const TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement();
+	checkf(CharacterMovement, TEXT("Failed to get CharacterMovementComponent"));
+
+	if (CharacterMovement->Velocity.SizeSquared2D() < KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -26,7 +50,7 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 		return;
 	}
 
-	TObjectPtr<AAO_PlayerCharacter> Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	const TObjectPtr<AAO_PlayerCharacter> Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
 	if (!Character)
 	{
 		AO_LOG(LogKH, Error, TEXT("Failed to cast AvatarActor to AAO_PlayerCharacter"));
@@ -63,8 +87,25 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 	
 }
 
-void UAO_GameplayAbility_Sprint::InputReleased(const FGameplayAbilitySpecHandle Handle,
+void UAO_GameplayAbility_Sprint::InputPressed(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+	
+	const TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
+
+	const TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement();
+	checkf(CharacterMovement, TEXT("Failed to get CharacterMovementComponent"));
+
+	if (CharacterMovement->Velocity.SizeSquared2D() < KINDA_SMALL_NUMBER)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+	}
+}
+
+void UAO_GameplayAbility_Sprint::InputReleased(const FGameplayAbilitySpecHandle Handle,
+                                               const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
@@ -78,7 +119,7 @@ void UAO_GameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
-	if (TObjectPtr<AAO_PlayerCharacter> Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get()))
+	if (const TObjectPtr<AAO_PlayerCharacter> Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get()))
 	{
 		Character->StartSprint_GAS(false);
 
@@ -89,7 +130,7 @@ void UAO_GameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle Han
 		}
 	}
 
-	FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
+	const FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
 	ActorInfo->AbilitySystemComponent->RemoveActiveEffectsWithTags(SprintCostTag);
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
