@@ -39,11 +39,11 @@ void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputCompo
 	}
 	if (IA_UseItem)
 	{
-		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInventoryItem);
+		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnLeftClick);
 	}
 	if (IA_DropItem)
 	{
-		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInventoryItem);	
+		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnRightClick);	
 	}
 }
 
@@ -65,6 +65,30 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 	//UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
 }
 
+void UAO_InventoryComponent::OnLeftClick()
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		UseInventoryItem_Server();
+	}
+	else
+	{
+		UseInventoryItem_Server_Implementation();
+	}
+}
+
+void UAO_InventoryComponent::OnRightClick()
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		DropInventoryItem_Server();
+	}
+	else
+	{
+		DropInventoryItem_Server_Implementation();
+	}
+}
+
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
@@ -74,12 +98,10 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 	if (!WorldItemActor) return;
 	
 	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
-	
 	Slots[SelectedSlotIndex] = IncomingItem;
 	Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
 	Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
 	OnInventoryUpdated.Broadcast(Slots);
-	
 	
 	if (OldSlot.ItemID != "empty")
 	{
@@ -103,19 +125,23 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 	}
 	else
 	{
+		Slots[SelectedSlotIndex] = IncomingItem;
+		Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
+		Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
+		OnInventoryUpdated.Broadcast(Slots);
+		
 		WorldItemActor->Destroy();
 	}
 }
 
-
-
-void UAO_InventoryComponent::UseInventoryItem()
+void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
 	//
 }
 
-void UAO_InventoryComponent::DropInventoryItem()
+void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "DropItem");
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
 	

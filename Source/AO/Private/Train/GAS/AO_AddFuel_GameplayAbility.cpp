@@ -2,7 +2,6 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
-
 UAO_AddFuel_GameplayAbility::UAO_AddFuel_GameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;

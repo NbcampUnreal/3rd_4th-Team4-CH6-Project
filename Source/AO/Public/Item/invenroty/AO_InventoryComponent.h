@@ -68,12 +68,16 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
 	void ServerSetSelectedSlot_Implementation(int32 NewIndex);
-		
+
+	void OnRightClick();
+	void OnLeftClick();
 	
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
-	void UseInventoryItem();
-	void DropInventoryItem();
+	UFUNCTION(Server, Reliable)
+	void UseInventoryItem_Server();
+	UFUNCTION(Server, Reliable)
+	void DropInventoryItem_Server();
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }
