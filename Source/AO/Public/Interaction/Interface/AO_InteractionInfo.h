@@ -46,7 +46,15 @@ public:
 	TObjectPtr<UAnimMontage> ActiveHoldMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
-	TObjectPtr<UAnimMontage> ActiveMontage; 
+	TObjectPtr<UAnimMontage> ActiveMontage;
+
+	// Motion Warping용 Transform (손이 가야 할 위치)
+	UPROPERTY(BlueprintReadWrite)
+	FTransform InteractionTransform;
+    
+	// 몽타주 내 Warp Target 이름 (InteractionPoint)
+	UPROPERTY(BlueprintReadWrite)
+	FName WarpTargetName = NAME_None;
 
 	// 모든 멤버 변수를 비교하여 완전히 동일한 경우에만 true 반환, 상호작용 정보 변화 감지에 사용
 	FORCEINLINE bool operator==(const FAO_InteractionInfo& Other) const

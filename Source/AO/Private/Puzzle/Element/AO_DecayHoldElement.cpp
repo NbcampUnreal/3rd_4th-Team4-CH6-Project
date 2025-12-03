@@ -170,13 +170,22 @@ void AAO_DecayHoldElement::StartProgressTimer()
 {
     if (ProgressTimerHandle.IsValid()) return;
     
-    GetWorldTimerManager().SetTimer(
-        ProgressTimerHandle,
-        this,
-        &AAO_DecayHoldElement::UpdateProgress,
-        0.1f,
-        true
-    );
+	TWeakObjectPtr<AAO_DecayHoldElement> WeakThis(this);
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			ProgressTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			{
+				if (AAO_DecayHoldElement* StrongThis = WeakThis.Get())
+				{
+					StrongThis->UpdateProgress();
+				}
+			}),
+			0.1f,
+			true
+		);
+	}
 }
 
 void AAO_DecayHoldElement::StopProgressTimer()

@@ -54,4 +54,16 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
 	TObjectPtr<UAnimMontage> ActiveMontage;
+
+	virtual FTransform GetInteractionTransform() const override;
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName InteractionSocketName = "InteractionPoint";
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName WarpTargetName = "InteractionPoint";
+
+private:
+	UPROPERTY()
+	TObjectPtr<UMeshComponent> CachedInteractionMesh;
 };

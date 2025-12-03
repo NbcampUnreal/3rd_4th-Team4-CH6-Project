@@ -24,7 +24,10 @@ void AAO_RotationPuzzleElement::BeginPlay()
 
 void AAO_RotationPuzzleElement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    GetWorldTimerManager().ClearTimer(RotationTimerHandle);
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RotationTimerHandle);
+	}
     Super::EndPlay(EndPlayReason);
 }
 

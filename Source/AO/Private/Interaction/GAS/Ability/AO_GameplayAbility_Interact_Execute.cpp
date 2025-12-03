@@ -3,6 +3,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
+#include "MotionWarpingComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -86,8 +87,6 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 			CharacterMovement->StopMovementImmediately();
 		}
 	}
-
-	RotateToTarget();
 
 	// UI: 홀딩 프로그레스 표시
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
@@ -201,12 +200,6 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 	{
 		return false;
 	}
-	
-	// 타겟 방향으로 회전
-	if (InteractionInfo.Duration <= 0.f)
-	{
-		RotateToTarget();
-	}
 
 	bool bHasMontage = false;
 	float MontageLength = 0.f;
@@ -218,7 +211,11 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 		AActor* AvatarActor = GetAvatarActorFromActorInfo();
 		if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
 		{
-			InteractionComp->MulticastPlayInteractionMontage(CompletionMontage);
+			InteractionComp->MulticastPlayInteractionMontage(
+			CompletionMontage,
+			InteractionInfo.InteractionTransform,
+			InteractionInfo.WarpTargetName
+		);
 			
 			MontageLength = CompletionMontage->GetPlayLength() + 0.5f;
 			bHasMontage = true;
@@ -271,25 +268,6 @@ bool UAO_GameplayAbility_Interact_Execute::SendFinalizeEvent()
 		}
 	}
 	return false;
-}
-
-void UAO_GameplayAbility_Interact_Execute::RotateToTarget()
-{
-	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
-	if (!Character || !InteractableActor)
-	{
-		return;
-	}
-
-	// 타겟 방향 계산
-	FVector ToTarget = InteractableActor->GetActorLocation() - Character->GetActorLocation();
-	ToTarget.Z = 0.f;
-	
-	if (!ToTarget.IsNearlyZero())
-	{
-		FRotator TargetRotation = ToTarget.Rotation();
-		Character->SetActorRotation(TargetRotation);
-	}
 }
 
 void UAO_GameplayAbility_Interact_Execute::OnInvalidInteraction()

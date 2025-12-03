@@ -93,16 +93,22 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
 
 void AAO_InspectionPuzzle::GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const
 {
-    TArray<UActorComponent*> Components;
-    GetComponents(UStaticMeshComponent::StaticClass(), Components);
-
-    for (UActorComponent* Comp : Components)
-    {
-        if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Comp))
-        {
-            OutMeshComponents.Add(MeshComp);
-        }
-    }
+	// 액터의 모든 메시 컴포넌트 수집 (재귀)
+	TArray<UMeshComponent*> AllMeshComponents;
+	GetComponents<UMeshComponent>(AllMeshComponents, true);
+    
+	for (UMeshComponent* MeshComp : AllMeshComponents)
+	{
+		if (!MeshComp) continue;
+        
+		if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
+		{
+			if (StaticMesh->GetStaticMesh())
+			{
+				OutMeshComponents.Add(MeshComp);
+			}
+		}
+	}
 }
 
 void AAO_InspectionPuzzle::OnInspectionMeshClicked(UPrimitiveComponent* ClickedComponent)

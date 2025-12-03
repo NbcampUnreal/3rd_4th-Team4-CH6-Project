@@ -38,8 +38,6 @@ protected:
 	float AcceptanceDistance = 100.f;
 
 private:
-	void RotateToTarget();
-	
 	FTimerHandle DurationTimerHandle;
 	FTimerHandle MontageTimerHandle;
 };

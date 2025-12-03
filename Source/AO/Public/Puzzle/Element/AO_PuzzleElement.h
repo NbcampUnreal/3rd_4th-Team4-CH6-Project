@@ -78,6 +78,8 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Puzzle")
 	void OnElementStateChanged(bool bIsActive);
 
+	virtual FTransform GetInteractionTransform() const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle")
 	EPuzzleElementType ElementType = EPuzzleElementType::OneTime;
 
@@ -115,4 +117,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Puzzle")
 	bool bHandleToggleInOnInteractionSuccess = true;
+    
+	UPROPERTY(EditAnywhere, Category="Puzzle|MotionWarping")
+	FName InteractionSocketName = "InteractionPoint";
+    
+	UPROPERTY(EditAnywhere, Category="Puzzle|MotionWarping")
+	FName WarpTargetName = "InteractionPoint";
 };

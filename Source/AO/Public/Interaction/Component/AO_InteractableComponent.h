@@ -36,6 +36,8 @@ public:
     // 상호작용 성공 시 호출
     void NotifyInteractionSuccess(AActor* Interactor);
 
+	virtual FTransform GetInteractionTransform() const override;
+
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
     FText InteractionTitle;
@@ -56,4 +58,10 @@ public:
     // 상호작용 성공 시 호출되는 이벤트
     UPROPERTY(BlueprintAssignable, Category="Interaction")
     FOnInteractableSuccess OnInteractionSuccess;
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName InteractionSocketName = "InteractionPoint";
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName WarpTargetName = "InteractionPoint";
 };

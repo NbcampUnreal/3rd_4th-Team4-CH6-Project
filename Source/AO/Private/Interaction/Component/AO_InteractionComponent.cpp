@@ -4,6 +4,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AO_Log.h"
 #include "EnhancedInputComponent.h"
+#include "MotionWarpingComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/Character.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
@@ -164,19 +165,33 @@ void UAO_InteractionComponent::OnInteractReleased()
 	ServerNotifyInteractReleased();
 }
 
-void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(UAnimMontage* MontageToPlay)
+void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(
+	UAnimMontage* MontageToPlay, 
+	FTransform WarpTransform, 
+	FName WarpName)
 {
 	if (!MontageToPlay)
 	{
 		return;
 	}
 
-	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	TObjectPtr<ACharacter> Character = Cast<ACharacter>(GetOwner());
 	if (!Character)
 	{
 		return;
 	}
 
+	// 모션 워핑 설정 (모든 클라이언트에서 실행)
+	if (!WarpName.IsNone())
+	{
+		TObjectPtr<UMotionWarpingComponent> MWC = Character->FindComponentByClass<UMotionWarpingComponent>();
+		if (MWC)
+		{
+			MWC->AddOrUpdateWarpTargetFromLocation(WarpName,WarpTransform.GetLocation());
+		}
+	}
+
+	// 몽타주 재생
 	if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
 	{
 		AnimInstance->Montage_Play(MontageToPlay);

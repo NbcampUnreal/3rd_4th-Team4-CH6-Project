@@ -43,14 +43,14 @@ void AAO_PuzzleElement::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 FAO_InteractionInfo AAO_PuzzleElement::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
 {
-	// DataAsset 사용 시 우선
-	if (bUseInteractionDataAsset && InteractionDataAsset)
-	{
-		return InteractionDataAsset->InteractionInfo;
-	}
-	
-	// 직접 설정한 정보 반환
-	return PuzzleInteractionInfo;
+	FAO_InteractionInfo Info = bUseInteractionDataAsset && InteractionDataAsset 
+		? InteractionDataAsset->InteractionInfo 
+		: PuzzleInteractionInfo;
+    
+	Info.InteractionTransform = GetInteractionTransform();
+	Info.WarpTargetName = WarpTargetName;
+    
+	return Info;
 }
 
 bool AAO_PuzzleElement::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
@@ -71,9 +71,36 @@ bool AAO_PuzzleElement::CanInteraction(const FAO_InteractionQuery& InteractionQu
 
 void AAO_PuzzleElement::GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const
 {
-	if (MeshComponent)
+	if (!MeshComponent)
 	{
-		OutMeshComponents.Add(MeshComponent);
+		return;
+	}
+
+	// 루트 메시가 실제 메시를 가지고 있으면 추가
+	if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
+	{
+		if (StaticMesh->GetStaticMesh())
+		{
+			OutMeshComponents.Add(MeshComponent);
+		}
+	}
+
+	// 자식 메시 컴포넌트들도 모두 수집
+	TArray<USceneComponent*> ChildComponents;
+	MeshComponent->GetChildrenComponents(true, ChildComponents);
+    
+	for (USceneComponent* Child : ChildComponents)
+	{
+		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		{
+			if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
+			{
+				if (StaticMesh->GetStaticMesh())
+				{
+					OutMeshComponents.Add(ChildMesh);
+				}
+			}
+		}
 	}
 }
 
@@ -169,6 +196,37 @@ void AAO_PuzzleElement::OnRep_IsActivated()
 {
 	// 클라이언트에서 상태 변경 시 블루프린트 이벤트 호출
 	OnElementStateChanged(bIsActivated);
+}
+
+FTransform AAO_PuzzleElement::GetInteractionTransform() const
+{
+	if (!MeshComponent || InteractionSocketName.IsNone())
+	{
+		return GetActorTransform();
+	}
+
+	// 루트 메시에서 Socket 찾기
+	if (MeshComponent->DoesSocketExist(InteractionSocketName))
+	{
+		return MeshComponent->GetSocketTransform(InteractionSocketName);
+	}
+
+	// 자식 메시들에서 Socket 찾기
+	TArray<USceneComponent*> ChildComponents;
+	MeshComponent->GetChildrenComponents(true, ChildComponents);
+    
+	for (USceneComponent* Child : ChildComponents)
+	{
+		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		{
+			if (ChildMesh->DoesSocketExist(InteractionSocketName))
+			{
+				return ChildMesh->GetSocketTransform(InteractionSocketName);
+			}
+		}
+	}
+
+	return GetActorTransform();
 }
 
 void AAO_PuzzleElement::ResetToInitialState()
