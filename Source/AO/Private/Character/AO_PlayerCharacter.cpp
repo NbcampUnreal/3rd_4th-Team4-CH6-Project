@@ -331,26 +331,35 @@ void AAO_PlayerCharacter::HandleWalk()
 
 void AAO_PlayerCharacter::StartJump()
 {
-	if (TraversalComponent)
+	if (AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Traversal")))))
 	{
-		if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
-		{
-			return;
-		}
+		return;
 	}
+
+	//if (TraversalComponent)
+	//{
+	//	if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
+	//	{
+	//		return;
+	//	}
+	//}
 
 	Jump();
 }
 
 void AAO_PlayerCharacter::TriggerJump()
 {
-	if (TraversalComponent)
-	{
-		if (!TraversalComponent->GetDoingTraversal())
-		{
-			TraversalComponent->TryTraversal();
-		}
-	}
+	AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Traversal"))));
+	
+	//if (TraversalComponent)
+	//{
+	//	if (!TraversalComponent->GetDoingTraversal())
+	//	{
+	//		TraversalComponent->TryTraversal();
+	//	}
+	//}
 }
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
