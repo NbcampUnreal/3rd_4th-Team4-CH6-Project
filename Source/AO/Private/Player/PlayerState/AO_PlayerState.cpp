@@ -23,6 +23,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, bLobbyIsReady);
 	DOREPLIFETIME(AAO_PlayerState, LobbyJoinOrder);
 	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
+	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -92,6 +93,18 @@ void AAO_PlayerState::OnRep_LobbyJoinOrder()
 void AAO_PlayerState::OnRep_IsLobbyHost()
 {
 	RefreshLobbyReadyBoard();
+}
+
+void AAO_PlayerState::OnRep_IsAlive()
+{
+	if (!bIsAlive)
+	{
+		AO_LOG(LogJM, Log, TEXT("Updated bIsAlive true -> false"));
+	}
+	else
+	{
+		AO_LOG(LogJM, Log, TEXT("Update bIsAlive false -> true"));
+	}
 }
 
 /* ==================== 이름 복제 ==================== */

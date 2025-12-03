@@ -47,6 +47,9 @@ public:
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float VoiceVolume = 1.0f;
 
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
+	float AmbientVolume = 1.0f;
+
 	// TODO: 추가 옵셜 설정하기
 	// 마우스 민감도 (float)
 	// 마우스 y축 반전 (bool)

@@ -25,6 +25,8 @@ public:
 	void StopVoiceChatForAllClients() const;
 	void LetUpdateVoiceMemberForAllClients(const AAO_PlayerController_InGameBase* DeadPlayerController);
 
+	void Test_LetUnmuteVoiceMemberForSurvivor(const AAO_PlayerController_InGameBase* AlivePC);
+
 private:
 	static void LetStartVoiceChat(AController*& C);
 };

@@ -48,8 +48,14 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_UpdateVoiceMember(AAO_PlayerState* DeadPlayerState);
 
+	UFUNCTION(Client, Reliable)
+	void Client_UnmuteVoiceMember(AAO_PlayerState* AlivePlayerState);
+
 	UFUNCTION(Server, Reliable)
 	void Test_Server_SelfDie();
+
+	UFUNCTION(Server, Reliable)
+	void Test_Server_SelfAlive();
 
 	UFUNCTION(BlueprintCallable, Category="AO|Test")
 	void Test_Die();
