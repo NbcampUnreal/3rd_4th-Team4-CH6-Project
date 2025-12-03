@@ -188,8 +188,6 @@ void AAO_PlayerController_InGameBase::Test_Server_SelfDie_Implementation()
 void AAO_PlayerController_InGameBase::Test_Server_SelfAlive_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if(GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Yellow, TEXT("Test_Server_SelfDie_Implementation Start"));
 
 	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
 	if (!AO_PS)

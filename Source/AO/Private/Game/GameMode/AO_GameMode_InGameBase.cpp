@@ -14,19 +14,6 @@ AAO_GameMode_InGameBase::AAO_GameMode_InGameBase()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-// JM : 실패
-/*void AAO_GameMode_InGameBase::PostLogin(APlayerController* NewPlayer)
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	Super::PostLogin(NewPlayer);
-	
-	// JM : 플레이어 최초 로그인 완료 시 보이스 자동 시작
-	AController* TargetController = Cast<AController>(NewPlayer);
-	LetStartVoiceChat(TargetController);
-
-	AO_LOG(LogJM, Log, TEXT("End"));
-}*/
-
 void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));

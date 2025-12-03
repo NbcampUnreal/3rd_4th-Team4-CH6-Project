@@ -1084,15 +1084,6 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Unmute 시도)
 		AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
 		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
-		// TODO : 등록만 하고 unmute는 안해도 될 듯? (기본이 unmute 상태라?)
-		/*if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
-		{
-			AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Unmuted Successfully"), *TargetPS->GetPlayerName());
-		}
-		else
-		{
-			AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Unmute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
-		}*/
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
