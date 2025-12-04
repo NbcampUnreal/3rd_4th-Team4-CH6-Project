@@ -1,0 +1,147 @@
+// AO_GameplayAbility_MeleeHitConfirm.cpp
+
+#include "Character/Combat/Ability/AO_GameplayAbility_MeleeHitConfirm.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+#include "AO_Log.h"
+
+UAO_GameplayAbility_MeleeHitConfirm::UAO_GameplayAbility_MeleeHitConfirm()
+{
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
+
+	TraceChannel = ECC_Pawn;
+
+	FAbilityTriggerData TriggerData;
+	TriggerData.TriggerTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Melee.Confirm"));
+	TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
+	AbilityTriggers.Add(TriggerData);
+	
+	HitReactEventTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact"));
+}
+
+void UAO_GameplayAbility_MeleeHitConfirm::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	if (!ActorInfo->IsNetAuthority())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
+	}
+	
+	if (!TriggerEventData)
+	{
+		AO_LOG(LogKH, Error, TEXT("TriggerEventData is null"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
+	}
+
+	DoMeleeHitConfirm(ActorInfo, TriggerEventData);
+
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+void UAO_GameplayAbility_MeleeHitConfirm::DoMeleeHitConfirm(const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayEventData* EventData)
+{
+	checkf(ActorInfo, TEXT("Failed to get ActorInfo"));
+	checkf(ActorInfo->AvatarActor.IsValid(), TEXT("Failed to get AvatarActor"));
+
+	const UAO_MeleeHitEventPayload* Payload = Cast<UAO_MeleeHitEventPayload>(EventData->OptionalObject);
+	if (!Payload)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to cast EventData to UAO_MeleeHitEventPayload"));
+		return;
+	}
+
+	const FAO_MeleeHitTraceParams& Params = Payload->Params;
+	
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("Failed to get World"));
+
+	TArray<FHitResult> HitResults;
+	TArray<AActor*> ActorsToIgnore;
+
+	if (bIgnoreInstigator)
+	{
+		ActorsToIgnore.Add(ActorInfo->AvatarActor.Get());
+	}
+
+	UKismetSystemLibrary::SphereTraceMulti(
+		World,
+		Params.TraceStart,
+		Params.TraceEnd,
+		Params.TraceRadius,
+		UEngineTypes::ConvertToTraceType(TraceChannel),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResults,
+		true);
+
+	TSet<TWeakObjectPtr<AActor>> UniqueHitActors;
+
+	for (const auto& Hit : HitResults)
+	{
+		AActor* HitActor = Hit.GetActor();
+		if (!HitActor) continue;
+		if (UniqueHitActors.Contains(HitActor)) continue;
+
+		UniqueHitActors.Add(HitActor);
+		ApplyDamageToActor(HitActor, Params, ActorInfo);
+	}
+}
+
+void UAO_GameplayAbility_MeleeHitConfirm::ApplyDamageToActor(AActor* TargetActor, const FAO_MeleeHitTraceParams& Params,
+	const FGameplayAbilityActorInfo* ActorInfo)
+{
+	if (!TargetActor || !Params.DamageEffectClass)
+	{
+		AO_LOG(LogKH, Warning, TEXT("DamageEffectClass is null"));
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = ActorInfo->AbilitySystemComponent.Get();
+	checkf(SourceASC, TEXT("Failed to get SourceASC"));
+
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+	if (!TargetASC)
+	{
+		return;
+	}
+	
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddInstigator(ActorInfo->OwnerActor.Get(), ActorInfo->AvatarActor.Get());
+
+	FGameplayEffectSpecHandle Handle = SourceASC->MakeOutgoingSpec(Params.DamageEffectClass, 1.f, Context);
+	checkf(Handle.IsValid(), TEXT("Failed to make Spec Handle"));
+
+	const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
+	Handle.Data.Get()->SetSetByCallerMagnitude(DamageTag, Params.DamageAmount);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*Handle.Data.Get(), TargetASC);
+
+	SendHitReactEvent(TargetActor, ActorInfo->AvatarActor.Get(), Params.DamageAmount);
+}
+
+void UAO_GameplayAbility_MeleeHitConfirm::SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor,
+	float DamageAmount)
+{
+	if (!TargetActor || !HitReactEventTag.IsValid())
+	{
+		AO_LOG(LogKH, Warning, TEXT("DamageEffectClass is null"));
+		return;
+	}
+
+	FGameplayEventData HitEvent;
+	HitEvent.EventTag = HitReactEventTag;
+	HitEvent.Instigator = InstigatorActor;
+	HitEvent.Target = TargetActor;
+	HitEvent.EventMagnitude = DamageAmount;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetActor, HitReactEventTag, HitEvent);
+}
