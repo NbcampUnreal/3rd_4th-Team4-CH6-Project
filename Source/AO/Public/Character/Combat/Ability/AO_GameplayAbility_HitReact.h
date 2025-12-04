@@ -44,4 +44,6 @@ protected:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+
+	FString GetHitDirectionSuffix(const FGameplayEventData* TriggerEventData, const FGameplayAbilityActorInfo* ActorInfo) const;
 };

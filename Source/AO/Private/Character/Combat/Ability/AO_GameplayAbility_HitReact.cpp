@@ -36,16 +36,41 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 		return;
 	}
 
-	FGameplayTag EventTag;
+	// 베이스 이벤트 태그 (Event.Combat.HitReact.Heavy)
+	FGameplayTag BaseTag;
 	if (TriggerEventData)
 	{
-		EventTag = TriggerEventData->EventTag;
+		BaseTag = TriggerEventData->EventTag;
 	}
 
-	TObjectPtr<UAnimMontage> MontageToPlay = nullptr;
-	if (EventTag.IsValid())
+	const FString DirectionSuffix = GetHitDirectionSuffix(TriggerEventData, ActorInfo);
+
+	// 베이스 태그에 .Front / .Back 등의 접미사를 붙여서 방향까지 포함한 태그 생성
+	FGameplayTag FinalTag = BaseTag;
+	if (BaseTag.IsValid())
 	{
-		if (TObjectPtr<UAnimMontage>* FoundMontage = HitReactMontageMap.Find(EventTag))
+		const FString BaseTagString = BaseTag.GetTagName().ToString();
+		const FString FinalTagString = FString::Printf(TEXT("%s.%s"), *BaseTagString, *DirectionSuffix);
+		FinalTag = FGameplayTag::RequestGameplayTag(FName(*FinalTagString));
+	}
+	AO_LOG(LogKH, Display, TEXT("Base Tag: %s"), *BaseTag.ToString());
+	AO_LOG(LogKH, Display, TEXT("Final Tag: %s"), *FinalTag.ToString());
+
+	TObjectPtr<UAnimMontage> MontageToPlay = nullptr;
+	
+	// 최종 태그로 몽타주 맵에서 찾아보기
+	if (FinalTag.IsValid())
+	{
+		if (TObjectPtr<UAnimMontage>* FoundMontage = HitReactMontageMap.Find(FinalTag))
+		{
+			MontageToPlay = FoundMontage->Get();
+		}
+	}
+
+	// 방향까지 붙힌 태그로 못 찾는 경우, 베이스 태그로도 찾아보기
+	if (!MontageToPlay && BaseTag.IsValid())
+	{
+		if (TObjectPtr<UAnimMontage>* FoundMontage = HitReactMontageMap.Find(BaseTag))
 		{
 			MontageToPlay = FoundMontage->Get();
 		}
@@ -95,4 +120,54 @@ void UAO_GameplayAbility_HitReact::OnMontageCancelled()
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
+}
+
+FString UAO_GameplayAbility_HitReact::GetHitDirectionSuffix(const FGameplayEventData* TriggerEventData,
+	const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	const AActor* InstigatorActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Instigator.Get()) : nullptr;
+	const AActor* TargetActor = ActorInfo && ActorInfo->AvatarActor.IsValid() ? ActorInfo->AvatarActor.Get() : nullptr;
+
+	if (!InstigatorActor || !TargetActor)
+	{
+		return TEXT("Front");
+	}
+
+	const FVector TargetLocation = TargetActor->GetActorLocation();
+	const FVector InstigatorLocation = InstigatorActor->GetActorLocation();
+
+	FVector ToInstigator = InstigatorLocation - TargetLocation;
+	ToInstigator.Z = 0.f;
+	if (!ToInstigator.Normalize())
+	{
+		return TEXT("Front");
+	}
+
+	FVector Forward = TargetActor->GetActorForwardVector();
+	Forward.Z = 0.f;
+	if (!Forward.Normalize())
+	{
+		return TEXT("Front");
+	}
+
+	const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward);
+
+	const float ForwardDot = FVector::DotProduct(Forward, ToInstigator);
+	const float RightDot = FVector::DotProduct(Right, ToInstigator);
+
+	const float FrontThreshold = 0.707f;
+
+	if (ForwardDot > FrontThreshold)
+	{
+		return TEXT("Front");
+	}
+	if (ForwardDot < -FrontThreshold)
+	{
+		return TEXT("Back");
+	}
+	if (RightDot >= 0.f)
+	{
+		return TEXT("Right");
+	}
+	return TEXT("Left");
 }
