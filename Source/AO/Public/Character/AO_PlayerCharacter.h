@@ -12,6 +12,7 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_CustomizingComponent;
 class UCustomizableObjectInstance;
 class UAO_PlayerCharacter_AttributeSet;
 class UGameplayAbility;
@@ -120,6 +121,8 @@ protected:
 	TObjectPtr<UCustomizableSkeletalComponent> BodyComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UCustomizableSkeletalComponent> HeadComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_CustomizingComponent> CustomizingComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -185,4 +188,11 @@ private:
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void UseInvenrotyItem();
 	void DropInvenrotyItem();
+
+//세훈: Customizable Object Instance
+public:
+	UFUNCTION(NetMulticast, Reliable)
+	void ChangeCharacterMesh(UCustomizableObjectInstance* ChangeMesh);
+	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const;
+	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const;
 };

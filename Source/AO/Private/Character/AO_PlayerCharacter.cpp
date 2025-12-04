@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
@@ -21,7 +22,6 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
-#include "MuCO/CustomizableObjectInstance.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -78,12 +78,17 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	BodyComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("BodyComponent"));
 	BodyComponent->SetupAttachment(BodySkeletalMesh);
 	BodyComponent->SetComponentName(FName("Body"));
+	BodyComponent->SetIsReplicated(true);
 	
 	HeadSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadSkeletalMesh"));
 	HeadSkeletalMesh->SetupAttachment(BaseSkeletalMesh);
 	HeadComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("HeadComponent"));
 	HeadComponent->SetupAttachment(HeadSkeletalMesh);
 	HeadComponent->SetComponentName(FName("Head"));
+	HeadComponent->SetIsReplicated(true);
+
+	CustomizingComponent = CreateDefaultSubobject<UAO_CustomizingComponent>(TEXT("CustomizingComponent"));
+	CustomizingComponent->SetIsReplicated(true);
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -520,4 +525,36 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
+{
+	return BodyComponent;
+}
+
+TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetHeadComponent() const
+{
+	return HeadComponent;
+}
+
+void AAO_PlayerCharacter::ChangeCharacterMesh_Implementation(UCustomizableObjectInstance* ChangeMesh)
+{
+	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
+	*GetName(), HasAuthority(), IsLocallyControlled());
+	
+	if (IsValid(ChangeMesh))
+	{
+		BodyComponent->SetCustomizableObjectInstance(ChangeMesh);
+		HeadComponent->SetCustomizableObjectInstance(ChangeMesh);
+		BodyComponent->UpdateSkeletalMeshAsync();
+		HeadComponent->UpdateSkeletalMeshAsync();
+	
+		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *ChangeMesh->GetName());
+		
+	}
+	else
+	{
+		AO_LOG(LogKSH, Error, TEXT("ChangeCharacterMesh: ChangeMesh is invalid"));
+	}
+	CustomizingComponent->PrintCustomizableObjectInstanceMap();
 }
