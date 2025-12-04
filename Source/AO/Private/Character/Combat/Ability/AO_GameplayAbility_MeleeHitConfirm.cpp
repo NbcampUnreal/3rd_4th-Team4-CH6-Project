@@ -16,7 +16,7 @@ UAO_GameplayAbility_MeleeHitConfirm::UAO_GameplayAbility_MeleeHitConfirm()
 	TraceChannel = ECC_Pawn;
 
 	FAbilityTriggerData TriggerData;
-	TriggerData.TriggerTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Melee.Confirm"));
+	TriggerData.TriggerTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Confirm"));
 	TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
 	AbilityTriggers.Add(TriggerData);
 	

@@ -11,7 +11,7 @@
 
 UAO_NotifyState_MeleeCollision::UAO_NotifyState_MeleeCollision()
 {
-	HitConfirmEventTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Melee.Confirm"));
+	HitConfirmEventTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Confirm"));
 }
 
 void UAO_NotifyState_MeleeCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,

@@ -34,7 +34,10 @@ protected:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
-	TObjectPtr<UAnimMontage> HitReactMontage;
+	TObjectPtr<UAnimMontage> DefaultHitReactMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
+	TMap<FGameplayTag, TObjectPtr<UAnimMontage>> HitReactMontageMap;
 
 	UFUNCTION()
 	void OnMontageCompleted();

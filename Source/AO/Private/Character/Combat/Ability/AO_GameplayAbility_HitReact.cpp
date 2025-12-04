@@ -29,15 +29,35 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 		return;
 	}
 
-	if (!HitReactMontage)
+	if (!DefaultHitReactMontage)
 	{
-		AO_LOG(LogKH, Warning, TEXT("HitReactMontage is null"));
+		AO_LOG(LogKH, Warning, TEXT("DefaultHitReactMontage is null"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	FGameplayTag EventTag;
+	if (TriggerEventData)
+	{
+		EventTag = TriggerEventData->EventTag;
+	}
+
+	TObjectPtr<UAnimMontage> MontageToPlay = nullptr;
+	if (EventTag.IsValid())
+	{
+		if (TObjectPtr<UAnimMontage>* FoundMontage = HitReactMontageMap.Find(EventTag))
+		{
+			MontageToPlay = FoundMontage->Get();
+		}
+	}
+	
+	if (!MontageToPlay)
+	{
+		MontageToPlay = DefaultHitReactMontage;
+	}
 	
 	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask
-		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, HitReactMontage);
+		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, MontageToPlay);
 	
 	if (!MontageTask)
 	{
