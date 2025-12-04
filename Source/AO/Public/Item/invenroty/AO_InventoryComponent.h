@@ -1,12 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffect.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "Components/ActorComponent.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "AO_InventoryComponent.generated.h"
 
+struct FGameplayEventData;
 class AAO_MasterItem;
 
 USTRUCT(BlueprintType)
@@ -97,4 +99,10 @@ protected:
 	void OnRep_SelectedIndex();
 	
 	bool IsValidSlotIndex(int32 Index) const { return Index >= 0 && Index < Slots.Num(); }
+
+public:
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
+	UDataTable* ItemDataTable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UseItem")
+	TSubclassOf<UGameplayEffect> AddHealthClass;
 };

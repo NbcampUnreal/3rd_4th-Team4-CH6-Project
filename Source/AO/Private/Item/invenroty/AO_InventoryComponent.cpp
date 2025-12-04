@@ -1,5 +1,6 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 
+#include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
@@ -172,7 +173,48 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
-	//
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "consume");
+		
+		static const FString Context00(TEXT("Inventory Item Use"));
+		float AddAmount = 0.0f;
+		const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
+		Slots[SelectedSlotIndex].ItemID, 
+		Context00      
+		);
+
+		if (ItemData)
+		{
+			AddAmount = ItemData->PassiveAmount;
+		}
+		const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive")); 
+    
+		FGameplayEventData EventData;
+		EventData.EventTag = ActivationEventTag;
+		EventData.EventMagnitude = AddAmount;
+		
+		AActor* OwnerActor = GetOwner();
+		if (!OwnerActor) return;
+		UAbilitySystemComponent* ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+		if (!ASC) return;
+		static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item"));    
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();  
+		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AddHealthClass, 1.f, Context);    
+		if (SpecHandle.IsValid())  
+		{
+			SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, EventData.EventMagnitude);  
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+		
+		
+		ClearSlot();
+	}
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
+		//
+	}
 }
 
 void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
