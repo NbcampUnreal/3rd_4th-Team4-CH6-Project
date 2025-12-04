@@ -19,6 +19,7 @@ UAO_InventoryComponent::UAO_InventoryComponent()
 	}
 
 	SelectedSlotIndex = 1;
+	EmptySlotList = {1, 2, 3, 4};
 }
 
 void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
@@ -89,6 +90,16 @@ void UAO_InventoryComponent::OnRightClick()
 	}
 }
 
+/*
+아이템과 상호작용을함
+
+현재 슬롯이 비어있는지 확인함.
+y -> 인벤토리에 해당 아이템을 복사함
+n -> 빈슬롯이 있는지 확인
+	있다 -> 빈슬롯에 넣는다
+	없다 -> 기존 아이템을 뱉어낸다
+	*/
+
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
@@ -98,29 +109,45 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 	if (!WorldItemActor) return;
 	
 	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
-	Slots[SelectedSlotIndex] = IncomingItem;
-	Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
-	Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
-	OnInventoryUpdated.Broadcast(Slots);
 	
 	if (OldSlot.ItemID != "empty")
 	{
-		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-
-		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-			DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
-			SpawnTransform,
-			nullptr,
-			nullptr,
-			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-		);
-
-		if (DropItem)
+		if (EmptySlotList.Num()>0)
 		{
-			DropItem->ItemID = OldSlot.ItemID;
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+			int32 findEmptyNum = EmptySlotList[0];
+			EmptySlotList.Remove(findEmptyNum);
+			
+			Slots[findEmptyNum] = IncomingItem;
+			Slots[findEmptyNum].ItemType = IncomingItem.ItemType;
+			Slots[findEmptyNum].FuelAmount = IncomingItem.FuelAmount;
+			OnInventoryUpdated.Broadcast(Slots);
+		}
+		else
+		{			
+			Slots[SelectedSlotIndex] = IncomingItem;
+			Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
+			Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
+			OnInventoryUpdated.Broadcast(Slots);
+
+			EmptySlotList.Remove(SelectedSlotIndex);
+			
+			FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+			FRotator SpawnRotation = FRotator::ZeroRotator;
+			FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+
+			AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+				DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+				SpawnTransform,
+				nullptr,
+				nullptr,
+				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+			);
+
+			if (DropItem)
+			{
+				DropItem->ItemID = OldSlot.ItemID;
+				UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+			}
 		}
 	}
 	else
@@ -130,8 +157,17 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 		Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
 		OnInventoryUpdated.Broadcast(Slots);
 		
+		EmptySlotList.Remove(SelectedSlotIndex);
+		
 		WorldItemActor->Destroy();
 	}
+	
+	FString DebugMessage;
+	for (int32 Index : EmptySlotList)
+	{
+		DebugMessage += FString::Printf(TEXT("%d "), Index);
+	}
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, DebugMessage);
 }
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
@@ -164,13 +200,11 @@ void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 		if (DropItem)
 		{
 			DropItem->ItemID = CurrentSlot.ItemID;
-			// DropItem->FuelAmount = CurrentSlot.FuelAmount; 
-
+			// DropItem->FuelAmount = CurrentSlot.FuelAmount;
 			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
 		}
+		ClearSlot();
 	}
-
-	ClearSlot();
 }
 
 void UAO_InventoryComponent::OnRep_Slots()
@@ -206,6 +240,7 @@ void UAO_InventoryComponent::ClearSlot()
 	{
 		OnInventoryUpdated.Broadcast(Slots);
 	}
+	EmptySlotList.Add(SelectedSlotIndex);
 }
 
 //ms_inventory key binding

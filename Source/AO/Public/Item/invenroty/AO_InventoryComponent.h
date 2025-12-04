@@ -82,6 +82,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }
 
+	UPROPERTY(Transient)
+	TArray<int32> EmptySlotList; 
+	
 	void ClearSlot();
 
 protected:
