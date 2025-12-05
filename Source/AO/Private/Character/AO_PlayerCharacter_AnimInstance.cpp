@@ -2,11 +2,11 @@
 
 #include "Character/AO_PlayerCharacter_AnimInstance.h"
 
-#include "AO/AO_Log.h"
-#include "Character/AO_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "PoseSearch/PoseSearchTrajectoryLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+
+#include "Character/AO_PlayerCharacter.h"
 
 void FAOAnimInstanceProxy::InitializeObjects(UAnimInstance* InAnimInstance)
 {
@@ -18,12 +18,13 @@ void FAOAnimInstanceProxy::InitializeObjects(UAnimInstance* InAnimInstance)
 	if (!InAnimInstance->GetWorld() || InAnimInstance->GetWorld()->IsPreviewWorld()) return;
 	
 	Owner = InAnimInstance->TryGetPawnOwner();
-	if (!Owner) return;
+	checkf(Owner, TEXT("Failed to get Owner"));
 
 	Character = Cast<AAO_PlayerCharacter>(Owner);
-	if (!Character) return;
+	checkf(Character, TEXT("Failed to get Character"));
 	
 	MovementComponent = Character->GetCharacterMovement();
+	checkf(Character, TEXT("Failed to get Character Movement"));
 }
 
 void FAOAnimInstanceProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
@@ -244,7 +245,7 @@ void UAO_PlayerCharacter_AnimInstance::UpdateStates()
 
 void UAO_PlayerCharacter_AnimInstance::UpdateTrajectory(float DeltaSeconds)
 {
-	UAnimInstance* AnimInstance = GetOwningComponent()->GetAnimInstance();
+	const TObjectPtr<UAnimInstance> AnimInstance = GetOwningComponent()->GetAnimInstance();
 
 	FPoseSearchTrajectoryData TrajectoryData;
 	if (Speed2D > 0.f)

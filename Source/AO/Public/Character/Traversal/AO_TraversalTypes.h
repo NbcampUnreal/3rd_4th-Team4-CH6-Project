@@ -59,11 +59,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Traversal")
 	float BackLedgeHeight = 0.f;
 	UPROPERTY(EditAnywhere, Category = "Traversal")
-	UPrimitiveComponent* HitComponent = nullptr;
+	TObjectPtr<UPrimitiveComponent> HitComponent = nullptr;
 
 	// Montage Information
 	UPROPERTY(EditAnywhere, Category = "Traversal")
-	UAnimMontage* ChosenMontage = nullptr;
+	TObjectPtr<UAnimMontage> ChosenMontage = nullptr;
 	UPROPERTY(EditAnywhere, Category = "Traversal")
 	float StartTime = 0.f;
 	UPROPERTY(EditAnywhere, Category = "Traversal")

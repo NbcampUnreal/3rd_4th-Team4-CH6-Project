@@ -18,7 +18,7 @@
 
 UAO_TraversalComponent::UAO_TraversalComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UAO_TraversalComponent::BeginPlay()
