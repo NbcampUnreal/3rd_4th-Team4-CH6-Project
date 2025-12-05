@@ -39,6 +39,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
 	TMap<FGameplayTag, TObjectPtr<UAnimMontage>> HitReactMontageMap;
 
+	UPROPERTY(EditDefaultsOnly, Category = "HitReact")
+	TSubclassOf<UGameplayEffect> InvulnerableEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
+	TSubclassOf<UGameplayEffect> BlockAbilitiesEffectClass;
+	
 	UFUNCTION()
 	void OnMontageCompleted();
 
@@ -46,4 +52,8 @@ protected:
 	void OnMontageCancelled();
 
 	FString GetHitDirectionSuffix(const FGameplayEventData* TriggerEventData, const FGameplayAbilityActorInfo* ActorInfo) const;
+
+private:
+	FActiveGameplayEffectHandle InvulnerableEffectHandle;
+	FActiveGameplayEffectHandle BlockAbilitiesEffectHandle;
 };

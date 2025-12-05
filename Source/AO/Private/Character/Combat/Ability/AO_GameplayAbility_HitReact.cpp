@@ -3,9 +3,12 @@
 
 #include "Character/Combat/Ability/AO_GameplayAbility_HitReact.h"
 
+#include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
 #include "AO_Log.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UAO_GameplayAbility_HitReact::UAO_GameplayAbility_HitReact()
 {
@@ -53,8 +56,6 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 		const FString FinalTagString = FString::Printf(TEXT("%s.%s"), *BaseTagString, *DirectionSuffix);
 		FinalTag = FGameplayTag::RequestGameplayTag(FName(*FinalTagString));
 	}
-	AO_LOG(LogKH, Display, TEXT("Base Tag: %s"), *BaseTag.ToString());
-	AO_LOG(LogKH, Display, TEXT("Final Tag: %s"), *FinalTag.ToString());
 
 	TObjectPtr<UAnimMontage> MontageToPlay = nullptr;
 	
@@ -97,12 +98,55 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 	MontageTask->OnInterrupted.AddDynamic(this, &UAO_GameplayAbility_HitReact::OnMontageCancelled);
 	
 	MontageTask->ReadyForActivation();
+	
+	if (HasAuthority(&ActivationInfo))
+	{
+		if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
+		{
+			Character->GetCharacterMovement()->DisableMovement();
+		}
+		
+		if (InvulnerableEffectClass)
+		{
+			FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, InvulnerableEffectClass, 1.f);
+			InvulnerableEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+		}
+
+		if (BlockAbilitiesEffectClass)
+		{
+			FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, BlockAbilitiesEffectClass, 1.f);
+			BlockAbilitiesEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+		}
+	}
 }
 
 void UAO_GameplayAbility_HitReact::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
+	if (HasAuthority(&ActivationInfo))
+	{
+		if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
+		{
+			Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		}
+		
+		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+		{
+			if (InvulnerableEffectHandle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(InvulnerableEffectHandle);
+			}
+			InvulnerableEffectHandle.Invalidate();
+
+			if (BlockAbilitiesEffectHandle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(BlockAbilitiesEffectHandle);
+			}
+			BlockAbilitiesEffectHandle.Invalidate();
+		}
+	}
+	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 

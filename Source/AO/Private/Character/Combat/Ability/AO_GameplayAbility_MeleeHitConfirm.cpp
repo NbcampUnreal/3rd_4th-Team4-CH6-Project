@@ -113,6 +113,13 @@ void UAO_GameplayAbility_MeleeHitConfirm::ApplyDamageToActor(AActor* TargetActor
 	{
 		return;
 	}
+
+	// 무적 상태인 경우 적용하지 않음
+	const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
+	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
+	{
+		return;
+	}
 	
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddInstigator(ActorInfo->OwnerActor.Get(), ActorInfo->AvatarActor.Get());
