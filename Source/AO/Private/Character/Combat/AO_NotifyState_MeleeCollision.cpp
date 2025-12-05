@@ -2,30 +2,36 @@
 
 #include "Character/Combat/AO_NotifyState_MeleeCollision.h"
 
-#include "AO_Log.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffect.h"
+
+#include "AO_Log.h"
 #include "Character/Combat/AO_DamageComponent.h"
+#include "Character/Combat/AO_MeleeHitEventPayload.h"
+
+UAO_NotifyState_MeleeCollision::UAO_NotifyState_MeleeCollision()
+{
+	HitConfirmEventTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.Confirm"));
+}
 
 void UAO_NotifyState_MeleeCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                                                  float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
-	if (!MeshComp || !MeshComp->GetOwner())
-	{
-		AO_LOG(LogKH, Error, TEXT("MeshComp or MeshComp->GetOwner() is null"));
-		return;
-	}
+	checkf(MeshComp, TEXT("MeshComp is invalid"));
 	
 	OwningActor = MeshComp->GetOwner();
+	checkf(OwningActor.IsValid(), TEXT("OwningActor is invalid"));
 
-	if (!MeshComp->DoesSocketExist(SocketName))
+	if (!SocketName.IsNone())
 	{
-		AO_LOG(LogKH, Error, TEXT("SocketName does not exist on MeshComp"));
-		return;
+		StartLocation = MeshComp->GetSocketLocation(SocketName);
 	}
-	
-	StartLocation = MeshComp->GetSocketLocation(SocketName);
+	else
+	{
+		StartLocation = MeshComp->GetComponentLocation();
+	}
 }
 
 void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
@@ -33,13 +39,41 @@ void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp,
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	if (OwningActor.IsValid() && DamageEffectClass)
+	if (!MeshComp || !OwningActor.IsValid() || !DamageEffectClass)
 	{
-		if (UAO_DamageComponent* DamageComponent = OwningActor->FindComponentByClass<UAO_DamageComponent>())
-		{
-			const FVector EndLocation = MeshComp->GetSocketLocation(SocketName);
-
-			DamageComponent->PerformMeleeDamage(DamageEffectClass, DamageAmount, StartLocation, EndLocation, TraceRadius);
-		}
+		return;
 	}
+	
+	AActor* Owner = OwningActor.Get();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return;
+	}
+
+	FVector EndLocation = StartLocation;
+	if (!SocketName.IsNone())
+	{
+		EndLocation = MeshComp->GetSocketLocation(SocketName);
+	}
+	else
+	{
+		EndLocation = MeshComp->GetComponentLocation();
+	}
+	
+	UAO_MeleeHitEventPayload* Payload = NewObject<UAO_MeleeHitEventPayload>(Owner);
+	checkf(Payload, TEXT("Failed to create UAO_MeleeHitEventPayload"));
+
+	Payload->Params.TraceStart = StartLocation;
+	Payload->Params.TraceEnd = EndLocation;
+	Payload->Params.TraceRadius = TraceRadius;
+	Payload->Params.DamageEffectClass = DamageEffectClass;
+	Payload->Params.DamageAmount = DamageAmount;
+
+	FGameplayEventData EventData;
+	EventData.EventTag = HitConfirmEventTag;
+	EventData.Instigator = Owner;
+	EventData.OptionalObject = Payload;
+	EventData.EventMagnitude = DamageAmount;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, HitConfirmEventTag, EventData);
 }
