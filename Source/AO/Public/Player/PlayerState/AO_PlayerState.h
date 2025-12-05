@@ -73,11 +73,16 @@ protected:
 	UFUNCTION()
 	void OnRep_IsLobbyHost();
 
+	// JM : 플레이어 생존 여부 확인
+	UFUNCTION()
+	void OnRep_IsAlive();
+
 private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
 
 // JM : 생존 여부 판단용 변수 추가 (임시)
 public:
+	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
 	bool bIsAlive = true;
 };
