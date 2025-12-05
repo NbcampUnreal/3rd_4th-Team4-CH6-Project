@@ -15,18 +15,17 @@ struct FAOLobbyReadyBoardEntry
 
 public:
 	UPROPERTY(BlueprintReadWrite)
-	FString PlayerName;
+	FString PlayerName = TEXT("");
 
 	UPROPERTY(BlueprintReadWrite)
-	bool bIsHost;
+	bool bIsHost = false;
 
 	UPROPERTY(BlueprintReadWrite)
-	FString StatusLabel;
+	FString StatusLabel = TEXT("");
 
 	UPROPERTY(BlueprintReadWrite)
-	bool bStatusActive;
+	bool bStatusActive = false;
 
-	// 정렬용: 로비 입장 순서 (0부터 시작, -1이면 미할당)
 	int32 JoinOrder = -1;
 };
 
