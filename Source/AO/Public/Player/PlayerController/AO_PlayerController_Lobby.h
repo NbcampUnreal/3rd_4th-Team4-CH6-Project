@@ -22,10 +22,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	// JM : 생명주기 테스트용
 
 public:
-	/* 스팀 초대 오버레이 UI 열기 */
-	UFUNCTION(Client, Reliable)
-	void Client_OpenInviteOverlay();
-
 	/* 레디 상태를 서버에 전달 */
 	UFUNCTION(Server, Reliable)
 	void Server_SetReady(bool bNewReady);
@@ -34,4 +30,27 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestStart();
 
+	/* 초대 UI 요청을 서버로 전달 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestInviteOverlay();
+
+	/* 옷장 UI 요청을 서버로 전달 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestWardrobe();
+
+	/* 서버에서 해당 클라에게 초대 UI 열라고 지시 */
+	UFUNCTION(Client, Reliable)
+	void Client_OpenInviteOverlay();
+
+	/* 서버에서 해당 클라에게 옷장 UI 열라고 지시 */
+	UFUNCTION(Client, Reliable)
+	void Client_OpenWardrobe();
+
+	/* 초대 UI 여는 로컬 함수 */
+	UFUNCTION()
+	void OpenInviteOverlay();
+
+	/* 옷장 UI 여는 로컬 함수 */
+	UFUNCTION()
+	void OpenWardrobe();
 };

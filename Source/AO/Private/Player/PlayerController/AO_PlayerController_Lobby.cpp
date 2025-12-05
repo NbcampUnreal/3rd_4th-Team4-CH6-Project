@@ -35,20 +35,6 @@ void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReaso
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
-{
-	if(const UGameInstance* GI = GetGameInstance())
-	{
-		if(UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
-		{
-			Sub->ShowInviteUI();
-			return;
-		}
-	}
-
-	AO_LOG(LogJSH, Warning, TEXT("Client_OpenInviteOverlay: OnlineSessionSubsystem not found"));
-}
-
 void AAO_PlayerController_Lobby::Server_SetReady_Implementation(bool bNewReady)
 {
 	if(AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
@@ -74,4 +60,92 @@ void AAO_PlayerController_Lobby::Server_RequestStart_Implementation()
 			GM->RequestStartFrom(this);
 		}
 	}
+}
+
+void AAO_PlayerController_Lobby::Server_RequestInviteOverlay_Implementation()
+{
+	AO_LOG(LogJSH, Log,
+		TEXT("Server_RequestInviteOverlay: Called on Server | PC=%s HasAuthority=%d IsLocal=%d"),
+		*GetName(),
+		HasAuthority() ? 1 : 0,
+		IsLocalController() ? 1 : 0);
+
+	Client_OpenInviteOverlay();
+}
+
+void AAO_PlayerController_Lobby::Server_RequestWardrobe_Implementation()
+{
+	AO_LOG(LogJSH, Log,
+		TEXT("Server_RequestWardrobe: Called on Server | PC=%s HasAuthority=%d IsLocal=%d"),
+		*GetName(),
+		HasAuthority() ? 1 : 0,
+		IsLocalController() ? 1 : 0);
+
+	Client_OpenWardrobe();
+}
+
+void AAO_PlayerController_Lobby::Client_OpenInviteOverlay_Implementation()
+{
+	AO_LOG(LogJSH, Log,
+		TEXT("Client_OpenInviteOverlay: Called on Client | PC=%s HasAuthority=%d IsLocal=%d"),
+		*GetName(),
+		HasAuthority() ? 1 : 0,
+		IsLocalController() ? 1 : 0);
+
+	OpenInviteOverlay();
+}
+
+void AAO_PlayerController_Lobby::Client_OpenWardrobe_Implementation()
+{
+	AO_LOG(LogJSH, Log,
+		TEXT("Client_OpenWardrobe: Called on Client | PC=%s HasAuthority=%d IsLocal=%d"),
+		*GetName(),
+		HasAuthority() ? 1 : 0,
+		IsLocalController() ? 1 : 0);
+
+	OpenWardrobe();
+}
+
+void AAO_PlayerController_Lobby::OpenInviteOverlay()
+{
+	if( !IsLocalController() )
+	{
+		AO_LOG(LogJSH, Warning,
+			TEXT("OpenInviteOverlay: Not LocalController | PC=%s"),
+			*GetName());
+		return;
+	}
+
+	if( const UGameInstance* GI = GetGameInstance() )
+	{
+		if( UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>() )
+		{
+			AO_LOG(LogJSH, Log,
+				TEXT("OpenInviteOverlay: ShowInviteUI | PC=%s"),
+				*GetName());
+
+			Sub->ShowInviteUI();
+			return;
+		}
+	}
+
+	AO_LOG(LogJSH, Warning,
+		TEXT("OpenInviteOverlay: OnlineSessionSubsystem not found | PC=%s"),
+		*GetName());
+}
+
+void AAO_PlayerController_Lobby::OpenWardrobe()
+{
+	if( !IsLocalController() )
+	{
+		AO_LOG(LogJSH, Warning,
+			TEXT("OpenWardrobe: Not LocalController | PC=%s"),
+			*GetName());
+		return;
+	}
+
+	// TODO: 실제 Wardrobe UI 열기
+	AO_LOG(LogJSH, Log,
+		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
+		*GetName());
 }
