@@ -36,6 +36,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> InteractableMeshComponent;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsActivated, EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
+	bool bIsActivated = false;
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
@@ -47,6 +50,9 @@ protected:
 	{ 
 		return InteractableMeshComponent; 
 	}
+
+	UFUNCTION()
+	void OnRep_IsActivated();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -71,11 +77,11 @@ protected:
 		meta=(EditCondition="bIsToggleable", EditConditionHides))
 	TObjectPtr<UAnimMontage> DeactivateMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Toggle")
-	bool bIsToggleable = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
+	bool bWaitForAnimationNotify = false;
 
-	UPROPERTY(BlueprintReadWrite, Replicated, Category="Interaction|Toggle")
-	bool bIsActivated = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Toggle")
+	bool bIsToggleable = false;
 
 	virtual FTransform GetInteractionTransform() const override;
     

@@ -37,6 +37,7 @@ FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_Interacti
 	Info.DeactivateMontage = DeactivateMontage;
 	Info.InteractionTransform = GetInteractionTransform();
 	Info.WarpTargetName = WarpTargetName;
+	Info.bWaitForAnimationNotify = bWaitForAnimationNotify;
 	return Info;
 }
 
@@ -48,14 +49,14 @@ void AAO_BaseInteractable::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCom
 	}
 
 	// 루트 메시가 실제 메시를 가지고 있으면 추가
-	if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
+	if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
 	{
 		if (StaticMesh->GetStaticMesh())
 		{
 			OutMeshComponents.Add(MeshComponent);
 		}
 	}
-	else if (USkeletalMeshComponent* SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComponent))
+	else if (TObjectPtr<USkeletalMeshComponent> SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComponent))
 	{
 		if (SkeletalMesh->GetSkeletalMeshAsset())
 		{
@@ -67,12 +68,12 @@ void AAO_BaseInteractable::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCom
 	TArray<USceneComponent*> ChildComponents;
 	MeshComponent->GetChildrenComponents(true, ChildComponents);
     
-	for (USceneComponent* Child : ChildComponents)
+	for (TObjectPtr<USceneComponent> Child : ChildComponents)
 	{
-		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		if (TObjectPtr<UMeshComponent> ChildMesh = Cast<UMeshComponent>(Child))
 		{
 			// Static Mesh 체크
-			if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
+			if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
 			{
 				if (StaticMesh->GetStaticMesh())
 				{
@@ -80,7 +81,7 @@ void AAO_BaseInteractable::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCom
 				}
 			}
 			// Skeletal Mesh 체크
-			else if (USkeletalMeshComponent* SkeletalMesh = Cast<USkeletalMeshComponent>(ChildMesh))
+			else if (TObjectPtr<USkeletalMeshComponent> SkeletalMesh = Cast<USkeletalMeshComponent>(ChildMesh))
 			{
 				if (SkeletalMesh->GetSkeletalMeshAsset())
 				{
@@ -102,7 +103,6 @@ void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 
 	MulticastPlayInteractionSound();
 	
-	// ExecuteInteraction에서 몽타주 재생 후 처리
 	if (bIsToggleable)
 	{
 		bIsActivated = !bIsActivated;
@@ -128,6 +128,11 @@ void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Intera
 	// 기본 구현은 비어있음, 오버라이드 가능
 }
 
+void AAO_BaseInteractable::OnRep_IsActivated()
+{
+	StartInteractionAnimation(bIsActivated);
+}
+
 FTransform AAO_BaseInteractable::GetInteractionTransform() const
 {
 	if (!MeshComponent || InteractionSocketName.IsNone())
@@ -145,9 +150,9 @@ FTransform AAO_BaseInteractable::GetInteractionTransform() const
 	TArray<USceneComponent*> ChildComponents;
 	MeshComponent->GetChildrenComponents(true, ChildComponents);
     
-	for (USceneComponent* Child : ChildComponents)
+	for (TObjectPtr<USceneComponent> Child : ChildComponents)
 	{
-		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		if (TObjectPtr<UMeshComponent> ChildMesh = Cast<UMeshComponent>(Child))
 		{
 			if (ChildMesh->DoesSocketExist(InteractionSocketName))
 			{
