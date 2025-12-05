@@ -6,7 +6,6 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
-#include "AO_Log.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -27,17 +26,11 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to Commit Ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	if (!DefaultHitReactMontage)
-	{
-		AO_LOG(LogKH, Warning, TEXT("DefaultHitReactMontage is null"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	checkf(DefaultHitReactMontage, TEXT("DefaultHitReactMontage is null"));
 
 	// 베이스 이벤트 태그 (Event.Combat.HitReact.Heavy)
 	FGameplayTag BaseTag;
@@ -84,13 +77,7 @@ void UAO_GameplayAbility_HitReact::ActivateAbility(const FGameplayAbilitySpecHan
 	
 	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask
 		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, MontageToPlay);
-	
-	if (!MontageTask)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to create MontageTask"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	checkf(MontageTask, TEXT("Failed to create MontageTask"));
 	
 	MontageTask->OnCompleted.AddDynamic(this, &UAO_GameplayAbility_HitReact::OnMontageCompleted);
 	MontageTask->OnBlendOut.AddDynamic(this, &UAO_GameplayAbility_HitReact::OnMontageCompleted);
@@ -131,7 +118,7 @@ void UAO_GameplayAbility_HitReact::EndAbility(const FGameplayAbilitySpecHandle H
 			Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 		}
 		
-		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+		if (TObjectPtr<UAbilitySystemComponent> ASC = ActorInfo->AbilitySystemComponent.Get())
 		{
 			if (InvulnerableEffectHandle.IsValid())
 			{
@@ -169,8 +156,8 @@ void UAO_GameplayAbility_HitReact::OnMontageCancelled()
 FString UAO_GameplayAbility_HitReact::GetHitDirectionSuffix(const FGameplayEventData* TriggerEventData,
 	const FGameplayAbilityActorInfo* ActorInfo) const
 {
-	const AActor* InstigatorActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Instigator.Get()) : nullptr;
-	const AActor* TargetActor = ActorInfo && ActorInfo->AvatarActor.IsValid() ? ActorInfo->AvatarActor.Get() : nullptr;
+	const TObjectPtr<AActor> InstigatorActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Instigator.Get()) : nullptr;
+	const TObjectPtr<AActor> TargetActor = ActorInfo && ActorInfo->AvatarActor.IsValid() ? ActorInfo->AvatarActor.Get() : nullptr;
 
 	if (!InstigatorActor || !TargetActor)
 	{

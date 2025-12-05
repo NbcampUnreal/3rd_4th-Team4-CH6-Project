@@ -21,17 +21,17 @@ protected:
 	virtual void OnRegister() override;
 
 public:
-	void GetLedgeTransforms(FVector& HitLocation, FVector& ActorLocation, FTraversalCheckResult& TraversalResult);
+	void GetLedgeTransforms(const FVector& HitLocation, const FVector& ActorLocation, FTraversalCheckResult& TraversalResult);
 	
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Traversal")
-	TArray<USplineComponent*> Ledges;
+	TArray<TObjectPtr<USplineComponent>> Ledges;
 	UPROPERTY(BlueprintReadOnly, Category = "Traversal")
-	TMap<USplineComponent*, USplineComponent*> OppositeLedges;
+	TMap<TObjectPtr<USplineComponent>, TObjectPtr<USplineComponent>> OppositeLedges;
 	UPROPERTY(BlueprintReadOnly, Category = "Traversal")
 	float MinLedgeWidth = 60.f;
 
 private:
 	void ScanSplines();
-	USplineComponent* FindLedgeClosestToActor(FVector& ActorLocation);
+	TObjectPtr<USplineComponent> FindLedgeClosestToActor(const FVector& ActorLocation);
 };

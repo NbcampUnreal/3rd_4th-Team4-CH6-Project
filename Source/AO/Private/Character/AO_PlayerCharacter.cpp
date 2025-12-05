@@ -35,10 +35,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
 
-	if (const TObjectPtr<UCapsuleComponent> Capsule = GetCapsuleComponent())
-	{
-		Capsule->SetCollisionProfileName(TEXT("Player"));
-	}
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Player"));
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = true;
@@ -81,11 +78,8 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
-	if (!DefaultFoleyAudioBank)
-	{
-		AO_LOG(LogKH, Error, TEXT("DefaultFoleyAudioBank is null"));
-		return nullptr;
-	}
+	ensure(DefaultFoleyAudioBank);
+	
 	return DefaultFoleyAudioBank;
 }
 
@@ -261,11 +255,13 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 		LandVelocity = GetCharacterMovement()->Velocity;
 		bJustLanded = true;
 
-		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
-		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+		FTimerDelegate TimerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]()
 		{
 			bJustLanded = false;
-		}, 0.3f, false);
+		});
+
+		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
+		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, TimerDelegate, 0.3f, false);
 	}
 }
 
@@ -287,7 +283,7 @@ void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
 		return;
 	}
 	
-	FVector2D InputValue = Value.Get<FVector2D>();
+	const FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
 	{
@@ -310,7 +306,7 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 		return;
 	}
 	
-	FVector2D InputValue = Value.Get<FVector2D>();
+	const FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
 	{
@@ -354,8 +350,7 @@ void AAO_PlayerCharacter::TriggerJump()
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
 {
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
-	if (Spec)
+	if (FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID))
 	{
 		Spec->InputPressed = true;
 		if (Spec->IsActive())
@@ -371,8 +366,7 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 {
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
-	if (Spec)
+	if (FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID))
 	{
 		Spec->InputPressed = false;
 		if (Spec->IsActive())
@@ -384,8 +378,7 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleCrouch()
 {
-	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
-	if (!CharacterMovementComponent || CharacterMovementComponent->IsFalling())
+	if (!GetCharacterMovement() || GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}

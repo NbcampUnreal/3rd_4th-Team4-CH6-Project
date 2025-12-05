@@ -41,6 +41,9 @@ void UAO_GameplayAbility_Traversal::OnAvatarSet(const FGameplayAbilityActorInfo*
 
 	CharacterMovement = Character->GetCharacterMovement();
 	checkf(CharacterMovement, TEXT("Failed to get CharacterMovementComponent"));
+
+	CapsuleComponent = Cast<UCapsuleComponent>(Owner->GetComponentByClass(UCapsuleComponent::StaticClass()));
+	checkf(CapsuleComponent, TEXT("Failed to cast Owner to UCapsuleComponent"));
 }
 
 bool UAO_GameplayAbility_Traversal::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -71,7 +74,6 @@ void UAO_GameplayAbility_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to Commit Ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -84,7 +86,7 @@ void UAO_GameplayAbility_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 		CharacterMovement->bServerAcceptClientAuthoritativePosition = true;
 	}
 	
-	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
 		TraversalResult.ChosenMontage,
@@ -108,11 +110,7 @@ void UAO_GameplayAbility_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 	
 	if (ActorInfo->IsNetAuthority())
 	{
-		if (TObjectPtr<UCapsuleComponent> CapsuleComponent = Cast<UCapsuleComponent>(
-			Owner->GetComponentByClass(UCapsuleComponent::StaticClass())))
-		{
-			CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
-		}
+		CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
 	}
 }
 
@@ -124,13 +122,9 @@ void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle 
 	{
 		if (ActorInfo->IsNetAuthority())
 		{
-			if (Character)
+			if (CapsuleComponent)
 			{
-				if (TObjectPtr<UCapsuleComponent> CapsuleComponent = Cast<UCapsuleComponent>(
-					Character->GetComponentByClass(UCapsuleComponent::StaticClass())))
-				{
-					CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, false);
-				}
+				CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, false);
 			}
 		}
 
@@ -164,7 +158,7 @@ bool UAO_GameplayAbility_Traversal::TryTraversal()
 	}
 
 	// Evaluate Traversal Conditions by Chooser Table
-	TArray<UObject*> EvaluateObjects;
+	TArray<TObjectPtr<UObject>> EvaluateObjects;
 	if (!EvaluateTraversal(EvaluateObjects))
 	{
 		return false;
@@ -222,20 +216,15 @@ bool UAO_GameplayAbility_Traversal::DetectTraversal()
 		return false;
 	}
 
-	FVector ActorLocation = Owner->GetActorLocation();
-	UCapsuleComponent* CapsuleComponent = Cast<UCapsuleComponent>(Owner->GetComponentByClass(UCapsuleComponent::StaticClass()));
-	if (!CapsuleComponent)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get CapsuleComponent"));
-		return false;
-	}
-	float CapsuleRadius = CapsuleComponent->GetScaledCapsuleRadius();
-	float CapsuleHalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
+	const FVector ActorLocation = Owner->GetActorLocation();
+	
+	const float CapsuleRadius = CapsuleComponent->GetScaledCapsuleRadius();
+	const float CapsuleHalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
 	
 	// Perform a trace in the actor's forward direction to find a traversable object
 	FHitResult HitResult;
-	FVector TraceStart = ActorLocation + TraversalInput.TraceOriginOffset;
-	FVector TraceEnd = TraceStart + TraversalInput.TraceForwardDirection * TraversalInput.TraceForwardDistance + TraversalInput.TraceEndOffset;
+	const FVector TraceStart = ActorLocation + TraversalInput.TraceOriginOffset;
+	const FVector TraceEnd = TraceStart + TraversalInput.TraceForwardDirection * TraversalInput.TraceForwardDistance + TraversalInput.TraceEndOffset;
 
 	RunCapsuleTrace(
 		TraceStart,
@@ -256,7 +245,7 @@ bool UAO_GameplayAbility_Traversal::DetectTraversal()
 	}
 
 	// Get the front and back ledge transforms from the traversable component
-	UAO_TraversableComponent* TraversableComponent = Cast<UAO_TraversableComponent>(
+	TObjectPtr<UAO_TraversableComponent> TraversableComponent = Cast<UAO_TraversableComponent>(
 		HitResult.GetActor()->GetComponentByClass(UAO_TraversableComponent::StaticClass()));
 	if (!TraversableComponent)
 	{
@@ -327,7 +316,7 @@ bool UAO_GameplayAbility_Traversal::DetectTraversal()
 	RoomCheckBackLedgeLocation.Z += CapsuleHalfHeight + 2.0f;
 
 	FHitResult RoomCheckBackHitResult;
-	bool bRoomCheckBackHit = RunCapsuleTrace(
+	const bool bRoomCheckBackHit = RunCapsuleTrace(
 		RoomCheckFrontLedgeLocation,
 		RoomCheckBackLedgeLocation,
 		CapsuleRadius,
@@ -384,20 +373,12 @@ bool UAO_GameplayAbility_Traversal::DetectTraversal()
 	return true;
 }
 
-bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<UObject*>& EvaluateObjects)
+bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<TObjectPtr<UObject>>& EvaluateObjects)
 {
-	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(Owner);
-	if (!PlayerCharacter)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to cast Owner to AAO_PlayerCharacter"));
-		return false;
-	}
+	const TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = Cast<AAO_PlayerCharacter>(Owner);
+	checkf(PlayerCharacter, TEXT("Failed to cast Owner to AAO_PlayerCharacter"));
 
-	if (!AnimChooserTable)
-	{
-		AO_LOG(LogKH, Warning, TEXT("AnimChooserTable is null"));
-		return false;
-	}
+	checkf(AnimChooserTable, TEXT("TraversalChooserTable is not set"));
 	
 	// Evaluate a chooser to select all montages that match the conditions of the traversal check.
 	const FInstancedStruct ResultInstances = UChooserFunctionLibrary::MakeEvaluateChooser(AnimChooserTable);
@@ -406,18 +387,16 @@ bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<UObject*>& Evaluate
 	FInstancedStruct InputStruct;
 	InputStruct.InitializeAs<FTraversalChooserInput>();
 	FTraversalChooserInput& InputData = InputStruct.GetMutable<FTraversalChooserInput>();
-	FTraversalChooserInput ChooserInput = FTraversalChooserInput(
-		TraversalResult.ActionType,
-		TraversalResult.bHasFrontLedge,
-		TraversalResult.bHasBackLedge,
-		TraversalResult.bHasBackFloor,
-		TraversalResult.ObstacleHeight,
-		TraversalResult.ObstacleDepth,
-		TraversalResult.BackLedgeHeight,
-		CharacterMovement->MovementMode,
-		PlayerCharacter->Gait,
-		CharacterMovement->Velocity.Size2D());
-	InputData = ChooserInput;
+	InputData.ActionType = TraversalResult.ActionType;
+	InputData.bHasFrontLedge = TraversalResult.bHasFrontLedge;
+	InputData.bHasBackLedge = TraversalResult.bHasBackLedge;
+	InputData.bHasBackFloor = TraversalResult.bHasBackFloor;
+	InputData.ObstacleHeight = TraversalResult.ObstacleHeight;
+	InputData.ObstacleDepth = TraversalResult.ObstacleDepth;
+	InputData.BackLedgeHeight = TraversalResult.BackLedgeHeight;
+	InputData.MovementMode = CharacterMovement->MovementMode;
+	InputData.Gait = PlayerCharacter->Gait;
+	InputData.Speed2D = CharacterMovement->Velocity.Size2D();
 	EvaluationContext.Params.Add(InputStruct);
 
 	FInstancedStruct OutputStruct;
@@ -441,7 +420,7 @@ bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<UObject*>& Evaluate
 	return true;
 }
 
-bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<UObject*>& EvaluateObjects)
+bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<TObjectPtr<UObject>>& EvaluateObjects)
 {
 	// Perform a Motion Match on all the montages that were chosen by the chooser to find the best result.
 	// This match will elect the best montage AND the best entry frame (start time) based on the distance to the ledge, and the current characters pose.
@@ -456,12 +435,8 @@ bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<UObject*>& Eval
 		FutureProperties,
 		MotionMatchResult);
 
-	UAnimMontage* SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
-	if (!SelectedAnim)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
-		return false;
-	}
+	TObjectPtr<UAnimMontage> SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
+	checkf(SelectedAnim, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
 
 	if (DrawDebugLevel >= 1)
 	{
@@ -563,15 +538,12 @@ void UAO_GameplayAbility_Traversal::OnMontageCompleted()
 bool UAO_GameplayAbility_Traversal::RunCapsuleTrace(const FVector& StartLocation, const FVector& EndLocation, float Radius,
 													float HalfHeight, FHitResult& OutHit, FColor DebugHitColor, FColor DebugTraceColor)
 {
-	TObjectPtr<UWorld> World = GetWorld();
-	if (!World)
-	{
-		return false;
-	}
+	const TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("Failed to get World"));
 	
 	FCollisionShape TraceShape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
 	FCollisionQueryParams CollisionResponseParams(FName(TEXT("TraversalTrace")), false, Owner);
-	bool bHit = World->SweepSingleByChannel(
+	const bool bHit = World->SweepSingleByChannel(
 		OutHit,
 		StartLocation,
 		EndLocation,
@@ -583,7 +555,7 @@ bool UAO_GameplayAbility_Traversal::RunCapsuleTrace(const FVector& StartLocation
 
 	if (DrawDebugLevel >= 2)
 	{
-		FQuat CapsuleRot = FQuat::Identity;
+		const FQuat CapsuleRot = FQuat::Identity;
 
 		if (bHit)
 		{

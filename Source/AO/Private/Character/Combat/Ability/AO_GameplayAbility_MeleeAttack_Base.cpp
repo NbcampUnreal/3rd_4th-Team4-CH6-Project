@@ -4,8 +4,6 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
-#include "AO_Log.h"
-
 UAO_GameplayAbility_MeleeAttack_Base::UAO_GameplayAbility_MeleeAttack_Base()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -18,27 +16,15 @@ void UAO_GameplayAbility_MeleeAttack_Base::ActivateAbility(const FGameplayAbilit
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to Commit Ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	if (!AttackMontage || !ActorInfo->AvatarActor.IsValid())
-	{
-		AO_LOG(LogKH, Warning, TEXT("AttackMontage or AvatarActor is null"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	checkf(AttackMontage, TEXT("AttackMontage is null"));
 
 	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask
 		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, AttackMontage);
-
-	if (!MontageTask)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to create MontageTask"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	checkf(MontageTask, TEXT("Failed to create MontageTask"));
 
 	MontageTask->OnCompleted.AddDynamic(this, &UAO_GameplayAbility_MeleeAttack_Base::OnMontageCompleted);
 	MontageTask->OnBlendOut.AddDynamic(this, &UAO_GameplayAbility_MeleeAttack_Base::OnMontageCompleted);

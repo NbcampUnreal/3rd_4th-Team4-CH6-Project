@@ -2,9 +2,26 @@
 
 #include "Character/Traversal/AO_NotifyState_MontageBlendOut.h"
 
-#include "AO_Log.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+
+void UAO_NotifyState_MontageBlendOut::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+	float TotalDuration, const FAnimNotifyEventReference& EventReference)
+{
+	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
+
+	Character = Cast<ACharacter>(MeshComp->GetOwner());
+	checkf(Character, TEXT("Failed to cast MeshComp to ACharacter"));
+
+	CharacterMovement = Character->GetCharacterMovement();
+	checkf(CharacterMovement, TEXT("Failed to get CharacterMovementComponent"));
+	
+	AnimInstance = MeshComp->GetAnimInstance();
+	checkf(AnimInstance, TEXT("Failed to get AnimInstance"));
+	
+	AnimMontage = Cast<UAnimMontage>(Animation);
+	checkf(AnimMontage, TEXT("Failed to cast AnimInstance to UAnimMontage"));
+}
 
 void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                                                  float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
@@ -16,27 +33,6 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 	{
 		return;
 	}
-	
-	TObjectPtr<ACharacter> Character = Cast<ACharacter>(MeshComp->GetOwner());
-	if (!Character)
-	{
-		AO_LOG(LogKH, Error, TEXT("Failed to cast MeshComp->GetOwner() to ACharacter"));
-		return;
-	}
-	
-	TObjectPtr<UAnimInstance> AnimInstance = MeshComp->GetAnimInstance();
-	if (!AnimInstance)
-	{
-		AO_LOG(LogKH, Error, TEXT("Failed to get AnimInstance"));
-		return;
-	}
-	
-	TObjectPtr<UAnimMontage> Montage = Cast<UAnimMontage>(Animation);
-	if (!Montage)
-	{
-		AO_LOG(LogKH, Error, TEXT("Failed to cast Animation to UAnimMontage"));
-		return;
-	}
 
 	bool bShouldBlendOut = false;
 	if (BlendOutCondition == EAO_TraversalBlendOutCondition::ForceBlendOut)
@@ -45,22 +41,16 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 	}
 	else if (BlendOutCondition == EAO_TraversalBlendOutCondition::WithMovementInput)
 	{
-		if (TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement())
+		if (!CharacterMovement->GetCurrentAcceleration().IsNearlyZero(0.1f))
 		{
-			if (!CharacterMovement->GetCurrentAcceleration().IsNearlyZero(0.1f))
-			{
-				bShouldBlendOut = true;
-			}
+			bShouldBlendOut = true;
 		}
 	}
 	else if (BlendOutCondition == EAO_TraversalBlendOutCondition::IfFalling)
 	{
-		if (TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement())
+		if (CharacterMovement->IsFalling())
 		{
-			if (CharacterMovement->IsFalling())
-			{
-				bShouldBlendOut = true;
-			}
+			bShouldBlendOut = true;
 		}
 	}
 
@@ -81,7 +71,7 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 	BlendSettings.BlendMode = EMontageBlendMode::Standard;
 
 	// BlendSettings를 사용하고 현재 재생 중인 Montage를 즉시 멈추고 블렌드 아웃을 진행함
-	AnimInstance->Montage_StopWithBlendSettings(BlendSettings, Montage);
+	AnimInstance->Montage_StopWithBlendSettings(BlendSettings, AnimMontage);
 }
 
 FString UAO_NotifyState_MontageBlendOut::GetNotifyName_Implementation() const

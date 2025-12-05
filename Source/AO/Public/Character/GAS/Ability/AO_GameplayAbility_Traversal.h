@@ -7,6 +7,7 @@
 #include "Character/Traversal/AO_TraversalTypes.h"
 #include "AO_GameplayAbility_Traversal.generated.h"
 
+class UCapsuleComponent;
 class UCharacterMovementComponent;
 class UChooserTable;
 
@@ -59,6 +60,8 @@ private:
 	TObjectPtr<ACharacter> Character = nullptr;
 	UPROPERTY()
 	TObjectPtr<UCharacterMovementComponent> CharacterMovement = nullptr;
+	UPROPERTY()
+	TObjectPtr<UCapsuleComponent> CapsuleComponent = nullptr;
 
 private:
 	UFUNCTION()
@@ -67,8 +70,8 @@ private:
 	bool TryTraversal();
 	bool GetTraversalCheckInputs(FTraversalCheckInput& OutTraversalInput);
 	bool DetectTraversal();
-	bool EvaluateTraversal(TArray<UObject*>& EvaluateObjects);
-	bool SelectTraversal(const TArray<UObject*>& EvaluateObjects);
+	bool EvaluateTraversal(TArray<TObjectPtr<UObject>>& EvaluateObjects);
+	bool SelectTraversal(const TArray<TObjectPtr<UObject>>& EvaluateObjects);
 
 	void UpdateWarpTargets();
 
