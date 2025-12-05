@@ -146,20 +146,23 @@ void AAO_WorldInteractable::StartInteractionAnimation(bool bActivate)
         TargetRotation = InitialInteractableRotation;
     }
 
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("World is null in StartInteractionAnimation"));
+
     // 타이머 시작
     TWeakObjectPtr<AAO_WorldInteractable> WeakThis(this);
-    GetWorldTimerManager().SetTimer(
-        TransformAnimationTimerHandle,
-        FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-        {
-            if (AAO_WorldInteractable* StrongThis = WeakThis.Get())
-            {
-                StrongThis->UpdateTransformAnimation();
-            }
-        }),
-        0.016f,
-        true
-    );
+	World->GetTimerManager().SetTimer(
+		TransformAnimationTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (AAO_WorldInteractable* StrongThis = WeakThis.Get())
+			{
+				StrongThis->UpdateTransformAnimation();
+			}
+		}),
+		0.016f,
+		true
+	);
 }
 
 void AAO_WorldInteractable::UpdateTransformAnimation()
@@ -186,7 +189,11 @@ void AAO_WorldInteractable::UpdateTransformAnimation()
     {
         InteractableMesh->SetRelativeLocation(TargetLocation);
         InteractableMesh->SetRelativeRotation(TargetRotation);
-        GetWorldTimerManager().ClearTimer(TransformAnimationTimerHandle);
+    	UWorld* World = GetWorld();
+    	if (World)
+    	{
+    		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);
+    	}
     }
 }
 
@@ -214,6 +221,10 @@ bool AAO_WorldInteractable::IsRotatorNearlyEqual(const FRotator& A, const FRotat
 
 void AAO_WorldInteractable::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    GetWorldTimerManager().ClearTimer(TransformAnimationTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);
+	}
     Super::EndPlay(EndPlayReason);
 }

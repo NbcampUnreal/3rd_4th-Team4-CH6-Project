@@ -290,12 +290,16 @@ void AAO_DecayHoldElement::StartProgressTimer()
 
 void AAO_DecayHoldElement::StopProgressTimer()
 {
-    GetWorldTimerManager().ClearTimer(ProgressTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(ProgressTimerHandle);
+	}
 }
 
 void AAO_DecayHoldElement::UpdateProgress()
 {
-    if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("UpdateProgress called on client"));
 
     const float DeltaTime = 0.1f;
     const float TargetDuration = PuzzleInteractionInfo.Duration;

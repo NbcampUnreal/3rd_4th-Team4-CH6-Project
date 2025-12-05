@@ -21,10 +21,23 @@ void UAO_AbilityTask_GrantNearbyInteraction::Activate()
 	SetWaitingOnAvatar();
 
 	// 주기적 탐색 시작
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(QueryTimerHandle, this, &UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables, InteractionAbilityScanRate, true);
-	}
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("World is null in Activate"));
+    
+	TWeakObjectPtr<UAO_AbilityTask_GrantNearbyInteraction> WeakThis(this);
+    
+	World->GetTimerManager().SetTimer(
+		QueryTimerHandle, 
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (UAO_AbilityTask_GrantNearbyInteraction* StrongThis = WeakThis.Get())
+			{
+				StrongThis->QueryInteractables();
+			}
+		}),
+		InteractionAbilityScanRate, 
+		true
+	);
 }
 
 void UAO_AbilityTask_GrantNearbyInteraction::OnDestroy(bool bInOwnerFinished)
@@ -95,7 +108,10 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 		// 상호작용 정보 수집
 		FAO_InteractionQuery InteractionQuery;
 		InteractionQuery.RequestingAvatar = AvatarActor;
-		InteractionQuery.RequestingController = Cast<AController>(AvatarActor->GetOwner());
+		if (AController* Controller = Cast<AController>(AvatarActor->GetOwner()))
+		{
+			InteractionQuery.RequestingController = Controller;
+		}
 		
 		for (TScriptInterface<IAO_Interface_Interactable>& Interactable : Interactables)
 		{

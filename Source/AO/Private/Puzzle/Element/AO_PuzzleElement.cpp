@@ -246,7 +246,7 @@ FTransform AAO_PuzzleElement::GetInteractionTransform() const
 
 void AAO_PuzzleElement::ResetToInitialState()
 {
-	if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("ResetToInitialState called on client"));
 
 	bIsActivated = false;
 	bInteractionEnabled = true;
@@ -255,7 +255,11 @@ void AAO_PuzzleElement::ResetToInitialState()
 	// 소모성도 리셋 (AAO_WorldInteractable의 bWasConsumed)
 	bWasConsumed = false;
 
-	GetWorldTimerManager().ClearTimer(TransformAnimationTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);
+	}
     
 	if (InteractableMeshComponent && bUseTransformAnimation)
 	{
@@ -268,6 +272,6 @@ void AAO_PuzzleElement::ResetToInitialState()
 
 void AAO_PuzzleElement::SetInteractionEnabled(bool bEnabled)
 {
-	if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("SetInteractionEnabled called on client"));
 	bInteractionEnabled = bEnabled;
 }

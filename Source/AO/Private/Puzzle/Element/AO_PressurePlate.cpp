@@ -36,7 +36,11 @@ void AAO_PressurePlate::BeginPlay()
 
 void AAO_PressurePlate::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -50,7 +54,11 @@ void AAO_PressurePlate::ResetToInitialState()
 {
 	Super::ResetToInitialState();
     
-	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	}
     
 	if (MeshComponent)
 	{
@@ -108,9 +116,12 @@ void AAO_PressurePlate::StartPlateAnimation()
 {
 	if (!MeshComponent) return;
     
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("World is null in StartPlateAnimation"));
+    
 	TWeakObjectPtr<AAO_PressurePlate> WeakThis(this);
     
-	GetWorldTimerManager().SetTimer(
+	World->GetTimerManager().SetTimer(
 		PlateAnimationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
@@ -136,7 +147,11 @@ void AAO_PressurePlate::UpdatePlateAnimation()
 	if (FVector::Dist(NewLocation, TargetMeshLocation) < 0.1f)
 	{
 		MeshComponent->SetRelativeLocation(TargetMeshLocation);
-		GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+		UWorld* World = GetWorld();
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+		}
 	}
 }
 

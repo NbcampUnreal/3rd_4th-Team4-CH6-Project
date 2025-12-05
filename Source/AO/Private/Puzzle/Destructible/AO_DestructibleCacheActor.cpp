@@ -81,7 +81,6 @@ void AAO_DestructibleCacheActor::TriggerDestruction()
 	if (HasAuthority())
 	{
 		// 서버: 즉시 파괴 실행
-		AO_LOG_NET(LogHSJ, Warning, TEXT("Destruction triggered"));
 		bIsDestroyed = true;
 		ExecuteDestruction();
 	}
@@ -120,11 +119,7 @@ void AAO_DestructibleCacheActor::OnRep_IsDestroyed()
 
 void AAO_DestructibleCacheActor::ExecuteDestruction()
 {
-	if (!GeoComp)
-	{
-		AO_LOG_NET(LogHSJ, Error, TEXT("Cannot execute destruction - GeoComp is null"));
-		return;
-	}
+	checkf(GeoComp, TEXT("GeoComp is null in ExecuteDestruction"));
 
 	// 카오스 캐시 매니저의 Trigger 모드 실행 (녹화된 파괴 재생)
 	TriggerComponent(GeoComp);
@@ -132,13 +127,21 @@ void AAO_DestructibleCacheActor::ExecuteDestruction()
 	// 삭제 타이머 설정
 	if (HasAuthority() && DestroyDelay > 0.0f)
 	{
+		UWorld* World = GetWorld();
+		checkf(World, TEXT("World is null in ExecuteDestruction"));
+        
+		TWeakObjectPtr<AAO_DestructibleCacheActor> WeakThis(this);
+        
 		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindWeakLambda(this, [this]()
+		TimerDelegate.BindWeakLambda(this, [WeakThis]()
 		{
-			Destroy();
+			if (AAO_DestructibleCacheActor* StrongThis = WeakThis.Get())
+			{
+				StrongThis->Destroy();
+			}
 		});
 
-		GetWorldTimerManager().SetTimer(
+		World->GetTimerManager().SetTimer(
 			DestroyTimerHandle,
 			TimerDelegate,
 			DestroyDelay,
@@ -149,6 +152,10 @@ void AAO_DestructibleCacheActor::ExecuteDestruction()
 
 void AAO_DestructibleCacheActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	GetWorldTimerManager().ClearTimer(DestroyTimerHandle);
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(DestroyTimerHandle);
+	}
 	Super::EndPlay(EndPlayReason);
 }

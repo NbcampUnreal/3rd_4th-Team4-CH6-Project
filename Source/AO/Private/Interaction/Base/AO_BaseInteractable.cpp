@@ -34,6 +34,7 @@ FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_Interacti
 	Info.AbilityToGrant = UGA_Interact_Base::StaticClass();
 	Info.ActiveHoldMontage  = ActiveHoldMontage;
 	Info.ActiveMontage  = ActiveMontage;
+	Info.DeactivateMontage = DeactivateMontage;
 	Info.InteractionTransform = GetInteractionTransform();
 	Info.WarpTargetName = WarpTargetName;
 	return Info;
@@ -94,20 +95,23 @@ void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 {
 	Super::OnInteractionSuccess(Interactor);
 
-	if (HasAuthority())
+	if (!HasAuthority())
 	{
-		MulticastPlayInteractionSound();
-        
-		if (bIsToggleable)
-		{
-			bIsActivated = !bIsActivated;
-			StartInteractionAnimation(bIsActivated);
-		}
-		else
-		{
-			bIsActivated = true;
-			StartInteractionAnimation(true);
-		}
+		return;
+	}
+
+	MulticastPlayInteractionSound();
+	
+	// ExecuteInteraction에서 몽타주 재생 후 처리
+	if (bIsToggleable)
+	{
+		bIsActivated = !bIsActivated;
+		StartInteractionAnimation(bIsActivated);
+	}
+	else
+	{
+		bIsActivated = true;
+		StartInteractionAnimation(true);
 	}
 
 	OnInteractionSuccess_BP(Interactor);

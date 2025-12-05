@@ -52,13 +52,13 @@ protected:
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	// 상호작용 정보
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
 	FText InteractionTitle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
 	FText InteractionContent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
 	float InteractionDuration = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
@@ -67,10 +67,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
 	TObjectPtr<UAnimMontage> ActiveMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation",
+		meta=(EditCondition="bIsToggleable", EditConditionHides))
+	TObjectPtr<UAnimMontage> DeactivateMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Toggle")
 	bool bIsToggleable = false;
 
-	UPROPERTY(BlueprintReadWrite, Replicated, Category="Interaction")
+	UPROPERTY(BlueprintReadWrite, Replicated, Category="Interaction|Toggle")
 	bool bIsActivated = false;
 
 	virtual FTransform GetInteractionTransform() const override;

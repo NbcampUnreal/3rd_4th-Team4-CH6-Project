@@ -116,23 +116,26 @@ void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComp
 
 void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
 {
-    if (!InspectableActor || bIsInspecting)
-    {
-        return;
-    }
+	checkf(InspectableActor, TEXT("InspectableActor is null"));
+
+	if (bIsInspecting)
+	{
+		return;
+	}
 
     AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in EnterInspectionMode"));
     
-    if (!Owner || !Owner->HasAuthority())
-    {
-        return;
-    }
+	if (!Owner->HasAuthority())
+	{
+		return;
+	}
 
     UAO_InspectableComponent* InspectableComp = InspectableActor->FindComponentByClass<UAO_InspectableComponent>();
-    if (!InspectableComp)
-    {
-        return;
-    }
+	if (!InspectableComp)
+	{
+		return;
+	}
 
     CurrentInspectedActor = InspectableActor;
 	// 이 값이 복제되면 PlayerCharacter의 Move()에서 입력 차단
@@ -169,12 +172,12 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
     ClientNotifyInspectionStarted(InspectableActor, GrantedClickAbilityHandle, CameraSettings);
     
     // 리슨서버에서 ClientRPC는 호스트 본인에게는 전달되지 않으므로 로컬에서 직접 실행
-    APlayerController* LocalPC = Cast<APlayerController>(Owner->GetOwner());
-    if (LocalPC && LocalPC->IsLocalController())
-    {
-        CurrentCameraSettings = CameraSettings;
-        ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
-    }
+	APlayerController* LocalPC = Cast<APlayerController>(Owner->GetOwner());
+	if (LocalPC && LocalPC->IsLocalController())
+	{
+		CurrentCameraSettings = CameraSettings;
+		ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
+	}
 }
 
 void UAO_InspectionComponent::ExitInspectionMode()
@@ -184,12 +187,13 @@ void UAO_InspectionComponent::ExitInspectionMode()
         return;
     }
 
-    AActor* Owner = GetOwner();
+	AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ExitInspectionMode"));
     
-    if (!Owner || !Owner->HasAuthority())
-    {
-        return;
-    }
+	if (!Owner->HasAuthority())
+	{
+		return;
+	}
 
     UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
     
@@ -266,11 +270,8 @@ void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
 // Inspection 진입 처리 (카메라 전환, UI 설정)
 void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocation, const FRotator& CameraRotation)
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ClientEnterInspection"));
 
     APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
     
@@ -294,7 +295,7 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         
         HiddenComponents.Empty();
         
-        for (UPrimitiveComponent* Comp : PrimitiveComponents)
+        for (TObjectPtr<UPrimitiveComponent> Comp : PrimitiveComponents)
         {
             // 이미 숨겨진 컴포넌트는 제외
             if (Comp && !Comp->bHiddenInGame)
@@ -345,11 +346,8 @@ void UAO_InspectionComponent::ClientExitInspection()
 	// Hover trace 중지 및 하이라이트 해제
 	StopHoverTrace();
 
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ClientExitInspection"));
 
     APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
     
@@ -365,7 +363,7 @@ void UAO_InspectionComponent::ClientExitInspection()
     if (Character)
     {
         // 숨겼던 컴포넌트들 다시 표시
-        for (UPrimitiveComponent* Comp : HiddenComponents)
+        for (TObjectPtr<UPrimitiveComponent> Comp : HiddenComponents)
         {
             if (Comp)
             {
@@ -501,11 +499,8 @@ void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Inst
 // 조사 카메라로 전환
 void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& CameraLocation, const FRotator& CameraRotation)
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in TransitionToInspectionCamera"));
 
     APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
     if (!PC)
@@ -522,17 +517,20 @@ void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& Camera
         OriginalViewTarget = CurrentViewTarget;
     }
 
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("World is null in TransitionToInspectionCamera"));
+
     // Inspection 카메라 액터 생성
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = Owner;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    InspectionCameraActor = GetWorld()->SpawnActor<ACameraActor>(
-        ACameraActor::StaticClass(),
-        CameraLocation,
-        CameraRotation,
-        SpawnParams
-    );
+	InspectionCameraActor = World->SpawnActor<ACameraActor>(
+		ACameraActor::StaticClass(),
+		CameraLocation,
+		CameraRotation,
+		SpawnParams
+	);
 
     if (InspectionCameraActor)
     {
@@ -550,11 +548,8 @@ void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& Camera
 // 플레이어 카메라로 복귀
 void UAO_InspectionComponent::TransitionToPlayerCamera()
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	AActor* Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in TransitionToPlayerCamera"));
 
     APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
     if (!PC)
@@ -591,11 +586,15 @@ FVector UAO_InspectionComponent::ClampCameraPosition(const FVector& NewPosition)
 
 void UAO_InspectionComponent::StartHoverTrace()
 {
-    if (!GetWorld()) return;
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
 
     TWeakObjectPtr<UAO_InspectionComponent> WeakThis(this);
     
-    GetWorld()->GetTimerManager().SetTimer(
+    World->GetTimerManager().SetTimer(
         HoverTraceTimerHandle,
         FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
         {
@@ -611,10 +610,13 @@ void UAO_InspectionComponent::StartHoverTrace()
 
 void UAO_InspectionComponent::StopHoverTrace()
 {
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
-    }
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
 
     // 마지막 하이라이트 해제
     UpdateHoverHighlight(nullptr);
@@ -650,7 +652,13 @@ void UAO_InspectionComponent::PerformHoverTrace()
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(Owner);
 
-    bool bHit = GetWorld()->LineTraceSingleByChannel(
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+    bool bHit = World->LineTraceSingleByChannel(
         HitResult,
         TraceStart,
         TraceEnd,

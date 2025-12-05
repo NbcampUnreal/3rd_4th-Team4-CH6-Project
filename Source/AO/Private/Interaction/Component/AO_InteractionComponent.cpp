@@ -29,11 +29,7 @@ void UAO_InteractionComponent::BeginPlay()
 	Super::BeginPlay();
 
 	AActor* Owner = GetOwner();
-	if (!Owner)
-	{
-		AO_LOG(LogHSJ, Error, TEXT("Owner is null"));
-		return;
-	}
+	checkf(Owner, TEXT("Owner is null in BeginPlay"));
 
 	UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent();
 	if (!ASC)
