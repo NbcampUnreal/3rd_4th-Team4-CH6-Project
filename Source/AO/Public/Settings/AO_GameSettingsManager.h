@@ -28,6 +28,7 @@ enum class EAudioType : uint8
 	SFX			UMETA(DisplayName = "SFX Volume"),
 	UI			UMETA(DisplayName = "UI Volume"),
 	Voice		UMETA(DisplayName = "Voice Volume"),
+	Ambient		UMETA(DisplayName = "Ambient Volume"),
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsApplied);
