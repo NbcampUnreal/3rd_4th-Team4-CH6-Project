@@ -79,7 +79,7 @@ void UAO_GameplayAbility_MeleeHitConfirm::DoMeleeHitConfirm(const FGameplayAbili
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResults,
 		true);
 

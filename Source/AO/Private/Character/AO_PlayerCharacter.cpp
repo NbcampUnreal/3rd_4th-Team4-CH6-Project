@@ -13,6 +13,7 @@
 #include "MotionWarpingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -33,6 +34,11 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+
+	if (const TObjectPtr<UCapsuleComponent> Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionProfileName(TEXT("Player"));
+	}
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = true;
@@ -61,7 +67,6 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
-	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
@@ -86,7 +91,8 @@ UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() cons
 
 bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 {
-	if (GetCharacterMovement()->IsMovingOnGround() || TraversalComponent->GetDoingTraversal())
+	if (GetCharacterMovement()->IsMovingOnGround()
+		|| AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Traversal"))))
 	{
 		return true;
 	}
@@ -337,14 +343,6 @@ void AAO_PlayerCharacter::StartJump()
 		return;
 	}
 
-	//if (TraversalComponent)
-	//{
-	//	if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
-	//	{
-	//		return;
-	//	}
-	//}
-
 	Jump();
 }
 
@@ -352,14 +350,6 @@ void AAO_PlayerCharacter::TriggerJump()
 {
 	AbilitySystemComponent->TryActivateAbilitiesByTag(
 		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Traversal"))));
-	
-	//if (TraversalComponent)
-	//{
-	//	if (!TraversalComponent->GetDoingTraversal())
-	//	{
-	//		TraversalComponent->TryTraversal();
-	//	}
-	//}
 }
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
