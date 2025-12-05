@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Physics/AO_CollisionChannels.h"
 #include "Interaction/Base/GA_Interact_Base.h"
+#include "Net/UnrealNetwork.h"
 
 AAO_BaseInteractable::AAO_BaseInteractable(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -16,6 +17,12 @@ AAO_BaseInteractable::AAO_BaseInteractable(const FObjectInitializer& ObjectIniti
 	MeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Block);
+
+	InteractableMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InteractableMeshComponent"));
+	InteractableMeshComponent->SetupAttachment(MeshComponent);
+	InteractableMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractableMeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
+	InteractableMeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 }
 
 FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
@@ -87,7 +94,29 @@ void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 {
 	Super::OnInteractionSuccess(Interactor);
 
+	if (HasAuthority())
+	{
+		MulticastPlayInteractionSound();
+        
+		if (bIsToggleable)
+		{
+			bIsActivated = !bIsActivated;
+			StartInteractionAnimation(bIsActivated);
+		}
+		else
+		{
+			bIsActivated = true;
+			StartInteractionAnimation(true);
+		}
+	}
+
 	OnInteractionSuccess_BP(Interactor);
+}
+
+void AAO_BaseInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ThisClass, bIsActivated);
 }
 
 void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)

@@ -21,6 +21,12 @@ AAO_PuzzleElement::AAO_PuzzleElement(const FObjectInitializer& ObjectInitializer
 	MeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Block);
+
+	InteractableMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InteractableMeshComponent"));
+	InteractableMeshComponent->SetupAttachment(MeshComponent);
+	InteractableMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractableMeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
+	InteractableMeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 }
 
 void AAO_PuzzleElement::BeginPlay()
@@ -113,6 +119,9 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		return;
 	}
 
+	// 사운드 재생
+	MulticastPlayInteractionSound();
+
 	if (!bHandleToggleInOnInteractionSuccess)
 	{
 		return;
@@ -127,6 +136,7 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		{
 			bIsActivated = true;
 			BroadcastPuzzleEvent(true);
+			StartInteractionAnimation(true);
 		}
 		break;
 
@@ -134,12 +144,14 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		// 즉시 토글
 		bIsActivated = !bIsActivated;
 		BroadcastPuzzleEvent(bIsActivated);
+		StartInteractionAnimation(bIsActivated);
 		break;
 
 	case EPuzzleElementType::HoldToggle:
 		// 홀딩 완료 후 토글
 		bIsActivated = !bIsActivated;
 		BroadcastPuzzleEvent(bIsActivated);
+		StartInteractionAnimation(bIsActivated);
 		break;
 	}
 }
@@ -194,8 +206,11 @@ void AAO_PuzzleElement::SetActivationState(bool bNewState)
 
 void AAO_PuzzleElement::OnRep_IsActivated()
 {
-	// 클라이언트에서 상태 변경 시 블루프린트 이벤트 호출
-	OnElementStateChanged(bIsActivated);
+	// 클라이언트 애니메이션
+	if (!HasAuthority())
+	{
+		StartInteractionAnimation(bIsActivated);
+	}
 }
 
 FTransform AAO_PuzzleElement::GetInteractionTransform() const
@@ -239,6 +254,14 @@ void AAO_PuzzleElement::ResetToInitialState()
 
 	// 소모성도 리셋 (AAO_WorldInteractable의 bWasConsumed)
 	bWasConsumed = false;
+
+	GetWorldTimerManager().ClearTimer(TransformAnimationTimerHandle);
+    
+	if (InteractableMeshComponent && bUseTransformAnimation)
+	{
+		InteractableMeshComponent->SetRelativeLocation(InitialInteractableLocation);
+		InteractableMeshComponent->SetRelativeRotation(InitialInteractableRotation);
+	}
 
 	OnRep_IsActivated(); // 클라이언트에 상태 변경 알림
 }

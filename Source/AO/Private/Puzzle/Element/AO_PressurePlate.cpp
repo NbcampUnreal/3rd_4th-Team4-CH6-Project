@@ -8,6 +8,7 @@ AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer
 {
     // 압력판은 OneTime 타입 기반 (한번 활성화 후 유지되는 게 아니라 Overlap으로 제어)
     ElementType = EPuzzleElementType::OneTime;
+	AnimationSpeed = 5.0f;
 
     OverlapTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapTrigger"));
     OverlapTrigger->SetupAttachment(RootComponent);

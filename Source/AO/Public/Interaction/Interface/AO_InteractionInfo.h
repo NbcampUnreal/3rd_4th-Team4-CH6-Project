@@ -48,6 +48,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	TObjectPtr<UAnimMontage> ActiveMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animation")
+	TObjectPtr<UAnimMontage> DeactivateMontage;
+
+	// 노티파이 대기 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animation")
+	bool bWaitForAnimationNotify = false;
+
 	// Motion Warping용 Transform (손이 가야 할 위치)
 	UPROPERTY(BlueprintReadWrite)
 	FTransform InteractionTransform;

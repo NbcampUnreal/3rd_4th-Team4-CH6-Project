@@ -50,9 +50,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate|Animation", meta=(ClampMin="1.0"))
 	float PressDepth = 10.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate|Animation", meta=(ClampMin="0.1"))
-	float AnimationSpeed = 5.0f;
-
 private:
 	FVector InitialMeshLocation;
 	FVector TargetMeshLocation;

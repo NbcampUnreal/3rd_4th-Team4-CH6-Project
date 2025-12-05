@@ -60,12 +60,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Puzzle")
 	void BroadcastPuzzleEvent(bool bActivate);
 
+	FORCEINLINE EPuzzleElementType GetElementType() const { return ElementType; }
+	FORCEINLINE bool IsActivated() const { return bIsActivated; }
+
 	// 외부에서 상태 강제 변경
 	UFUNCTION(BlueprintCallable, Category="Puzzle")
 	void SetActivationState(bool bNewState);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UStaticMeshComponent> InteractableMeshComponent;
 
 protected:
 	virtual void BeginPlay() override;
@@ -75,10 +81,12 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_IsActivated();
 
-	UFUNCTION(BlueprintImplementableEvent, Category="Puzzle")
-	void OnElementStateChanged(bool bIsActive);
-
 	virtual FTransform GetInteractionTransform() const;
+
+	virtual UStaticMeshComponent* GetInteractableMesh() const override 
+	{ 
+		return InteractableMeshComponent; 
+	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle")
 	EPuzzleElementType ElementType = EPuzzleElementType::OneTime;

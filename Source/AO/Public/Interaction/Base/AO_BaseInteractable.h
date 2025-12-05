@@ -30,11 +30,23 @@ public:
 
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 
+	FORCEINLINE bool IsToggleable() const { return bIsToggleable; }
+	FORCEINLINE bool IsActivated() const { return bIsActivated; }
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UStaticMeshComponent> InteractableMeshComponent;
+
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
 	
 	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
 	void OnInteractionSuccess_BP(AActor* Interactor);
+
+	virtual UStaticMeshComponent* GetInteractableMesh() const override 
+	{ 
+		return InteractableMeshComponent; 
+	}
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -54,6 +66,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
 	TObjectPtr<UAnimMontage> ActiveMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	bool bIsToggleable = false;
+
+	UPROPERTY(BlueprintReadWrite, Replicated, Category="Interaction")
+	bool bIsActivated = false;
 
 	virtual FTransform GetInteractionTransform() const override;
     

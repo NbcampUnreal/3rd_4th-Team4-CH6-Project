@@ -2,15 +2,15 @@
 #include "Puzzle/Element/AO_DecayHoldElement.h"
 #include "Net/UnrealNetwork.h"
 #include "Puzzle/Actor/AO_PuzzleReactionActor.h"
-#include "AbilitySystemComponent.h"
 #include "AO_Log.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 
 AAO_DecayHoldElement::AAO_DecayHoldElement(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     ElementType = EPuzzleElementType::HoldToggle;
-    bHandleToggleInOnInteractionSuccess = false; // Duration 도달 시 직접 처리
 }
 
 void AAO_DecayHoldElement::BeginPlay()
@@ -19,17 +19,13 @@ void AAO_DecayHoldElement::BeginPlay()
     
     if (HasAuthority())
     {
-        if (PuzzleInteractionInfo.Duration <= 0.f)
+        if (!LinkedReactionActor)
         {
-            AO_LOG(LogHSJ, Error, TEXT("[DecayHold] %s: Duration is 0!"), *GetName());
+            AO_LOG(LogHSJ, Error, TEXT("[DecayHold] %s: LinkedReactionActor not set!"), *GetName());
         }
-        
-        if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::Toggle)
+        else if (LinkedReactionActor->ReactionMode != EPuzzleReactionMode::HoldActive)
         {
-            if (!LinkedReactionActor->TriggerTag.IsValid())
-            {
-                AO_LOG(LogHSJ, Error, TEXT("[DecayHold] %s: Toggle mode but TriggerTag not set!"), *GetName());
-            }
+            AO_LOG(LogHSJ, Warning, TEXT("[DecayHold] %s: LinkedReactionActor should use HoldActive mode"), *GetName());
         }
     }
 }
@@ -44,7 +40,7 @@ void AAO_DecayHoldElement::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AAO_DecayHoldElement, CurrentHoldProgress);
-	DOREPLIFETIME(AAO_DecayHoldElement, ManualHoldActors);
+    DOREPLIFETIME(AAO_DecayHoldElement, ManualHoldActors);
 }
 
 bool AAO_DecayHoldElement::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
@@ -88,55 +84,39 @@ void AAO_DecayHoldElement::OnInteractActiveStarted(AActor* Interactor)
     
     if (!HasAuthority()) return;
 
+    NotifyCount = 0;
+    bIsLeverUp = false;
+
 	// Duration 도달 후 실제 키 입력 상태 추적을 위한 백업 리스트
     ManualHoldActors.AddUnique(Interactor);
-
-	StartProgressTimer();
+    StartProgressTimer();
+    PlayStartMontage();
 }
 
 void AAO_DecayHoldElement::OnInteractActiveEnded(AActor* Interactor)
 {
-    if (!HasAuthority())
-    {
-        Super::OnInteractActiveEnded(Interactor);
-        return;
-    }
-
-    const float TargetDuration = PuzzleInteractionInfo.Duration;
-
-	// HoldActive인 경우 Duration 도달 후에도 키를 누르고 있으면 홀드 유지
-	if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::HoldActive)
-	{
-		if (CurrentHoldProgress >= TargetDuration - 0.15f)
-		{
-			if (UAO_InteractionComponent* InteractionComp = Interactor->FindComponentByClass<UAO_InteractionComponent>())
-			{
-				if (InteractionComp->bIsHoldingInteract)
-				{
-					// 여전히 키를 누르고 있음, Super 호출 스킵하여 CachedInteractors 유지
-					return;
-				}
-			}
-		}
-	}
-	// Toggle인 경우 UpdateProgress에서 처리 못 한 경우 백업 처리
-	else if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::Toggle)
-	{
-		// 토글 성공
-		if (CurrentHoldProgress >= TargetDuration- 0.15f)
-		{
-			CurrentHoldProgress = TargetDuration;
-			HandleToggleCompletion();
-		}
-		else
-		{
-			// 중간에 뗀 경우, 토글 실패, 진행도 리셋
-			CurrentHoldProgress = 0.0f;
-		}
-	}
+	Super::OnInteractActiveEnded(Interactor);
     
-    Super::OnInteractActiveEnded(Interactor);
-    ManualHoldActors.RemoveSingleSwap(Interactor);
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	ManualHoldActors.RemoveSingleSwap(Interactor);
+    
+	// 비정상 종료 처리인 경우
+	if (NotifyCount > 0 && NotifyCount < 3)
+	{
+		NotifyCount = 0;
+        
+		if (bIsLeverUp)
+		{
+			bIsLeverUp = false;
+			MulticastLeverAction(false);
+		}
+        
+		MulticastSetMovementForActor(Interactor, true);
+	}
 }
 
 void AAO_DecayHoldElement::ResetToInitialState()
@@ -144,43 +124,163 @@ void AAO_DecayHoldElement::ResetToInitialState()
     Super::ResetToInitialState();
     CurrentHoldProgress = 0.0f;
     ManualHoldActors.Empty();
+    bIsLeverUp = false;
+    NotifyCount = 0;
+}
+
+void AAO_DecayHoldElement::OnNotifyReceived()
+{
+	if (!HasAuthority()) return;
+    
+	NotifyCount++;
+    
+	// 상호작용 Actor 찾기
+	AActor* InteractingActor = nullptr;
+	if (CachedInteractors.Num() > 0)
+	{
+		InteractingActor = CachedInteractors[0].Get();
+	}
+    
+	if (!InteractingActor)
+	{
+		AO_LOG(LogHSJ, Error, TEXT("[DecayHold] No interacting actor!"));
+		return;
+	}
+    
+	switch (NotifyCount)
+	{
+	case 1:
+		bIsLeverUp = true;
+		MulticastLeverAction(true);
+		break;
+        
+	case 2:
+		MulticastMontageControl(InteractingActor, true, 0.0f);
+		MulticastSetMovementForActor(InteractingActor, false);
+		break;
+        
+	case 3:
+		bIsLeverUp = false;
+		MulticastLeverAction(false);
+		break;
+	}
+}
+
+void AAO_DecayHoldElement::StopEarly()
+{
+	if (!HasAuthority()) return;
+    
+	AActor* InteractingActor = nullptr;
+	if (CachedInteractors.Num() > 0)
+	{
+		InteractingActor = CachedInteractors[0].Get();
+	}
+    
+	if (InteractingActor)
+	{
+		MulticastMontageControl(InteractingActor, false, 0.0f);
+	}
+    
+	StopProgressTimer();
+    
+	ManualHoldActors.Empty();
+	CachedInteractors.Empty();
+    
+	StartProgressTimer();
+    
+	NotifyCount = 0;
+    
+	if (bIsLeverUp)
+	{
+		bIsLeverUp = false;
+		MulticastLeverAction(false);
+	}
+}
+
+void AAO_DecayHoldElement::ReleasePause()
+{
+	if (!HasAuthority()) return;
+    
+	ManualHoldActors.Empty();
+    
+	AActor* InteractingActor = nullptr;
+	if (CachedInteractors.Num() > 0)
+	{
+		InteractingActor = CachedInteractors[0].Get();
+	}
+    
+	if (InteractingActor)
+	{
+		MulticastMontageControl(InteractingActor, true, 1.0f);
+		MulticastSetMovementForActor(InteractingActor, true);
+	}
+}
+
+void AAO_DecayHoldElement::CleanupAfterMontage()
+{
+	if (!HasAuthority()) return;
+    
+	AActor* InteractingActor = nullptr;
+	if (CachedInteractors.Num() > 0)
+	{
+		InteractingActor = CachedInteractors[0].Get();
+	}
+    
+	CachedInteractors.Empty();
+    
+	if (InteractingActor)
+	{
+		MulticastSetMovementForActor(InteractingActor, true);
+	}
+}
+
+float AAO_DecayHoldElement::GetActiveMontageRemainingTime() const
+{
+    const FAO_InteractionInfo& Info = PuzzleInteractionInfo;
+    if (!Info.ActiveMontage) return 0.5f;
+
+    for (const TWeakObjectPtr<AActor>& Actor : CachedInteractors)
+    {
+        if (AActor* ValidActor = Actor.Get())
+        {
+            if (ACharacter* Character = Cast<ACharacter>(ValidActor))
+            {
+                if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+                {
+                    if (AnimInstance->Montage_IsPlaying(Info.ActiveMontage))
+                    {
+                        float Remaining = Info.ActiveMontage->GetPlayLength() - AnimInstance->Montage_GetPosition(Info.ActiveMontage);
+                        return FMath::Max(Remaining, 0.2f) + 0.2f;
+                    }
+                }
+            }
+        }
+    }
+    
+    return 0.5f;
 }
 
 bool AAO_DecayHoldElement::IsAnyoneHolding() const
 {
-    for (const TWeakObjectPtr<AActor>& Interactor : CachedInteractors)
-    {
-        if (Interactor.IsValid())
-        {
-            return true;
-        }
-    }
-    for (const TWeakObjectPtr<AActor>& Interactor : ManualHoldActors)
-    {
-        if (Interactor.IsValid())
-        {
-            return true;
-        }
-    }
-    
-    return false;
+	for (const TWeakObjectPtr<AActor>& Interactor : ManualHoldActors)
+	{
+		if (Interactor.IsValid())
+			return true;
+	}
+	return false;
 }
 
 void AAO_DecayHoldElement::StartProgressTimer()
 {
     if (ProgressTimerHandle.IsValid()) return;
     
-	TWeakObjectPtr<AAO_DecayHoldElement> WeakThis(this);
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
 			ProgressTimerHandle,
-			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			FTimerDelegate::CreateWeakLambda(this, [this]()
 			{
-				if (AAO_DecayHoldElement* StrongThis = WeakThis.Get())
-				{
-					StrongThis->UpdateProgress();
-				}
+				UpdateProgress();
 			}),
 			0.1f,
 			true
@@ -199,118 +299,105 @@ void AAO_DecayHoldElement::UpdateProgress()
 
     const float DeltaTime = 0.1f;
     const float TargetDuration = PuzzleInteractionInfo.Duration;
-    
     if (TargetDuration <= 0.f) return;
 
     bool bHolding = IsAnyoneHolding();
 
-	// 진행도 증가/감소
     if (bHolding)
     {
-        CurrentHoldProgress += DeltaTime;
-        
-        if (CurrentHoldProgress >= TargetDuration - 0.05f)
-        {
-            CurrentHoldProgress = TargetDuration;
-
-        	// Toggle인 경우 즉시 토글 처리
-        	if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::Toggle)
-        	{
-        		HandleToggleCompletion();
-        		ManualHoldActors.Empty();
-        		CachedInteractors.Empty();
-        		StopProgressTimer();
-        		return;
-        	}
-        }
+        CurrentHoldProgress = FMath::Min(CurrentHoldProgress + DeltaTime, TargetDuration);
     }
     else
     {
-    	// HoldActive면 진행도 감소
-    	if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::HoldActive)
-    	{
-    		CurrentHoldProgress -= DecayRate * DeltaTime;
-            
-    		if (CurrentHoldProgress <= 0.0f)
-    		{
-    			CurrentHoldProgress = 0.0f;
-    			ManualHoldActors.Empty();
-    			CachedInteractors.Empty();
-    		}
-    	}
+        CurrentHoldProgress -= DecayRate * DeltaTime;
+        
+        if (CurrentHoldProgress <= 0.0f)
+        {
+            CurrentHoldProgress = 0.0f;
+            StopProgressTimer();
+        }
     }
-
-	// HoldActive인 경우 Duration 도달 후 실제 키 입력 상태 확인
-	if (bHolding && CurrentHoldProgress >= TargetDuration - 0.05f)
-	{
-		if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::HoldActive)
-		{
-			bool bStillHoldingKey = false;
-
-			// ManualHoldActors에서 실제 키 입력 확인
-			for (const TWeakObjectPtr<AActor>& Actor : ManualHoldActors)
-			{
-				if (Actor.IsValid())
-				{
-					if (UAO_InteractionComponent* InteractionComp = Actor->FindComponentByClass<UAO_InteractionComponent>())
-					{
-						if (InteractionComp->bIsHoldingInteract)
-						{
-							bStillHoldingKey = true;
-							break;
-						}
-					}
-				}
-			}
-
-			// 키를 놓았으면 양쪽 리스트 모두 정리
-			if (!bStillHoldingKey)
-			{
-				ManualHoldActors.Empty();
-				CachedInteractors.Empty();
-				bHolding = false;
-			}
-		}
-	}
-
-	// 타이머 정지 조건, 아무도 홀드 안 하고 진행도 0
-	if (!bHolding && CurrentHoldProgress <= 0.0f)
-	{
-		StopProgressTimer();
-		return;
-	}
-	
-	// HoldActive인 경우 진행도를 ReactionActor에 진행도 실시간 전달
-    if (LinkedReactionActor && LinkedReactionActor->ReactionMode == EPuzzleReactionMode::HoldActive)
+    
+    if (LinkedReactionActor)
     {
-        float Progress = TargetDuration > 0.f ? CurrentHoldProgress / TargetDuration : 0.f;
-        LinkedReactionActor->SetProgress(Progress);
+        LinkedReactionActor->SetProgress(CurrentHoldProgress / TargetDuration);
     }
 }
 
-void AAO_DecayHoldElement::HandleToggleCompletion()
+void AAO_DecayHoldElement::PlayStartMontage()
 {
-    if (!LinkedReactionActor) return;
-    if (LinkedReactionActor->ReactionMode != EPuzzleReactionMode::Toggle) return;
+    const FAO_InteractionInfo& Info = PuzzleInteractionInfo;
+    if (!Info.ActiveMontage) return;
 
-    FGameplayTag TriggerTag = LinkedReactionActor->TriggerTag;
-    if (!TriggerTag.IsValid()) return;
-
-    UAbilitySystemComponent* ASC = LinkedReactionActor->GetAbilitySystemComponent();
-    if (!ASC) return;
-
-	// 상태 토글 및 태그 추가/제거
-    bIsActivated = !bIsActivated;
-    
-    if (bIsActivated)
+    for (const TWeakObjectPtr<AActor>& Actor : CachedInteractors)
     {
-        ASC->AddLooseGameplayTag(TriggerTag);
+        if (AActor* ValidActor = Actor.Get())
+        {
+            if (UAO_InteractionComponent* InteractionComp = ValidActor->FindComponentByClass<UAO_InteractionComponent>())
+            {
+                InteractionComp->MulticastPlayInteractionMontage(
+                    Info.ActiveMontage,
+                    GetInteractionTransform(),
+                    WarpTargetName
+                );
+            }
+        }
     }
-    else
+}
+
+void AAO_DecayHoldElement::MulticastLeverAction_Implementation(bool bActivate)
+{
+    StartInteractionAnimation(bActivate);
+    MulticastPlayInteractionSound();
+}
+
+void AAO_DecayHoldElement::MulticastMontageControl_Implementation(AActor* TargetActor, bool bPlay, float PlayRate)
+{
+    if (!TargetActor)
     {
-        ASC->RemoveLooseGameplayTag(TriggerTag);
+        AO_LOG(LogHSJ, Error, TEXT("[DecayHold] MulticastMontageControl: TargetActor is null!"));
+        return;
     }
     
-    OnRep_IsActivated();
-    CurrentHoldProgress = 0.0f;
+    const FAO_InteractionInfo& Info = PuzzleInteractionInfo;
+    if (!Info.ActiveMontage) return;
+
+    if (ACharacter* Character = Cast<ACharacter>(TargetActor))
+    {
+        if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+        {
+            if (bPlay && AnimInstance->Montage_IsPlaying(Info.ActiveMontage))
+            {
+                AnimInstance->Montage_SetPlayRate(Info.ActiveMontage, PlayRate);
+            }
+            else if (!bPlay)
+            {
+                AnimInstance->Montage_Stop(0.2f, Info.ActiveMontage);
+            }
+        }
+    }
+}
+
+void AAO_DecayHoldElement::MulticastSetMovementForActor_Implementation(AActor* TargetActor, bool bEnable)
+{
+    if (!TargetActor)
+    {
+        AO_LOG(LogHSJ, Error, TEXT("[DecayHold] MulticastSetMovementForActor: TargetActor is null!"));
+        return;
+    }
+    
+    if (ACharacter* Character = Cast<ACharacter>(TargetActor))
+    {
+        if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
+        {
+            if (bEnable)
+            {
+                Movement->SetMovementMode(MOVE_Walking);
+            }
+            else
+            {
+                Movement->DisableMovement();
+            }
+        }
+    }
 }
