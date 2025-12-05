@@ -68,14 +68,14 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 
 	// 노티파이 리스너 등록
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (TObjectPtr<UAbilitySystemComponent> ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		FGameplayTag FinalizeTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
 		ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).AddUObject(this, &ThisClass::OnAnimNotifyReceived);
 	}
 
 	// 홀딩 시작 알림
-	if (AAO_WorldInteractable* WorldInteractable = Cast<AAO_WorldInteractable>(InteractableActor))
+	if (TObjectPtr<AAO_WorldInteractable> WorldInteractable = Cast<AAO_WorldInteractable>(InteractableActor))
 	{
 		WorldInteractable->OnInteractActiveStarted(GetAvatarActorFromActorInfo());
 	}
@@ -84,7 +84,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	if (Cast<AAO_DecayHoldElement>(InteractableActor))
 	{
 		// 입력 해제 감지
-		if (UAO_AbilityTask_WaitInteractionInputRelease* InputReleaseTask = 
+		if (TObjectPtr<UAO_AbilityTask_WaitInteractionInputRelease> InputReleaseTask = 
 			UAO_AbilityTask_WaitInteractionInputRelease::WaitInteractionInputRelease(this))
 		{
 			InputReleaseTask->OnReleased.AddDynamic(this, &ThisClass::OnInteractionInputReleased);
@@ -105,19 +105,19 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 
 	// 홀딩 처리
-	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
 	{
-		if (UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement())
+		if (TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement())
 		{
 			CharacterMovement->StopMovementImmediately();
 		}
 	}
 
 	// UI: 홀딩 프로그레스 표시
-	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
+	TObjectPtr<AActor> AvatarActor = GetAvatarActorFromActorInfo();
+	if (TObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
 	{
-		if (UAO_InteractionWidgetController* Controller = InteractionComp->GetInteractionWidgetController())
+		if (TObjectPtr<UAO_InteractionWidgetController> Controller = InteractionComp->GetInteractionWidgetController())
 		{
 			FAO_InteractionMessage Message;
 			Message.MessageType = EAO_InteractionMessageType::Progress;
@@ -130,9 +130,9 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 	
 	// 애니메이션: 홀딩 자세
-	if (UAnimMontage* HoldMontage = InteractionInfo.ActiveHoldMontage)
+	if (TObjectPtr<UAnimMontage> HoldMontage = InteractionInfo.ActiveHoldMontage)
 	{
-		if (UAbilityTask_PlayMontageAndWait* PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+		if (TObjectPtr<UAbilityTask_PlayMontageAndWait> PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 			this, TEXT("HoldMontage"), HoldMontage))
 		{
 			PlayMontageTask->ReadyForActivation();
@@ -140,7 +140,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 
 	// Task: 이탈 감지 (각도/거리 계산해서 홀딩 중 이탈하면 해제)
-	if (UAO_AbilityTask_WaitForInvalidInteraction* InvalidInteractionTask = 
+	if (TObjectPtr<UAO_AbilityTask_WaitForInvalidInteraction> InvalidInteractionTask = 
 		UAO_AbilityTask_WaitForInvalidInteraction::WaitForInvalidInteraction(this, AcceptanceAngle, AcceptanceDistance))
 	{
 		InvalidInteractionTask->OnInvalidInteraction.AddDynamic(this, &ThisClass::OnInvalidInteraction);
@@ -148,7 +148,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 
 	// Task: 입력 해제 감지
-	if (UAO_AbilityTask_WaitInteractionInputRelease* InputReleaseTask = 
+	if (TObjectPtr<UAO_AbilityTask_WaitInteractionInputRelease> InputReleaseTask = 
 		UAO_AbilityTask_WaitInteractionInputRelease::WaitInteractionInputRelease(this))
 	{
 		InputReleaseTask->OnReleased.AddDynamic(this, &ThisClass::OnInteractionInputReleased);
@@ -156,7 +156,7 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	}
 
 	// 홀딩 완료 타이머
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (!World)
 	{
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
@@ -166,62 +166,65 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	// 타이머 처리
 	TWeakObjectPtr<UAO_GameplayAbility_Interact_Execute> WeakThis(this);
     
-	FTimerDelegate TimerDelegate;
-	TimerDelegate.BindWeakLambda(this, [WeakThis]()
+	World->GetTimerManager().SetTimer(
+	DurationTimerHandle,
+	FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 	{
-		if (UAO_GameplayAbility_Interact_Execute* StrongThis = WeakThis.Get())
+		if (TObjectPtr<UAO_GameplayAbility_Interact_Execute> StrongThis = WeakThis.Get())
 		{
 			StrongThis->OnDurationEnded();
 		}
-	});
-    
-	World->GetTimerManager().SetTimer(DurationTimerHandle, TimerDelegate, InteractionInfo.Duration, false);
+	}),
+	InteractionInfo.Duration,
+	false
+);
 }
 
 void UAO_GameplayAbility_Interact_Execute::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	TObjectPtr<AActor> AvatarActor = GetAvatarActorFromActorInfo();
     
     // DecayHold인 경우 움직임 다시 복구
-    if (AAO_DecayHoldElement* DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
-    {
-        DecayElement->MulticastSetMovementForActor(AvatarActor, true);
-    }
+	if (TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
+	{
+		DecayElement->MulticastSetMovementForActor(AvatarActor, true);
+	}
     
     // 홀딩 종료 알림
-    if (AAO_WorldInteractable* WorldInteractable = Cast<AAO_WorldInteractable>(InteractableActor))
-    {
-        WorldInteractable->OnInteractActiveEnded(AvatarActor);
-    }
+	if (TObjectPtr<AAO_WorldInteractable> WorldInteractable = Cast<AAO_WorldInteractable>(InteractableActor))
+	{
+		WorldInteractable->OnInteractActiveEnded(AvatarActor);
+	}
     
     // 타이머 정리
-    if (UWorld* World = GetWorld())
-    {
-        if (DurationTimerHandle.IsValid())
-        {
-            World->GetTimerManager().ClearTimer(DurationTimerHandle);
-        }
-        if (MontageTimerHandle.IsValid())
-        {
-            World->GetTimerManager().ClearTimer(MontageTimerHandle);
-        }
-    }
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		if (DurationTimerHandle.IsValid())
+		{
+			World->GetTimerManager().ClearTimer(DurationTimerHandle);
+		}
+		if (MontageTimerHandle.IsValid())
+		{
+			World->GetTimerManager().ClearTimer(MontageTimerHandle);
+		}
+	}
 
     // 노티파이 리스너 해제
-    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-    {
-        FGameplayTag FinalizeTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
-        ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).RemoveAll(this);
-    }
+	if (TObjectPtr<UAbilitySystemComponent> ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		FGameplayTag FinalizeTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
+		ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).RemoveAll(this);
+	}
     
     bHoldingPhaseCompleted = false;
 
     // UI: 홀딩 프로그레스 숨김
 	if (AvatarActor)
 	{
-		if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
+		if (TObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
 		{
-			if (UAO_InteractionWidgetController* Controller = InteractionComp->GetInteractionWidgetController())
+			if (TObjectPtr<UAO_InteractionWidgetController> Controller = InteractionComp->GetInteractionWidgetController())
 			{
 				FAO_InteractionMessage Message;
 				Message.MessageType = EAO_InteractionMessageType::Notice;
@@ -250,10 +253,10 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 	checkf(InteractableActor, TEXT("InteractableActor is null in ExecuteInteraction"));
 	checkf(InteractionInfo.AbilityToGrant, TEXT("AbilityToGrant is null in ExecuteInteraction"));
 
-	UAnimMontage* MontageToPlay = nullptr;
+	TObjectPtr<UAnimMontage> MontageToPlay = nullptr;
 	bool bShouldActivate = false;
 	
-	if (AAO_PuzzleElement* PuzzleElement = Cast<AAO_PuzzleElement>(InteractableActor))
+	if (TObjectPtr<AAO_PuzzleElement> PuzzleElement = Cast<AAO_PuzzleElement>(InteractableActor))
 	{
 		if (PuzzleElement->GetElementType() == EPuzzleElementType::Toggle)
 		{
@@ -266,7 +269,7 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 			MontageToPlay = InteractionInfo.ActiveMontage;
 		}
 	}
-	else if (AAO_BaseInteractable* BaseInteractable = Cast<AAO_BaseInteractable>(InteractableActor))
+	else if (TObjectPtr<AAO_BaseInteractable> BaseInteractable = Cast<AAO_BaseInteractable>(InteractableActor))
 	{
 		// 현재 상태 기준으로 몽타주 선택
 		if (BaseInteractable->IsToggleable())
@@ -303,11 +306,11 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 
 	if (MontageToPlay)
 	{
-		AActor* AvatarActor = GetAvatarActorFromActorInfo();
+		TObjectPtr<AActor> AvatarActor = GetAvatarActorFromActorInfo();
 		checkf(AvatarActor, TEXT("AvatarActor is null"));
 		
 		// Interaction 컴포넌트에서 멀티캐스트, AnimInstance에 직접 재생
-		if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
+		if (TObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
 		{
 			InteractionComp->MulticastPlayInteractionMontage(
 				MontageToPlay,
@@ -332,20 +335,23 @@ bool UAO_GameplayAbility_Interact_Execute::ExecuteInteraction()
 	if (bHasMontage)
 	{
 		// 몽타주 완료 후 어빌리티 종료
-		if (UWorld* World = GetWorld())
+		if (TObjectPtr<UWorld> World = GetWorld())
 		{
 			TWeakObjectPtr<UAO_GameplayAbility_Interact_Execute> WeakThis(this);
 			
-			FTimerDelegate TimerDelegate;
-			TimerDelegate.BindWeakLambda(this, [WeakThis]()
+			World->GetTimerManager().SetTimer(
+			MontageTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 			{
-				if (UAO_GameplayAbility_Interact_Execute* StrongThis = WeakThis.Get())
+				if (TObjectPtr<UAO_GameplayAbility_Interact_Execute> StrongThis = WeakThis.Get())
 				{
 					StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
 						StrongThis->CurrentActivationInfo, true, false);
 				}
-			});
-			World->GetTimerManager().SetTimer(MontageTimerHandle, TimerDelegate, MontageLength, false);
+			}),
+			MontageLength,
+			false
+			);
 		}
 	}
 	else if (bSuccess)
@@ -363,7 +369,7 @@ bool UAO_GameplayAbility_Interact_Execute::SendFinalizeEvent()
 	Payload.Instigator = GetAvatarActorFromActorInfo();
 	Payload.Target = InteractableActor;
 	
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (TObjectPtr<UAbilitySystemComponent> ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = ASC->FindAbilitySpecFromClass(InteractionInfo.AbilityToGrant))
 		{
@@ -387,7 +393,7 @@ void UAO_GameplayAbility_Interact_Execute::OnInvalidInteraction()
 void UAO_GameplayAbility_Interact_Execute::OnInteractionInputReleased()
 {
 	// Decay 홀드인 경우
-	if (AAO_DecayHoldElement* DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
+	if (TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
     {
         bool bIsServer = GetOwningActorFromActorInfo()->HasAuthority();
         
@@ -397,23 +403,25 @@ void UAO_GameplayAbility_Interact_Execute::OnInteractionInputReleased()
             ServerNotifyDecayHoldInputReleased();
             
             // 몽타주 완료 대기
-            if (UWorld* World = GetWorld())
+            if (TObjectPtr<UWorld> World = GetWorld())
             {
                 float RemainingTime = DecayElement->GetActiveMontageRemainingTime();
                 
             	TWeakObjectPtr<UAO_GameplayAbility_Interact_Execute> WeakThis(this);
                 
-            	FTimerDelegate TimerDelegate;
-            	TimerDelegate.BindWeakLambda(this, [WeakThis]()
-				{
-					if (UAO_GameplayAbility_Interact_Execute* StrongThis = WeakThis.Get())
+            	World->GetTimerManager().SetTimer(
+					MontageTimerHandle,
+					FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 					{
-						StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
-							StrongThis->CurrentActivationInfo, true, false);
-					}
-				});
-                
-                World->GetTimerManager().SetTimer(MontageTimerHandle, TimerDelegate, RemainingTime, false);
+						if (TObjectPtr<UAO_GameplayAbility_Interact_Execute> StrongThis = WeakThis.Get())
+						{
+							StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
+								StrongThis->CurrentActivationInfo, true, false);
+						}
+					}),
+					RemainingTime,
+					false
+				);
             }
             return;
         }
@@ -430,28 +438,30 @@ void UAO_GameplayAbility_Interact_Execute::OnInteractionInputReleased()
         {
             DecayElement->ReleasePause();
             
-            if (UWorld* World = GetWorld())
+            if (TObjectPtr<UWorld> World = GetWorld())
             {
                 float RemainingTime = DecayElement->GetActiveMontageRemainingTime();
                 
             	TWeakObjectPtr<UAO_GameplayAbility_Interact_Execute> WeakThis(this);
             	TWeakObjectPtr<AAO_DecayHoldElement> WeakDecay(DecayElement);
                 
-            	FTimerDelegate TimerDelegate;
-            	TimerDelegate.BindWeakLambda(this, [WeakThis, WeakDecay]()
-				{
-					if (AAO_DecayHoldElement* StrongDecay = WeakDecay.Get())
+            	World->GetTimerManager().SetTimer(
+					MontageTimerHandle,
+					FTimerDelegate::CreateWeakLambda(this, [WeakThis, WeakDecay]()
 					{
-						StrongDecay->CleanupAfterMontage();
-					}
-					if (UAO_GameplayAbility_Interact_Execute* StrongThis = WeakThis.Get())
-					{
-						StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
-							StrongThis->CurrentActivationInfo, true, false);
-					}
-				});
-                
-                World->GetTimerManager().SetTimer(MontageTimerHandle, TimerDelegate, RemainingTime, false);
+						if (TObjectPtr<AAO_DecayHoldElement> StrongDecay = WeakDecay.Get())
+						{
+							StrongDecay->CleanupAfterMontage();
+						}
+						if (TObjectPtr<UAO_GameplayAbility_Interact_Execute> StrongThis = WeakThis.Get())
+						{
+							StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
+								StrongThis->CurrentActivationInfo, true, false);
+						}
+					}),
+					RemainingTime,
+					false
+				);
             }
         }
         return;
@@ -472,7 +482,7 @@ void UAO_GameplayAbility_Interact_Execute::OnAnimNotifyReceived(const FGameplayE
 	}
     
 	// DecayHold인 경우 내부 상태로 처리
-	if (AAO_DecayHoldElement* DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
+	if (TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
 	{
 		DecayElement->OnNotifyReceived();
 		return;
@@ -484,8 +494,8 @@ void UAO_GameplayAbility_Interact_Execute::OnAnimNotifyReceived(const FGameplayE
 
 void UAO_GameplayAbility_Interact_Execute::ServerNotifyDecayHoldInputReleased_Implementation()
 {
-	AAO_DecayHoldElement* DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor);
-	if (!DecayElement)
+	TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor);
+    if (!DecayElement)
 	{
 		return;
 	}
@@ -501,7 +511,7 @@ void UAO_GameplayAbility_Interact_Execute::ServerNotifyDecayHoldInputReleased_Im
 	{
 		DecayElement->ReleasePause();
         
-		UWorld* World = GetWorld();
+		TObjectPtr<UWorld> World = GetWorld();
 		if (World)
 		{
 			float RemainingTime = DecayElement->GetActiveMontageRemainingTime();
@@ -509,21 +519,23 @@ void UAO_GameplayAbility_Interact_Execute::ServerNotifyDecayHoldInputReleased_Im
 			TWeakObjectPtr<UAO_GameplayAbility_Interact_Execute> WeakThis(this);
 			TWeakObjectPtr<AAO_DecayHoldElement> WeakDecay(DecayElement);
             
-			FTimerDelegate TimerDelegate;
-			TimerDelegate.BindWeakLambda(this, [WeakThis, WeakDecay]()
-			{
-				if (AAO_DecayHoldElement* StrongDecay = WeakDecay.Get())
+			World->GetTimerManager().SetTimer(
+				MontageTimerHandle,
+				FTimerDelegate::CreateWeakLambda(this, [WeakThis, WeakDecay]()
 				{
-					StrongDecay->CleanupAfterMontage();
-				}
-				if (UAO_GameplayAbility_Interact_Execute* StrongThis = WeakThis.Get())
-				{
-					StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
-						StrongThis->CurrentActivationInfo, true, false);
-				}
-			});
-            
-			World->GetTimerManager().SetTimer(MontageTimerHandle, TimerDelegate, RemainingTime, false);
+					if (TObjectPtr<AAO_DecayHoldElement> StrongDecay = WeakDecay.Get())
+					{
+						StrongDecay->CleanupAfterMontage();
+					}
+					if (TObjectPtr<UAO_GameplayAbility_Interact_Execute> StrongThis = WeakThis.Get())
+					{
+						StrongThis->EndAbility(StrongThis->CurrentSpecHandle, StrongThis->CurrentActorInfo, 
+							StrongThis->CurrentActivationInfo, true, false);
+					}
+				}),
+				RemainingTime,
+				false
+			);
 		}
 	}
 }

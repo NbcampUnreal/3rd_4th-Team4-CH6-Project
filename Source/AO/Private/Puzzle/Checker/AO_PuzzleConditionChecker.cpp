@@ -196,7 +196,7 @@ void AAO_PuzzleConditionChecker::CompletePuzzle()
 				continue;
 			}
 
-			UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+			TObjectPtr<UAbilitySystemComponent> ASC = ASI->GetAbilitySystemComponent();
 			if (ASC)
 			{
 				ASC->AddLooseGameplayTag(CompletionTag);
@@ -269,7 +269,7 @@ void AAO_PuzzleConditionChecker::StartConditionTimer(int32 ConditionIndex, float
 {
 	if (Duration <= 0.0f) return;
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("World is null in StartConditionTimer"));
 
 	FTimerHandle& TimerHandle = ConditionTimerHandles.FindOrAdd(ConditionIndex);
@@ -280,7 +280,7 @@ void AAO_PuzzleConditionChecker::StartConditionTimer(int32 ConditionIndex, float
 		TimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis, ConditionIndex]()
 		{
-			if (AAO_PuzzleConditionChecker* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_PuzzleConditionChecker> StrongThis = WeakThis.Get())
 			{
 				StrongThis->OnConditionTimeout(ConditionIndex);
 			}
@@ -316,7 +316,7 @@ void AAO_PuzzleConditionChecker::MulticastPuzzleFailed_Implementation()
 
 void AAO_PuzzleConditionChecker::ClearAllTimers()
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (!World)
 	{
 		return;

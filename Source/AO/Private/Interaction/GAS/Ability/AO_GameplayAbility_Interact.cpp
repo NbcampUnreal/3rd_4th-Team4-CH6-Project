@@ -25,7 +25,7 @@ void UAO_GameplayAbility_Interact::ActivateAbility(const FGameplayAbilitySpecHan
 
 	// 주변 상호작용 오브젝트 탐색 시작(GrantAbilityTask는 주변 상호작용 가능한 오브젝트에게 필요한 어빌리티를 자동으로 부여)
 	// 상호작용 오브젝트는 기본적으로 자신에게 어떤 어빌리티가 필요한지 정보를 가지고 있음
-	if (UAO_AbilityTask_GrantNearbyInteraction* GrantAbilityTask = UAO_AbilityTask_GrantNearbyInteraction::GrantAbilitiesForNearbyInteractables(
+	if (TObjectPtr<UAO_AbilityTask_GrantNearbyInteraction> GrantAbilityTask = UAO_AbilityTask_GrantNearbyInteraction::GrantAbilitiesForNearbyInteractables(
 		this, InteractionScanRange, InteractionScanRate))
 	{
 		GrantAbilityTask->ReadyForActivation();

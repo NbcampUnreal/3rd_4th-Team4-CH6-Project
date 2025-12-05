@@ -19,7 +19,7 @@ void AAO_WorldInteractable::BeginPlay()
 	Super::BeginPlay();
 
 	// 초기 Transform 저장
-	UStaticMeshComponent* InteractableMesh = GetInteractableMesh();
+	TObjectPtr<UStaticMeshComponent> InteractableMesh = GetInteractableMesh();
 	if (InteractableMesh && bUseTransformAnimation)
 	{
 		InitialInteractableLocation = InteractableMesh->GetRelativeLocation();
@@ -35,10 +35,7 @@ void AAO_WorldInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 
 void AAO_WorldInteractable::OnInteractActiveStarted(AActor* Interactor)
 {
-	if (!IsValid(Interactor))
-	{
-		return;
-	}
+	checkf(IsValid(Interactor), TEXT("Interactor is null in OnInteractActiveStarted"));
 	
 	// 서버: 홀딩 중인 플레이어 추적
 	if (HasAuthority())
@@ -52,10 +49,7 @@ void AAO_WorldInteractable::OnInteractActiveStarted(AActor* Interactor)
 
 void AAO_WorldInteractable::OnInteractActiveEnded(AActor* Interactor)
 {
-	if (!IsValid(Interactor))
-	{
-		return;
-	}
+	checkf(IsValid(Interactor), TEXT("Interactor is null in OnInteractActiveEnded"));
 	
 	// 서버: 홀딩 종료한 플레이어 제거
 	if (HasAuthority())
@@ -69,10 +63,7 @@ void AAO_WorldInteractable::OnInteractActiveEnded(AActor* Interactor)
 
 void AAO_WorldInteractable::OnInteractionSuccess(AActor* Interactor)
 {
-	if (!IsValid(Interactor))
-	{
-		return;
-	}
+	checkf(IsValid(Interactor), TEXT("Interactor is null in OnInteractionSuccess"));
 	
 	if (HasAuthority())
 	{
@@ -87,14 +78,19 @@ void AAO_WorldInteractable::OnInteractionSuccess(AActor* Interactor)
 
 			for (TWeakObjectPtr<AActor>& TargetInteractor : TargetInteractors)
 			{
-				AActor* TargetActor = TargetInteractor.Get();
-				if (!TargetActor || Interactor == TargetActor)
+				if (!TargetInteractor.IsValid())
+				{
+					continue;
+				}
+				
+				TObjectPtr<AActor> TargetActor = TargetInteractor.Get();
+				if (Interactor == TargetActor)
 				{
 					continue;
 				}
 
 				// 다른 플레이어의 상호작용 어빌리티 강제 취소
-				if (UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
+				if (TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
 				{
 					FGameplayTagContainer CancelAbilitiesTag;
 					CancelAbilitiesTag.AddTag(AO_InteractionTags::Status_Action_AbilityInteract);
@@ -127,7 +123,7 @@ void AAO_WorldInteractable::OnRep_WasConsumed()
 
 void AAO_WorldInteractable::StartInteractionAnimation(bool bActivate)
 {
-    UStaticMeshComponent* InteractableMesh = GetInteractableMesh();
+	TObjectPtr<UStaticMeshComponent> InteractableMesh = GetInteractableMesh();
 
     if (!InteractableMesh || !bUseTransformAnimation)
     {
@@ -146,7 +142,7 @@ void AAO_WorldInteractable::StartInteractionAnimation(bool bActivate)
         TargetRotation = InitialInteractableRotation;
     }
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("World is null in StartInteractionAnimation"));
 
     // 타이머 시작
@@ -155,7 +151,7 @@ void AAO_WorldInteractable::StartInteractionAnimation(bool bActivate)
 		TransformAnimationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
-			if (AAO_WorldInteractable* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_WorldInteractable> StrongThis = WeakThis.Get())
 			{
 				StrongThis->UpdateTransformAnimation();
 			}
@@ -167,11 +163,11 @@ void AAO_WorldInteractable::StartInteractionAnimation(bool bActivate)
 
 void AAO_WorldInteractable::UpdateTransformAnimation()
 {
-    UStaticMeshComponent* InteractableMesh = GetInteractableMesh();
-    if (!InteractableMesh)
-    {
-        return;
-    }
+	TObjectPtr<UStaticMeshComponent> InteractableMesh = GetInteractableMesh();
+	if (!InteractableMesh)
+	{
+		return;
+	}
 
     FVector CurrentLocation = InteractableMesh->GetRelativeLocation();
     FRotator CurrentRotation = InteractableMesh->GetRelativeRotation();
@@ -189,7 +185,7 @@ void AAO_WorldInteractable::UpdateTransformAnimation()
     {
         InteractableMesh->SetRelativeLocation(TargetLocation);
         InteractableMesh->SetRelativeRotation(TargetRotation);
-    	UWorld* World = GetWorld();
+    	TObjectPtr<UWorld> World = GetWorld();
     	if (World)
     	{
     		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);
@@ -221,7 +217,7 @@ bool AAO_WorldInteractable::IsRotatorNearlyEqual(const FRotator& A, const FRotat
 
 void AAO_WorldInteractable::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);

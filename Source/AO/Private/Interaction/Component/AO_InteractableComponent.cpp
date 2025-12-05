@@ -57,12 +57,12 @@ void UAO_InteractableComponent::GetMeshComponents(TArray<UMeshComponent*>& OutMe
 	TArray<UMeshComponent*> AllMeshComponents;
 	Owner->GetComponents<UMeshComponent>(AllMeshComponents, true); // true = 자식까지
     
-	for (UMeshComponent* MeshComp : AllMeshComponents)
+	for (TObjectPtr<UMeshComponent> MeshComp : AllMeshComponents)
 	{
 		if (!MeshComp) continue;
         
 		// Static Mesh 체크
-		if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
+		if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
 		{
 			if (StaticMesh->GetStaticMesh())
 			{
@@ -70,7 +70,7 @@ void UAO_InteractableComponent::GetMeshComponents(TArray<UMeshComponent*>& OutMe
 			}
 		}
 		// Skeletal Mesh 체크
-		else if (USkeletalMeshComponent* SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComp))
+		else if (TObjectPtr<USkeletalMeshComponent> SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComp))
 		{
 			if (SkeletalMesh->GetSkeletalMeshAsset())
 			{
@@ -83,7 +83,7 @@ void UAO_InteractableComponent::GetMeshComponents(TArray<UMeshComponent*>& OutMe
 // 상호작용 성공 시 호출
 void UAO_InteractableComponent::NotifyInteractionSuccess(AActor* Interactor)
 {
-    AActor* Owner = GetOwner();
+    TObjectPtr<AActor> Owner = GetOwner();
     if (!Owner || !Owner->HasAuthority())
     {
         return;
@@ -104,7 +104,7 @@ FTransform UAO_InteractableComponent::GetInteractionTransform() const
 		TArray<UMeshComponent*> MeshComponents;
 		Owner->GetComponents<UMeshComponent>(MeshComponents, true);
         
-		for (UMeshComponent* MeshComp : MeshComponents)
+		for (TObjectPtr<UMeshComponent> MeshComp : MeshComponents)
 		{
 			if (MeshComp && MeshComp->DoesSocketExist(InteractionSocketName))
 			{

@@ -83,7 +83,7 @@ void AAO_PuzzleElement::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCompon
 	}
 
 	// 루트 메시가 실제 메시를 가지고 있으면 추가
-	if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
+	if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
 	{
 		if (StaticMesh->GetStaticMesh())
 		{
@@ -95,11 +95,11 @@ void AAO_PuzzleElement::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCompon
 	TArray<USceneComponent*> ChildComponents;
 	MeshComponent->GetChildrenComponents(true, ChildComponents);
     
-	for (USceneComponent* Child : ChildComponents)
+	for (TObjectPtr<USceneComponent> Child : ChildComponents)
 	{
-		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		if (TObjectPtr<UMeshComponent> ChildMesh = Cast<UMeshComponent>(Child))
 		{
-			if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
+			if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
 			{
 				if (StaticMesh->GetStaticMesh())
 				{
@@ -230,9 +230,9 @@ FTransform AAO_PuzzleElement::GetInteractionTransform() const
 	TArray<USceneComponent*> ChildComponents;
 	MeshComponent->GetChildrenComponents(true, ChildComponents);
     
-	for (USceneComponent* Child : ChildComponents)
+	for (TObjectPtr<USceneComponent> Child : ChildComponents)
 	{
-		if (UMeshComponent* ChildMesh = Cast<UMeshComponent>(Child))
+		if (TObjectPtr<UMeshComponent> ChildMesh = Cast<UMeshComponent>(Child))
 		{
 			if (ChildMesh->DoesSocketExist(InteractionSocketName))
 			{
@@ -255,7 +255,7 @@ void AAO_PuzzleElement::ResetToInitialState()
 	// 소모성도 리셋 (AAO_WorldInteractable의 bWasConsumed)
 	bWasConsumed = false;
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);

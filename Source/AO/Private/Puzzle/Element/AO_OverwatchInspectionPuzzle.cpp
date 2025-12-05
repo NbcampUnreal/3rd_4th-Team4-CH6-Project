@@ -88,7 +88,7 @@ void AAO_OverwatchInspectionPuzzle::OnInspectionMeshClicked(UPrimitiveComponent*
         return;
     }
 
-    AActor* HitActor = ClickedComponent->GetOwner();
+    TObjectPtr<AActor> HitActor = ClickedComponent->GetOwner();
     if (!HitActor)
     {
         return;

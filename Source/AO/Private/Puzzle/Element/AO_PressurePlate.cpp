@@ -36,7 +36,7 @@ void AAO_PressurePlate::BeginPlay()
 
 void AAO_PressurePlate::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
@@ -54,7 +54,7 @@ void AAO_PressurePlate::ResetToInitialState()
 {
 	Super::ResetToInitialState();
     
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
@@ -72,7 +72,7 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     if (!HasAuthority()) return;
     if (!bInteractionEnabled) return;
 
-    APawn* Pawn = Cast<APawn>(OtherActor);
+    TObjectPtr<APawn> Pawn = Cast<APawn>(OtherActor);
     if (!Pawn) return;
 
     if (OverlappingActors.Contains(OtherActor)) return;
@@ -116,7 +116,7 @@ void AAO_PressurePlate::StartPlateAnimation()
 {
 	if (!MeshComponent) return;
     
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("World is null in StartPlateAnimation"));
     
 	TWeakObjectPtr<AAO_PressurePlate> WeakThis(this);
@@ -125,7 +125,7 @@ void AAO_PressurePlate::StartPlateAnimation()
 		PlateAnimationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
-			if (AAO_PressurePlate* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_PressurePlate> StrongThis = WeakThis.Get())
 			{
 				StrongThis->UpdatePlateAnimation();
 			}
@@ -147,7 +147,7 @@ void AAO_PressurePlate::UpdatePlateAnimation()
 	if (FVector::Dist(NewLocation, TargetMeshLocation) < 0.1f)
 	{
 		MeshComponent->SetRelativeLocation(TargetMeshLocation);
-		UWorld* World = GetWorld();
+		TObjectPtr<UWorld> World = GetWorld();
 		if (World)
 		{
 			World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);

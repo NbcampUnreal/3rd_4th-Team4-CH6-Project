@@ -51,7 +51,7 @@ bool AAO_DecayHoldElement::CanInteraction(const FAO_InteractionQuery& Interactio
 	// 다른 플레이어가 홀드 중이면 차단 (본인은 허용)
     if (IsAnyoneHolding())
     {
-        AActor* RequestingActor = InteractionQuery.RequestingAvatar.Get();
+    	TObjectPtr<AActor> RequestingActor = InteractionQuery.RequestingAvatar.Get();
         if (!RequestingActor)
             return false;
 
@@ -135,7 +135,7 @@ void AAO_DecayHoldElement::OnNotifyReceived()
 	NotifyCount++;
     
 	// 상호작용 Actor 찾기
-	AActor* InteractingActor = nullptr;
+	TObjectPtr<AActor> InteractingActor = nullptr;
 	if (CachedInteractors.Num() > 0)
 	{
 		InteractingActor = CachedInteractors[0].Get();
@@ -170,7 +170,7 @@ void AAO_DecayHoldElement::StopEarly()
 {
 	if (!HasAuthority()) return;
     
-	AActor* InteractingActor = nullptr;
+	TObjectPtr<AActor> InteractingActor = nullptr;
 	if (CachedInteractors.Num() > 0)
 	{
 		InteractingActor = CachedInteractors[0].Get();
@@ -203,7 +203,7 @@ void AAO_DecayHoldElement::ReleasePause()
     
 	ManualHoldActors.Empty();
     
-	AActor* InteractingActor = nullptr;
+	TObjectPtr<AActor> InteractingActor = nullptr;
 	if (CachedInteractors.Num() > 0)
 	{
 		InteractingActor = CachedInteractors[0].Get();
@@ -220,7 +220,7 @@ void AAO_DecayHoldElement::CleanupAfterMontage()
 {
 	if (!HasAuthority()) return;
     
-	AActor* InteractingActor = nullptr;
+	TObjectPtr<AActor> InteractingActor = nullptr;
 	if (CachedInteractors.Num() > 0)
 	{
 		InteractingActor = CachedInteractors[0].Get();
@@ -241,11 +241,11 @@ float AAO_DecayHoldElement::GetActiveMontageRemainingTime() const
 
     for (const TWeakObjectPtr<AActor>& Actor : CachedInteractors)
     {
-        if (AActor* ValidActor = Actor.Get())
+        if (TObjectPtr<AActor> ValidActor = Actor.Get())
         {
-            if (ACharacter* Character = Cast<ACharacter>(ValidActor))
+            if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(ValidActor))
             {
-                if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+                if (TObjectPtr<UAnimInstance> AnimInstance = Character->GetMesh()->GetAnimInstance())
                 {
                     if (AnimInstance->Montage_IsPlaying(Info.ActiveMontage))
                     {
@@ -274,13 +274,17 @@ void AAO_DecayHoldElement::StartProgressTimer()
 {
     if (ProgressTimerHandle.IsValid()) return;
     
-	if (UWorld* World = GetWorld())
+	if (TObjectPtr<UWorld> World = GetWorld())
 	{
+		TWeakObjectPtr<AAO_DecayHoldElement> WeakThis(this);
 		World->GetTimerManager().SetTimer(
 			ProgressTimerHandle,
-			FTimerDelegate::CreateWeakLambda(this, [this]()
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 			{
-				UpdateProgress();
+				if (TObjectPtr<AAO_DecayHoldElement> StrongThis = WeakThis.Get())
+				{
+					StrongThis->UpdateProgress();
+				}
 			}),
 			0.1f,
 			true
@@ -290,7 +294,7 @@ void AAO_DecayHoldElement::StartProgressTimer()
 
 void AAO_DecayHoldElement::StopProgressTimer()
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(ProgressTimerHandle);
@@ -335,16 +339,16 @@ void AAO_DecayHoldElement::PlayStartMontage()
 
     for (const TWeakObjectPtr<AActor>& Actor : CachedInteractors)
     {
-        if (AActor* ValidActor = Actor.Get())
+        if (TObjectPtr<AActor> ValidActor = Actor.Get())
         {
-            if (UAO_InteractionComponent* InteractionComp = ValidActor->FindComponentByClass<UAO_InteractionComponent>())
-            {
-                InteractionComp->MulticastPlayInteractionMontage(
-                    Info.ActiveMontage,
-                    GetInteractionTransform(),
-                    WarpTargetName
-                );
-            }
+        	if (TObjectPtr<UAO_InteractionComponent> InteractionComp = ValidActor->FindComponentByClass<UAO_InteractionComponent>())
+        	{
+        		InteractionComp->MulticastPlayInteractionMontage(
+					Info.ActiveMontage,
+					GetInteractionTransform(),
+					WarpTargetName
+				);
+        	}
         }
     }
 }
@@ -366,9 +370,9 @@ void AAO_DecayHoldElement::MulticastMontageControl_Implementation(AActor* Target
     const FAO_InteractionInfo& Info = PuzzleInteractionInfo;
     if (!Info.ActiveMontage) return;
 
-    if (ACharacter* Character = Cast<ACharacter>(TargetActor))
+    if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(TargetActor))
     {
-        if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+        if (TObjectPtr<UAnimInstance> AnimInstance = Character->GetMesh()->GetAnimInstance())
         {
             if (bPlay && AnimInstance->Montage_IsPlaying(Info.ActiveMontage))
             {
@@ -390,18 +394,18 @@ void AAO_DecayHoldElement::MulticastSetMovementForActor_Implementation(AActor* T
         return;
     }
     
-    if (ACharacter* Character = Cast<ACharacter>(TargetActor))
-    {
-        if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
-        {
-            if (bEnable)
-            {
-                Movement->SetMovementMode(MOVE_Walking);
-            }
-            else
-            {
-                Movement->DisableMovement();
-            }
-        }
-    }
+	if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(TargetActor))
+	{
+		if (TObjectPtr<UCharacterMovementComponent> Movement = Character->GetCharacterMovement())
+		{
+			if (bEnable)
+			{
+				Movement->SetMovementMode(MOVE_Walking);
+			}
+			else
+			{
+				Movement->DisableMovement();
+			}
+		}
+	}
 }

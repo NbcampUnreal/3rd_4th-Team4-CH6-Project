@@ -28,10 +28,10 @@ void UAO_InteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AActor* Owner = GetOwner();
+	TObjectPtr<AActor> Owner = GetOwner();
 	checkf(Owner, TEXT("Owner is null in BeginPlay"));
 
-	UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent();
+	TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent();
 	if (!ASC)
 	{
 		AO_LOG(LogHSJ, Error, TEXT("ASC not found on owner"));
@@ -45,9 +45,9 @@ void UAO_InteractionComponent::BeginPlay()
 	}
 
 	// 로컬 플레이어만 UI 초기화
-	if (APawn* Pawn = Cast<APawn>(Owner))
+	if (TObjectPtr<APawn> Pawn = Cast<APawn>(Owner))
 	{
-		if (APlayerController* PC = Cast<APlayerController>(Pawn->GetController()))
+		if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(Pawn->GetController()))
 		{
 			if (PC->IsLocalController())
 			{
@@ -64,7 +64,7 @@ void UAO_InteractionComponent::SetupInputBinding(UInputComponent* PlayerInputCom
 		return;
 	}
 
-	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	if (TObjectPtr<UEnhancedInputComponent> EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &UAO_InteractionComponent::OnInteractPressed);
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Completed, this, &UAO_InteractionComponent::OnInteractReleased);
@@ -81,7 +81,7 @@ void UAO_InteractionComponent::ServerTriggerInteract_Implementation(AActor* Targ
 	bIsHoldingInteract = true;
 	
 	// GameplayEvent로 Execute 어빌리티 트리거
-	if (UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent())
+	if (TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent())
 	{
 		FGameplayEventData Payload;
 		Payload.EventTag = AO_InteractionTags::Ability_Action_AbilityInteract_Execute;
@@ -126,7 +126,7 @@ void UAO_InteractionComponent::InitializeInteractionUI(APlayerController* PC)
 
 void UAO_InteractionComponent::GiveDefaultAbilities()
 {
-	UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent();
+	TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent();
 	if (!ASC || !GetOwner()->HasAuthority())
 	{
 		return;
@@ -188,7 +188,7 @@ void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(
 	}
 
 	// 몽타주 재생
-	if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+	if (TObjectPtr<UAnimInstance> AnimInstance = Character->GetMesh()->GetAnimInstance())
 	{
 		AnimInstance->Montage_Play(MontageToPlay);
 	}
@@ -196,7 +196,7 @@ void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(
 
 UAbilitySystemComponent* UAO_InteractionComponent::GetOwnerAbilitySystemComponent() const
 {
-	if (AActor* Owner = GetOwner())
+	if (TObjectPtr<AActor> Owner = GetOwner())
 	{
 		return UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
 	}

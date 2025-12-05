@@ -69,7 +69,7 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
 		return false;
 	}
     
-    AActor* RequestingActor = InteractionQuery.RequestingAvatar.Get();
+	TObjectPtr<AActor> RequestingActor = InteractionQuery.RequestingAvatar.Get();
     if (!RequestingActor)
     {
         return false;
@@ -82,7 +82,7 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
     }
     
     // 이미 자신이 검사 중이면 불가
-    UAO_InspectionComponent* InspectionComp = RequestingActor->FindComponentByClass<UAO_InspectionComponent>();
+	TObjectPtr<UAO_InspectionComponent> InspectionComp = RequestingActor->FindComponentByClass<UAO_InspectionComponent>();
     if (InspectionComp && InspectionComp->GetInspectedActor() == this)
     {
         return false;
@@ -97,11 +97,11 @@ void AAO_InspectionPuzzle::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCom
 	TArray<UMeshComponent*> AllMeshComponents;
 	GetComponents<UMeshComponent>(AllMeshComponents, true);
     
-	for (UMeshComponent* MeshComp : AllMeshComponents)
+	for (TObjectPtr<UMeshComponent> MeshComp : AllMeshComponents)
 	{
 		if (!MeshComp) continue;
         
-		if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
+		if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
 		{
 			if (StaticMesh->GetStaticMesh())
 			{

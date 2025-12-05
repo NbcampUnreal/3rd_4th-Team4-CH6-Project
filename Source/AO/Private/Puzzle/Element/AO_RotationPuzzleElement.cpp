@@ -24,7 +24,8 @@ void AAO_RotationPuzzleElement::BeginPlay()
 
 void AAO_RotationPuzzleElement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
 	{
 		World->GetTimerManager().ClearTimer(RotationTimerHandle);
 	}
@@ -62,7 +63,7 @@ void AAO_RotationPuzzleElement::ResetToInitialState()
     CurrentRotationIndex = 0;
 	bIsRotating = false;
     
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(RotationTimerHandle);
@@ -106,7 +107,7 @@ void AAO_RotationPuzzleElement::RotateToNext()
         );
     }
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("World is null in RotateToNext"));
     
 	TWeakObjectPtr<AAO_RotationPuzzleElement> WeakThis(this);
@@ -115,7 +116,7 @@ void AAO_RotationPuzzleElement::RotateToNext()
 		RotationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
-			if (AAO_RotationPuzzleElement* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_RotationPuzzleElement> StrongThis = WeakThis.Get())
 			{
 				StrongThis->UpdateRotationAnimation();
 			}
@@ -181,7 +182,7 @@ void AAO_RotationPuzzleElement::UpdateRotationAnimation()
         // 정확히 목표값으로 설정 (오차 제거)
         MeshComponent->SetRelativeRotation(TargetRotation);
         
-    	UWorld* World = GetWorld();
+    	TObjectPtr<UWorld> World = GetWorld();
     	if (World)
     	{
     		World->GetTimerManager().ClearTimer(RotationTimerHandle);
@@ -219,7 +220,7 @@ void AAO_RotationPuzzleElement::OnRep_CurrentRotationIndex()
 		);
 	}
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (!World)
 	{
 		return;
@@ -231,7 +232,7 @@ void AAO_RotationPuzzleElement::OnRep_CurrentRotationIndex()
 		RotationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
-			if (AAO_RotationPuzzleElement* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_RotationPuzzleElement> StrongThis = WeakThis.Get())
 			{
 				StrongThis->UpdateRotationAnimation();
 			}

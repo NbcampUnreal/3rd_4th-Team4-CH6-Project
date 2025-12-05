@@ -127,23 +127,20 @@ void AAO_DestructibleCacheActor::ExecuteDestruction()
 	// 삭제 타이머 설정
 	if (HasAuthority() && DestroyDelay > 0.0f)
 	{
-		UWorld* World = GetWorld();
+		TObjectPtr<UWorld> World = GetWorld();
 		checkf(World, TEXT("World is null in ExecuteDestruction"));
         
 		TWeakObjectPtr<AAO_DestructibleCacheActor> WeakThis(this);
         
-		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindWeakLambda(this, [WeakThis]()
-		{
-			if (AAO_DestructibleCacheActor* StrongThis = WeakThis.Get())
-			{
-				StrongThis->Destroy();
-			}
-		});
-
 		World->GetTimerManager().SetTimer(
 			DestroyTimerHandle,
-			TimerDelegate,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			{
+				if (TObjectPtr<AAO_DestructibleCacheActor> StrongThis = WeakThis.Get())
+				{
+					StrongThis->Destroy();
+				}
+			}),
 			DestroyDelay,
 			false
 		);
@@ -152,7 +149,7 @@ void AAO_DestructibleCacheActor::ExecuteDestruction()
 
 void AAO_DestructibleCacheActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	if (World)
 	{
 		World->GetTimerManager().ClearTimer(DestroyTimerHandle);
