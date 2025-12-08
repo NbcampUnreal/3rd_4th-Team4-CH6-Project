@@ -48,6 +48,10 @@ public:
 	// 호스트 여부 (입장 순서 0번을 호스트로 간주)
 	bool IsLobbyHost() const;
 
+	// 레디 상태가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_LobbyIsReady();
+
 protected:
 	// 레디 상태 (변경 시 OnRep_LobbyIsReady 호출)
 	UPROPERTY(ReplicatedUsing=OnRep_LobbyIsReady)
@@ -60,11 +64,7 @@ protected:
 	// 호스트 여부 (세션 동안 유지, GameInstance 기반)
 	UPROPERTY(ReplicatedUsing=OnRep_IsLobbyHost)
 	bool bIsLobbyHost;
-
-	// 레디 상태가 복제될 때 호출
-	UFUNCTION()
-	void OnRep_LobbyIsReady();
-
+	
 	// 입장 순서가 복제될 때 호출
 	UFUNCTION()
 	void OnRep_LobbyJoinOrder();
@@ -73,11 +73,16 @@ protected:
 	UFUNCTION()
 	void OnRep_IsLobbyHost();
 
+	// JM : 플레이어 생존 여부 확인
+	UFUNCTION()
+	void OnRep_IsAlive();
+
 private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
 
 // JM : 생존 여부 판단용 변수 추가 (임시)
 public:
+	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
 	bool bIsAlive = true;
 };

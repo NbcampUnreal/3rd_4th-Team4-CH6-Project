@@ -68,8 +68,8 @@ protected:
 	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
 public:
-	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
-	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+	FORCEINLINE TObjectPtr<USpringArmComponent> GetSpringArm() const {	return SpringArm; }
+	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
 
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
@@ -87,8 +87,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
-	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")

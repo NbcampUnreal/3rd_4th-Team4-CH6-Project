@@ -27,11 +27,11 @@ protected:
 
 public:
 	UPROPERTY(Transient)
-	APawn* Owner = nullptr;
+	TObjectPtr<APawn> Owner = nullptr;
 	UPROPERTY(Transient)
-	AAO_PlayerCharacter* Character = nullptr;
+	TObjectPtr<AAO_PlayerCharacter> Character = nullptr;
 	UPROPERTY(Transient)
-	UCharacterMovementComponent* MovementComponent = nullptr;
+	TObjectPtr<UCharacterMovementComponent> MovementComponent = nullptr;
 };
 
 UCLASS()

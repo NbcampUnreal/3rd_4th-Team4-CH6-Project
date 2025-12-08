@@ -47,6 +47,43 @@ public:
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
 	float VoiceVolume = 1.0f;
 
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Audio")
+	float AmbientVolume = 1.0f;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	int32 UpscalingOption = 1; // DLSS(Default)
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	int32 DlssOption = 2;	// Auto(Default)
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	float DlssSharpness = 0.0f;
+	
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	bool bEnableRayReconstruction = false;
+	
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	int32 ImageScalingOption = 2;	// Ultra Quality(Default)
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	float ImageScalingCustomResolution = 100.0f;
+	
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
+	float ImageScalingSharpness = 0.0f;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|FSR")
+	bool bEnableFsrFrameGeneration = false;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|FSR")
+	int32 FsrOption = 1;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|BuiltIn")
+	int32 BuiltInAntiAliasingOption = 0;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|BuiltIn")
+	float BuiltInResolutionScale = 100.0f;
+	
+
 	// TODO: 추가 옵셜 설정하기
 	// 마우스 민감도 (float)
 	// 마우스 y축 반전 (bool)
