@@ -24,9 +24,16 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
-	// 스테이지 출발 상호작용 시 서버에서 호출할 함수
+	/* 스테이지 출발 상호작용 시 서버에서 호출할 함수 */
 	void HandleStageExitRequest(AController* Requester);
 
-	// o 키 테스트용: 게임 실패 처리
+	/* 게임 실패 처리 */
 	void HandleStageFail(AController* Requester);
+			
+	/* 기차 연료 조건 미달시 실패 트리거 */
+	void TriggerStageFailByTrainFuel();
+	
+protected:
+	/* 열차(연료) 정보 받아오기 */
+	void SaveTrainFuelToGameInstance();
 };

@@ -5,6 +5,11 @@
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "AO_Log.h"
 
+#include "Train/AO_Train.h"
+#include "AbilitySystemComponent.h"
+#include "Train/GAS/AO_Fuel_AttributeSet.h"
+#include "EngineUtils.h"
+
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -60,7 +65,33 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		return;
 	}
 
-	const float Fuel = AO_GI->SharedTrainFuel;
+	// 현재 스테이지의 열차에서 연료 값 가져오기
+	AAO_Train* Train = nullptr;
+
+	for(TActorIterator<AAO_Train> It(World); It; ++It)
+	{
+		Train = *It;
+		break; // 첫 번째 Train만 사용
+	}
+
+	if(Train == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageExit: Train not found in world"));
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
+	if(ASC == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageExit: Train has no AbilitySystemComponent"));
+		return;
+	}
+
+	const float Fuel = ASC->GetNumericAttribute(UAO_Fuel_AttributeSet::GetFuelAttribute());
+	
+	// 가져온 연료를 GI에 1회 저장
+	AO_GI->SharedTrainFuel = Fuel;
+	
 	constexpr float RequiredFuel = 20.0f;
 
 	if(Fuel < RequiredFuel)
@@ -70,10 +101,10 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
-
+	
 	FName TargetMapName;
 
-	// 마지막 스테이지면 → 로비로 귀환 (엔딩 분기는 로비에서 처리)
+	// 마지막 스테이지면 → 로비로 귀환
 	if(AO_GI->IsLastStage())
 	{
 		TargetMapName = AO_GI->GetLobbyMap();
@@ -136,4 +167,62 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 	AO_LOG(LogJSH, Log, TEXT("StageFail: Travel to %s"), *Path);
 
 	World->ServerTravel(Path);
+}
+
+void AAO_GameMode_Stage::TriggerStageFailByTrainFuel()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("TriggerStageFailByTrainFuel: Train fuel below zero -> StageFail"));
+
+	HandleStageFail(nullptr);
+}
+
+void AAO_GameMode_Stage::SaveTrainFuelToGameInstance()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if (AO_GI == nullptr)
+	{
+		return;
+	}
+
+	AAO_Train* Train = nullptr;
+
+	for (TActorIterator<AAO_Train> It(World); It; ++It)
+	{
+		Train = *It;
+		break;
+	}
+
+	if (Train == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SaveTrainFuelToGameInstance: Train not found"));
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
+	if (ASC == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SaveTrainFuelToGameInstance: Train has no ASC"));
+		return;
+	}
+
+	const float CurrentFuel = ASC->GetNumericAttribute(UAO_Fuel_AttributeSet::GetFuelAttribute());
+	AO_GI->SharedTrainFuel = CurrentFuel;
+
+	AO_LOG(LogJSH, Log, TEXT("SaveTrainFuelToGameInstance: Fuel=%.1f saved to GI"), CurrentFuel);
 }
