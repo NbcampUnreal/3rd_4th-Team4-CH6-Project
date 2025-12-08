@@ -71,6 +71,17 @@ public:
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|NVIDIA")
 	float ImageScalingSharpness = 0.0f;
 
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|FSR")
+	bool bEnableFsrFrameGeneration = false;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|FSR")
+	int32 FsrOption = 1;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|BuiltIn")
+	int32 BuiltInAntiAliasingOption = 0;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|BuiltIn")
+	float BuiltInResolutionScale = 100.0f;
 	
 
 	// TODO: 추가 옵셜 설정하기
