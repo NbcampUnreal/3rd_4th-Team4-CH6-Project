@@ -74,7 +74,7 @@ bool AAO_LobbyInteractable::CanInteraction(const FAO_InteractionQuery& Interacti
 
     case EAO_LobbyInteractType::InviteFriends:
         // 모두 초대 UI 허용
-        return PC->IsLocalController();
+        return true;
 
     case EAO_LobbyInteractType::Wardrobe:
         // 모두 커스터마이징 가능
@@ -87,17 +87,31 @@ bool AAO_LobbyInteractable::CanInteraction(const FAO_InteractionQuery& Interacti
 
 void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
 {
+    AO_LOG(LogJSH, Log,
+        TEXT("[LobbyInteract] OnSuccess Enter | This=%s Type=%d Interactor=%s"),
+        *GetName(),
+        static_cast<int32>(InteractType),
+        *GetNameSafe(Interactor));
+
     Super::OnInteractionSuccess_BP_Implementation(Interactor);
 
     APawn* Pawn = Cast<APawn>(Interactor);
     if (!Pawn)
     {
+        AO_LOG(LogJSH, Warning,
+            TEXT("[LobbyInteract] OnSuccess: Interactor is not Pawn | This=%s Interactor=%s"),
+            *GetName(),
+            *GetNameSafe(Interactor));
         return;
     }
 
     AAO_PlayerController_Lobby* PC = Cast<AAO_PlayerController_Lobby>(Pawn->GetController());
     if (!PC)
     {
+        AO_LOG(LogJSH, Warning,
+            TEXT("[LobbyInteract] OnSuccess: No Lobby PC | This=%s Pawn=%s"),
+            *GetName(),
+            *GetNameSafe(Pawn));
         return;
     }
 
@@ -109,13 +123,41 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
         {
             if (bIsHost)
             {
+                AO_LOG(LogJSH, Log,
+                    TEXT("[LobbyInteract] ReadyToggle: Host tried to use Ready, ignored | PC=%s"),
+                    *GetNameSafe(PC));
                 return;
             }
 
             if (AAO_PlayerState* PS = PC->GetPlayerState<AAO_PlayerState>())
             {
                 const bool bNewReady = !PS->IsLobbyReady();
+
+                // 로컬 선반영: 내 화면에서 즉시 Ready 반영
+                if (PC->IsLocalController())
+                {
+                    AO_LOG(LogJSH, Log,
+                        TEXT("[LobbyInteract] ReadyToggle: local predict SetLobbyReady(%d) | PC=%s"),
+                        static_cast<int32>(bNewReady),
+                        *GetNameSafe(PC));
+
+                    PS->SetLobbyReady(bNewReady);
+                    PS->OnRep_LobbyIsReady();
+                }
+
+                // 서버에 실제 Ready 상태 요청
+                AO_LOG(LogJSH, Log,
+                    TEXT("[LobbyInteract] ReadyToggle: call Server_SetReady(%d) | PC=%s"),
+                    static_cast<int32>(bNewReady),
+                    *GetNameSafe(PC));
+
                 PC->Server_SetReady(bNewReady);
+            }
+            else
+            {
+                AO_LOG(LogJSH, Warning,
+                    TEXT("[LobbyInteract] ReadyToggle: PlayerState is null | PC=%s"),
+                    *GetNameSafe(PC));
             }
             break;
         }
@@ -123,25 +165,57 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
         {
             if (!bIsHost)
             {
+                AO_LOG(LogJSH, Log,
+                    TEXT("[LobbyInteract] StartGame: Non-host tried to start, ignored | PC=%s"),
+                    *GetNameSafe(PC));
                 return;
             }
+            AO_LOG(LogJSH, Log,
+                TEXT("[LobbyInteract] StartGame: call Server_RequestStart | PC=%s"),
+                *GetNameSafe(PC));
             PC->Server_RequestStart();
             break;
         }
     case EAO_LobbyInteractType::InviteFriends:
         {
-            PC->Client_OpenInviteOverlay();
+            AO_LOG(LogJSH, Log,
+                TEXT("[LobbyInteract] InviteFriends: call Server_RequestInviteOverlay | This=%s Interactor=%s HasAuthority=%d"),
+                *GetName(),
+                *GetNameSafe(Interactor),
+                HasAuthority() ? 1 : 0);
+            
+            AO_LOG(LogJSH, Log,
+                TEXT("[LobbyInteract] InviteFriends: Server_RequestInviteOverlay from PC=%s IsLocal=%d"),
+                *GetNameSafe(PC),
+                PC->IsLocalController() ? 1 : 0);
+
+            PC->Server_RequestInviteOverlay();
             break;
         }
+
     case EAO_LobbyInteractType::Wardrobe:
         {
             AO_LOG(LogJSH, Log,
-                TEXT("Wardrobe Interact: %s used wardrobe interactable %s"),
+                TEXT("[LobbyInteract] Wardrobe: call Server_RequestWardrobe | This=%s Interactor=%s HasAuthority=%d"),
+                *GetName(),
+                *GetNameSafe(Interactor),
+                HasAuthority() ? 1 : 0);
+
+            AO_LOG(LogJSH, Log,
+                TEXT("[LobbyInteract] Wardrobe: Server_RequestWardrobe from PC=%s IsLocal=%d"),
                 *GetNameSafe(PC),
-                *GetName());
+                PC->IsLocalController() ? 1 : 0);
+
+            PC->Server_RequestWardrobe();
             break;
         }
     default:
-        break;
+        {
+            AO_LOG(LogJSH, Warning,
+                TEXT("[LobbyInteract] Unknown InteractType=%d | This=%s"),
+                static_cast<int32>(InteractType),
+                *GetName());
+            break;
+        }
     }
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "AO_NotifyState_MeleeCollision.generated.h"
 
@@ -13,6 +14,9 @@ class AO_API UAO_NotifyState_MeleeCollision : public UAnimNotifyState
 {
 	GENERATED_BODY()
 
+public:
+	UAO_NotifyState_MeleeCollision();
+	
 protected:
 	virtual void NotifyBegin(
 		USkeletalMeshComponent* MeshComp,
@@ -38,8 +42,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GAS|Damage")
 	float TraceRadius = 25.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GAS|Damage")
+	FGameplayTag HitConfirmEventTag;
+
 private:
-	FVector StartLocation;
+	FVector StartLocation = FVector::ZeroVector;
 
 	TWeakObjectPtr<AActor> OwningActor;
 };
