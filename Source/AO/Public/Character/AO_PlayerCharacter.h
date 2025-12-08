@@ -130,12 +130,16 @@ public:
 	FVector LandVelocity;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "PlayerCharacter|Movement")
 	bool bJustLanded = false;
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacter|Movement")
+	float DeathCameraArmOffset = 300.f;
 
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetInputState(bool bWantsToSprint, bool bWantsToWalk);
 	UFUNCTION()
 	void OnRep_Gait();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_HandleDeathView();
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
@@ -158,6 +162,13 @@ private:
 	// Foley
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
+	// Bind GAS
+	void BindGameplayAbilities();
+	void BindGameplayEffects();
+	void BindAttributeDelegates();
+
+	// Death
+	void HandlePlayerDeath();
 	
 // JM : VOIPTalker Register to PS
 private:

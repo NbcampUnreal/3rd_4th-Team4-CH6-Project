@@ -75,6 +75,29 @@ void AAO_PlayerController_Stage::Server_RequestStageFail_Implementation()
 	StageGM->HandleStageFail(this);
 }
 
+void AAO_PlayerController_Stage::ShowDeathUI()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (!DeathWidget && DeathWidgetClass)
+	{
+		DeathWidget = CreateWidget<UUserWidget>(this, DeathWidgetClass);
+	}
+	
+	if (DeathWidget)
+	{
+		DeathWidget->AddToViewport();
+	}
+
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(DeathWidget->TakeWidget());
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+}
+
 // 임시 키 입력 코드
 void AAO_PlayerController_Stage::SetupInputComponent()
 {

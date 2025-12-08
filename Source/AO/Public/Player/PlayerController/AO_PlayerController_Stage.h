@@ -28,10 +28,19 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> HUDWidget;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
+	TSubclassOf<UUserWidget> DeathWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> DeathWidget;
+
 public:
 	// 서버로 출발 보내는 RPC
 	UFUNCTION(Server, Reliable)
     void Server_RequestStageExit();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void ShowDeathUI();
 
 	/* ----------테스트용 임시 코드------------*/
 public:
