@@ -113,7 +113,7 @@ IOnlineSessionPtr UAO_OnlineSessionSubsystem::GetSessionInterface() const
 IOnlineVoicePtr UAO_OnlineSessionSubsystem::GetOnlineVoiceInterface() const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())		// JM : raw pointer 타입으로 반환됨
 	{
 		AO_LOG(LogJM, Log, TEXT("return OSS::Voice Interface"));
 		return OSS->GetVoiceInterface();

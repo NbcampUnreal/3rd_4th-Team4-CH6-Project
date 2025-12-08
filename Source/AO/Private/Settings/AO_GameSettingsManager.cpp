@@ -11,7 +11,8 @@ void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::Initialize(Collection);
 
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->ApplySettings(false);		// 엔진 기본 설정 적용 (그래픽, 해상도 등)
 		Settings->ApplyCustomSettings();								// 사용자 정의 설정 적용 (볼륨, 마우스 감도 등)
@@ -31,6 +32,7 @@ void UAO_GameSettingsManager::Deinitialize()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+// TODO: static 으로 만들기
 UAO_GameUserSettings* UAO_GameSettingsManager::GetGameUserSettings() const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -41,7 +43,8 @@ UAO_GameUserSettings* UAO_GameSettingsManager::GetGameUserSettings() const
 void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->ApplySettings(false);	// 변경된 설정 값 반영
 		Settings->ApplyCustomSettings();							// 커스텀 설정 적용 (볼륨, 감도 등)
@@ -58,7 +61,8 @@ void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 void UAO_GameSettingsManager::ApplyResolutionSettings()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->ApplyResolutionSettings(false);
 		Settings->RequestUIUpdate();			// ApplySettings 에서 호출되는 내용
@@ -76,7 +80,8 @@ void UAO_GameSettingsManager::ApplyResolutionSettings()
 void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->ApplyNonResolutionSettings();
 		Settings->RequestUIUpdate();			// ApplySettings 에서 호출되는 내용
@@ -95,10 +100,12 @@ void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 void UAO_GameSettingsManager::SetToDefaults()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetToDefaults();
-		if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		// if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
 		{
 			DelegateManager->OnResetAllSettings.Broadcast();
 			AO_LOG(LogJM, Log, TEXT("Broadcast DelegateManager::OnResetAllSettings"));
@@ -117,7 +124,8 @@ void UAO_GameSettingsManager::SetToDefaults()
 void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetOverallScalabilityLevel(static_cast<int32>(NewLevel));
 	}
@@ -131,7 +139,8 @@ void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 void UAO_GameSettingsManager::SetAntiAliasingScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetAntiAliasingQuality(static_cast<int32>(NewLevel));
 	}
@@ -145,7 +154,8 @@ void UAO_GameSettingsManager::SetAntiAliasingScalability(EScalabilityLevel NewLe
 void UAO_GameSettingsManager::SetViewDistanceScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetViewDistanceQuality(static_cast<int32>(NewLevel));
 	}
@@ -159,7 +169,8 @@ void UAO_GameSettingsManager::SetViewDistanceScalability(EScalabilityLevel NewLe
 void UAO_GameSettingsManager::SetShadowScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetShadowQuality(static_cast<int32>(NewLevel));
 	}
@@ -173,7 +184,8 @@ void UAO_GameSettingsManager::SetShadowScalability(EScalabilityLevel NewLevel)
 void UAO_GameSettingsManager::SetGlobalIlluminationScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetGlobalIlluminationQuality(static_cast<int32>(NewLevel));
 	}
@@ -187,7 +199,8 @@ void UAO_GameSettingsManager::SetGlobalIlluminationScalability(EScalabilityLevel
 void UAO_GameSettingsManager::SetReflectionScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetReflectionQuality(static_cast<int32>(NewLevel));
 	}
@@ -201,7 +214,8 @@ void UAO_GameSettingsManager::SetReflectionScalability(EScalabilityLevel NewLeve
 void UAO_GameSettingsManager::SetTextureScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetTextureQuality(static_cast<int32>(NewLevel));
 	}
@@ -215,7 +229,8 @@ void UAO_GameSettingsManager::SetTextureScalability(EScalabilityLevel NewLevel)
 void UAO_GameSettingsManager::SetVisualEffectScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetVisualEffectQuality(static_cast<int32>(NewLevel));
 	}
@@ -229,7 +244,8 @@ void UAO_GameSettingsManager::SetVisualEffectScalability(EScalabilityLevel NewLe
 void UAO_GameSettingsManager::SetPostProcessingScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	//	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetPostProcessingQuality(static_cast<int32>(NewLevel));
 	}
@@ -243,7 +259,8 @@ void UAO_GameSettingsManager::SetPostProcessingScalability(EScalabilityLevel New
 void UAO_GameSettingsManager::SetFoliageScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetFoliageQuality(static_cast<int32>(NewLevel));
 	}
@@ -257,7 +274,8 @@ void UAO_GameSettingsManager::SetFoliageScalability(EScalabilityLevel NewLevel)
 void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetShadingQuality(static_cast<int32>(NewLevel));
 	}
@@ -271,7 +289,8 @@ void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetVSyncEnabled(bEnable);
 	}
@@ -285,7 +304,8 @@ void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
 void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMode)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		Settings->SetFullscreenMode(InFullscreenMode);
 	}
@@ -303,7 +323,8 @@ void UAO_GameSettingsManager::SetScreenResolutionByIndex(int32 ResolutionIndex)
 
 	if (ResolutionInfoList.IsValidIndex(ResolutionIndex))
 	{
-		if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+		if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+		// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 		{
 			Settings->SetScreenResolution(ResolutionInfoList[ResolutionIndex].Resolution);
 		}
@@ -348,7 +369,8 @@ int32 UAO_GameSettingsManager::GetCurrentResolutionIndex() const
 FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (const UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (const UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		AO_LOG(LogJM, Log, TEXT("End"));
 		return Settings->GetScreenResolution();
@@ -360,7 +382,8 @@ FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
- 	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+ 	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
  	{
  		switch (AudioType)
  		{
@@ -388,7 +411,8 @@ float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
 void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const float NewVolume)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_GameUserSettings* Settings = GetGameUserSettings())
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	// if (UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
 		const float ClampedVolume = FMath::Clamp(NewVolume, 0.0f, 1.0f);
 		switch (AudioType)

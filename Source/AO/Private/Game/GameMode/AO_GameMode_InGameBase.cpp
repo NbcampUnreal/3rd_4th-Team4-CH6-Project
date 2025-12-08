@@ -27,11 +27,13 @@ void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 void AAO_GameMode_InGameBase::StopVoiceChatForAllClients() const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UWorld* World = GetWorld())
+	if (TObjectPtr<UWorld> World = GetWorld())
+	// if (UWorld* World = GetWorld())
 	{
 		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 		{
-			if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
+			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
+			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
 			{
 				AO_PC_InGame->Client_StopVoiceChat();
 			}
@@ -48,18 +50,20 @@ void AAO_GameMode_InGameBase::StopVoiceChatForAllClients() const
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const AAO_PlayerController_InGameBase* DeadPlayerController)
+void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& DeadPlayerController)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	AAO_PlayerState* DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
+	TObjectPtr<AAO_PlayerState> DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
+	// AAO_PlayerState* DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
 	if (!DeadPlayerState)
 	{
 		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> DeadPlayerState"))
 		return;
 	}
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
+	// UWorld* World = GetWorld();
 	if (!World)
 	{
 		AO_LOG(LogJM, Warning, TEXT("World is not Valid"));
@@ -68,9 +72,11 @@ void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const AAO_Player
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		if (APlayerController* PC = It->Get())
+		if (TObjectPtr<APlayerController> PC = It->Get())
+		// if (APlayerController* PC = It->Get())
 		{
-			if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
+			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
+			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
 			{
 				AO_PC_InGame->Client_UpdateVoiceMember(DeadPlayerState);
 			}
@@ -88,18 +94,20 @@ void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const AAO_Player
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const AAO_PlayerController_InGameBase* AlivePC)
+void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const TObjectPtr<AAO_PlayerController_InGameBase>& AlivePC)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	AAO_PlayerState* AlivePlayerState = Cast<AAO_PlayerState>(AlivePC->PlayerState);
+	TObjectPtr<AAO_PlayerState> AlivePlayerState = Cast<AAO_PlayerState>(AlivePC->PlayerState); 
+	// AAO_PlayerState* AlivePlayerState = Cast<AAO_PlayerState>(AlivePC->PlayerState);
 	if (!AlivePlayerState)
 	{
 		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AlivePlayerState"))
 		return;
 	}
 
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
+	// UWorld* World = GetWorld();
 	if (!World)
 	{
 		AO_LOG(LogJM, Warning, TEXT("World is not Valid"));
@@ -108,11 +116,14 @@ void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const AAO_Pla
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		if (APlayerController* PC = It->Get())
+		if (TObjectPtr<APlayerController> PC = It->Get())
+		// if (APlayerController* PC = It->Get())
 		{
-			if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
+			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
+			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
 			{
-				if (AAO_PlayerState* AO_PS = AO_PC_InGame->GetPlayerState<AAO_PlayerState>())
+				if (TObjectPtr<AAO_PlayerState> AO_PS = AO_PC_InGame->GetPlayerState<AAO_PlayerState>())
+				// if (AAO_PlayerState* AO_PS = AO_PC_InGame->GetPlayerState<AAO_PlayerState>())
 				{
 					if (AO_PS->bIsAlive)
 					{
@@ -137,8 +148,9 @@ void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const AAO_Pla
 void AAO_GameMode_InGameBase::LetStartVoiceChat(AController*& TargetController)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	
-	if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(TargetController))
+
+	if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(TargetController))
+	// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(TargetController))
 	{
 		AO_PC_InGame->Client_StartVoiceChat();
 	}
