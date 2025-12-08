@@ -350,9 +350,10 @@ FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (const UAO_GameUserSettings* Settings = GetGameUserSettings())
 	{
+		AO_LOG(LogJM, Log, TEXT("End"));
 		return Settings->GetScreenResolution();
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
+	AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings. (Apply Default Settings 1920x1080)"));
 	return FIntPoint(1920, 1080);	// 포인터가 유효하지 않으면 1920x1080 해상도 반환
 }
 
