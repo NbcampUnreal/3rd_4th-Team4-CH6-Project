@@ -104,8 +104,6 @@ void AAO_PlayerController_Stage::RequestSpectate()
 {
 	if (IsLocalController())
 	{
-		ServerRPC_RequestSpectate();
-
 		if (!SpectateWidget && SpectateWidgetClass)
 		{
 			SpectateWidget = CreateWidget<UUserWidget>(this, SpectateWidgetClass);
@@ -120,6 +118,8 @@ void AAO_PlayerController_Stage::RequestSpectate()
 		{
 			DeathWidget->RemoveFromParent();
 		}
+		
+		ServerRPC_RequestSpectate();
 	}
 }
 
