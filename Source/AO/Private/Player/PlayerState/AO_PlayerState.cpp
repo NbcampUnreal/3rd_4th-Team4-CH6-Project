@@ -107,6 +107,35 @@ void AAO_PlayerState::OnRep_IsAlive()
 	}
 }
 
+void AAO_PlayerState::SetAlive(bool bNewAlive)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (bIsAlive == bNewAlive)
+	{
+		return;
+	}
+
+	bIsAlive = bNewAlive;
+
+	if (!bIsAlive)
+	{
+		AO_LOG(LogJM, Log, TEXT("SetAlive: Now Dead (bIsAlive=false)"));
+	}
+	else
+	{
+		AO_LOG(LogJM, Log, TEXT("SetAlive: Now Alive (bIsAlive=true)"));
+	}
+}
+
+bool AAO_PlayerState::IsAlive() const
+{
+	return bIsAlive;
+}
+
 /* ==================== 이름 복제 ==================== */
 
 // 이름이 복제될 때 호출됨

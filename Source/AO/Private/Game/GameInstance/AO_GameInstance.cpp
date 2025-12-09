@@ -11,12 +11,17 @@ UAO_GameInstance::UAO_GameInstance()
 	SharedTrainFuel = 0.0f;
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
+
+	// 최초 기본 부활 횟수
+	InitialSharedReviveCount = 5;
+	SharedReviveCount = InitialSharedReviveCount;
 }
 
 void UAO_GameInstance::ResetRun()
 {
 	CurrentStageIndex = 0;
 	SharedTrainFuel = 0.0f;
+	SharedReviveCount = InitialSharedReviveCount;
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -129,4 +134,39 @@ bool UAO_GameInstance::IsLobbyHostPlayerState(const APlayerState* PlayerState) c
 	}
 
 	return LobbyHostNetIdStr == NetId->ToString();
+}
+
+int32 UAO_GameInstance::GetSharedReviveCount() const
+{
+	return SharedReviveCount;
+}
+
+void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
+{
+	const int32 NewValue = SharedReviveCount + Delta;
+
+	if (NewValue < 0)
+	{
+		SharedReviveCount = 0;
+	}
+	else
+	{
+		SharedReviveCount = NewValue;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("GI: SharedReviveCount changed to %d"), SharedReviveCount);
+}
+
+bool UAO_GameInstance::TryConsumeSharedReviveCount()
+{
+	if (SharedReviveCount <= 0)
+	{
+		return false;
+	}
+
+	--SharedReviveCount;
+
+	AO_LOG(LogJSH, Log, TEXT("GI: Consume revive -> %d left"), SharedReviveCount);
+
+	return true;
 }

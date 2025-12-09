@@ -18,6 +18,7 @@ public:
 	AAO_GameMode_Stage();
 
 public:
+	virtual void BeginPlay() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
@@ -32,6 +33,16 @@ public:
 			
 	/* 기차 연료 조건 미달시 실패 트리거 */
 	void TriggerStageFailByTrainFuel();
+	
+	/* 플레이어 생존 여부가 변경되었을 때 호출되는 함수 */
+	void NotifyPlayerAliveStateChanged(class AAO_PlayerState* ChangedPlayerState);
+	
+protected:
+	/* 아직 살아 있는 플레이어가 한 명이라도 있는지 여부 */
+	bool HasAnyAlivePlayer() const;
+
+	/* 공용 부활 횟수와 생존자 수를 보고 전멸 여부 평가 */
+	void EvaluateTeamWipe();
 	
 protected:
 	/* 열차(연료) 정보 받아오기 */

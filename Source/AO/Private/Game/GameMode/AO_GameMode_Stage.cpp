@@ -9,11 +9,37 @@
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "EngineUtils.h"
+#include "Game/GameState/AO_GameState.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_Stage::BeginPlay()
+{
+	AO_LOG(LogJM, Log, TEXT("BeginPlay Start"));
+	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		UWorld* World = GetWorld();
+		if (World != nullptr)
+		{
+			UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+			AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+
+			if (AO_GI != nullptr && AO_GS != nullptr)
+			{
+				const int32 ReviveCount = AO_GI->GetSharedReviveCount();
+				AO_GS->SetSharedReviveCount(ReviveCount);
+				AO_LOG(LogJSH, Log, TEXT("Stage BeginPlay: Sync SharedReviveCount GI(%d) -> GS"), ReviveCount);
+			}
+		}
+	}
+
+	AO_LOG(LogJM, Log, TEXT("BeginPlay End"));
 }
 
 void AAO_GameMode_Stage::PostLogin(APlayerController* NewPlayer)
@@ -179,6 +205,100 @@ void AAO_GameMode_Stage::TriggerStageFailByTrainFuel()
 	AO_LOG(LogJSH, Log, TEXT("TriggerStageFailByTrainFuel: Train fuel below zero -> StageFail"));
 
 	HandleStageFail(nullptr);
+}
+
+void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedPlayerState)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (ChangedPlayerState == nullptr)
+	{
+		return;
+	}
+
+	AO_LOG
+	(
+		LogJSH,
+		Log,
+		TEXT("NotifyPlayerAliveStateChanged: %s bIsAlive=%s"),
+		*ChangedPlayerState->GetPlayerName(),
+		ChangedPlayerState->IsAlive() ? TEXT("true") : TEXT("false")
+	);
+
+	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
+	EvaluateTeamWipe();
+}
+
+bool AAO_GameMode_Stage::HasAnyAlivePlayer() const
+{
+	const AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+	if (AO_GS == nullptr)
+	{
+		return false;
+	}
+
+	for (APlayerState* PS : AO_GS->PlayerArray)
+	{
+		AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
+		if (AO_PS == nullptr)
+		{
+			continue;
+		}
+
+		if (AO_PS->IsAlive())
+		{
+			// 한 명이라도 살아 있으면 전멸 아님
+			return true;
+		}
+	}
+
+	// 모두 bIsAlive == false
+	return false;
+}
+
+void AAO_GameMode_Stage::EvaluateTeamWipe()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if (AO_GI == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("EvaluateTeamWipe: GameInstance is not UAO_GameInstance"));
+		return;
+	}
+
+	// 아직 살아 있는 플레이어가 하나라도 있으면 전멸 아님
+	if (HasAnyAlivePlayer())
+	{
+		return;
+	}
+
+	// 공용 부활 횟수가 0이면 -> 진짜 전멸
+	if (AO_GI->GetSharedReviveCount() <= 0)
+	{
+		AO_LOG(LogJSH, Log, TEXT("EvaluateTeamWipe: No alive players and no shared revive left -> StageFail"));
+
+		// 누가 요청했는지 특정하기 어렵기 때문에 nullptr 전달
+		HandleStageFail(nullptr);
+	}
+	else
+	{
+		// 모두 죽었지만 부활 횟수는 남아 있음 -> 일단 대기 (부활 Ability 등이 처리)
+		AO_LOG(LogJSH, Log, TEXT("EvaluateTeamWipe: No alive players but revive left (%d) -> Wait"),
+			AO_GI->GetSharedReviveCount());
+	}
 }
 
 void AAO_GameMode_Stage::SaveTrainFuelToGameInstance()
