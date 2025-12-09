@@ -1,12 +1,15 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 
 #include "AbilitySystemComponent.h"
+#include "BlueprintEditor.h"
 #include "EnhancedInputComponent.h"
+#include "KismetTraceUtils.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Navigation/PathFollowingComponent.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
@@ -213,7 +216,42 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
-		//
+
+		FHitResult Hit;
+		FVector Start = GetOwner()->GetActorLocation();
+		FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(GetOwner());
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(
+			Hit,
+			Start,
+			End,
+			ECC_Visibility,
+			Params
+		);
+
+		if (bHit)
+		{
+			// 데미지 적용
+			if (AActor* HitActor = Hit.GetActor())
+			{
+				UGameplayStatics::ApplyPointDamage(
+					HitActor,
+					1.0f,
+					(End - Start).GetSafeNormal(),
+					Hit,
+					GetOwner()->GetInstigatorController(),
+			GetOwner(),   
+					UDamageType::StaticClass()
+				);
+			}
+			DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
+
+			// effect
+		}
+
 	}
 }
 

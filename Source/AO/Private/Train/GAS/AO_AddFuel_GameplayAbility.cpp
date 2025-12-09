@@ -57,5 +57,6 @@ void UAO_AddFuel_GameplayAbility::ActivateAbility(
 
 		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
+	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
