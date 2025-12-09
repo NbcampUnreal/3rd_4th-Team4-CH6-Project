@@ -86,10 +86,12 @@ void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_OnlineSessionSubsystem> OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
 		OSSManager->StopVoiceChat();
 	}
 	else
 	{
+		AO_ENSURE(false, TEXT("OSS Manager is not Valid"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }

@@ -947,7 +947,6 @@ void UAO_OnlineSessionSubsystem::StartVoiceChat()
 		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
 		return;
 	}
-	// VoiceInterface->Init();		// TODO: 이번에 실험적으로 추가해봄
 	VoiceInterface->RegisterLocalTalker(0);
 	VoiceInterface->StartNetworkedVoice(0);
 	bIsEnableVoiceChat = true;

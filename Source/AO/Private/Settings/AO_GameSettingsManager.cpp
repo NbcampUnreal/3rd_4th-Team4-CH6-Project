@@ -31,8 +31,7 @@ void UAO_GameSettingsManager::Deinitialize()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-// TODO: static 으로 만들기
-UAO_GameUserSettings* UAO_GameSettingsManager::GetGameUserSettings() const
+UAO_GameUserSettings* UAO_GameSettingsManager::GetGameUserSettings()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	AO_LOG(LogJM, Log, TEXT("End"));
