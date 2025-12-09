@@ -30,7 +30,6 @@ void AAO_GameMode_InGameBase::StopVoiceChatForAllClients() const
 
 	TObjectPtr<UWorld> World = GetWorld();
 	if (!AO_ENSURE(World, TEXT("World is Not valid")))
-	// if (UWorld* World = GetWorld())
 	{
 		return;
 	}
@@ -38,37 +37,14 @@ void AAO_GameMode_InGameBase::StopVoiceChatForAllClients() const
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
-			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
 		{
 			AO_PC_InGame->Client_StopVoiceChat();
 		}
 		else
 		{
-			// AO_LOG(LogJM, Warning, TEXT("Can't Cast to PC -> PC_InGame"));
 			AO_ENSURE(false, TEXT("Can't Cast to PC -> PC_InGame"));
 		}
 	}
-	//
-	// if (TObjectPtr<UWorld> World = GetWorld())
-	// // if (UWorld* World = GetWorld())
-	// {
-	// 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
-	// 	{
-	// 		if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
-	// 		// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(*It))
-	// 		{
-	// 			AO_PC_InGame->Client_StopVoiceChat();
-	// 		}
-	// 		else
-	// 		{
-	// 			AO_LOG(LogJM, Warning, TEXT("Can't Cast to PC -> PC_InGame"));
-	// 		}
-	// 	}
-	// }
-	// else
-	// {
-	// 	AO_LOG(LogJM, Warning, TEXT("No World"));
-	// }
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -78,42 +54,32 @@ void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const TObjectPtr
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
 	TObjectPtr<AAO_PlayerState> DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
-	// AAO_PlayerState* DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
 	if (!AO_ENSURE(DeadPlayerState, TEXT("Cast Failed PS -> AAO_PS")))
-	// if (!DeadPlayerState)
 	{
-		// AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> DeadPlayerState"))
 		return;
 	}
 
 	TObjectPtr<UWorld> World = GetWorld();
-	// UWorld* World = GetWorld();
 	if (!AO_ENSURE(World, TEXT("World is not Valid")))
-	// if (!World)
 	{
-		// AO_LOG(LogJM, Warning, TEXT("World is not Valid"));
 		return;
 	}
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (TObjectPtr<APlayerController> PC = It->Get())
-		// if (APlayerController* PC = It->Get())
 		{
 			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
-			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
 			{
 				AO_PC_InGame->Client_UpdateVoiceMember(DeadPlayerState);
 			}
 			else
 			{
-				// AO_LOG(LogJM, Warning, TEXT("Can't Cast to PC -> PC_InGame"));
 				AO_ENSURE(false, TEXT("Can't Cast to PC -> PC_InGame"));
 			}
 		}
 		else
 		{
-			// AO_LOG(LogJM, Warning, TEXT("PC is not Valid"))
 			AO_ENSURE(false, TEXT("PC from Iterator is not Valid"));
 		}
 	}
@@ -126,33 +92,24 @@ void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const TObject
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
 	TObjectPtr<AAO_PlayerState> AlivePlayerState = Cast<AAO_PlayerState>(AlivePC->PlayerState); 
-	// AAO_PlayerState* AlivePlayerState = Cast<AAO_PlayerState>(AlivePC->PlayerState);
 	if (!AO_ENSURE(AlivePlayerState, TEXT("Cast Failed PS -> AAO_PS")))
-	// if (!AlivePlayerState)
 	{
-		// AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AlivePlayerState"))
 		return;
 	}
 
 	TObjectPtr<UWorld> World = GetWorld();
-	// UWorld* World = GetWorld();
 	if (!AO_ENSURE(World, TEXT("World is not Valid")))
-	// if (!World)
 	{
-		// AO_LOG(LogJM, Warning, TEXT("World is not Valid"));
 		return;
 	}
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (TObjectPtr<APlayerController> PC = It->Get())
-		// if (APlayerController* PC = It->Get())
 		{
 			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
-			// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
 			{
 				if (TObjectPtr<AAO_PlayerState> AO_PS = AO_PC_InGame->GetPlayerState<AAO_PlayerState>())
-				// if (AAO_PlayerState* AO_PS = AO_PC_InGame->GetPlayerState<AAO_PlayerState>())
 				{
 					if (AO_PS->bIsAlive)
 					{
@@ -166,13 +123,11 @@ void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const TObject
 			}
 			else
 			{
-				// AO_LOG(LogJM, Warning, TEXT("Can't Cast to PC -> PC_InGame"));
 				AO_ENSURE(false, TEXT("Can't Cast to PC -> PC_InGame"));
 			}
 		}
 		else
 		{
-			// AO_LOG(LogJM, Warning, TEXT("PC is not Valid"))
 			AO_ENSURE(false, TEXT("PC from Iterator is not Valid"));
 		}
 	}
@@ -185,13 +140,11 @@ void AAO_GameMode_InGameBase::LetStartVoiceChat(AController*& TargetController)
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
 	if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(TargetController))
-	// if (AAO_PlayerController_InGameBase* AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(TargetController))
 	{
 		AO_PC_InGame->Client_StartVoiceChat();
 	}
 	else
 	{
-		// AO_LOG(LogJM, Warning, TEXT("Can't Cast to Controller -> PC_InGame"));
 		AO_ENSURE(false, TEXT("Can't Cast Controller -> AO_PC_InGame"));
 	}
 	

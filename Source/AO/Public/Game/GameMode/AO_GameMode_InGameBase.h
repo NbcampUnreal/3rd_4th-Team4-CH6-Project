@@ -25,8 +25,6 @@ public:
 	void StopVoiceChatForAllClients() const;
 	void LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& DeadPlayerController);
 	void Test_LetUnmuteVoiceMemberForSurvivor(const TObjectPtr<AAO_PlayerController_InGameBase>& AlivePC);
-	/*void LetUpdateVoiceMemberForAllClients(const AAO_PlayerController_InGameBase* DeadPlayerController);
-	void Test_LetUnmuteVoiceMemberForSurvivor(const AAO_PlayerController_InGameBase* AlivePC);*/
 
 private:
 	static void LetStartVoiceChat(AController*& C);		// HandleSeamleessTravelPlayer의 C 값을 전달해야 해서 스마트 포인터 변환 보류
