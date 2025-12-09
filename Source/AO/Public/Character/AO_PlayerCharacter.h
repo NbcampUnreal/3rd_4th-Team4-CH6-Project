@@ -64,6 +64,8 @@ protected:
 	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
 	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
+	virtual void CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult) override;
+
 public:
 	FORCEINLINE TObjectPtr<USpringArmComponent> GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

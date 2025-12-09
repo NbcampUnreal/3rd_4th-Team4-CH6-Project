@@ -94,6 +94,18 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 	return false;
 }
 
+void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
+{
+	if (Camera)
+	{
+		Camera->GetCameraView(DeltaTime, OutResult);
+	}
+	else
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+	}
+}
+
 bool AAO_PlayerCharacter::IsInspecting() const
 {
 	return InspectionComponent && InspectionComponent->IsInspecting();
