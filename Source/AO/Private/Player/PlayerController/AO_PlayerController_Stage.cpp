@@ -6,6 +6,7 @@
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "AO_Log.h"
 #include "OnlineSubsystemTypes.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/GameStateBase.h"
 #include "UI/Widget/AO_SpectateWidget.h"
 
@@ -118,6 +119,11 @@ void AAO_PlayerController_Stage::RequestSpectate()
 		{
 			DeathWidget->RemoveFromParent();
 		}
+
+		if (HUDWidget)
+		{
+			HUDWidget->RemoveFromParent();
+		}
 		
 		ServerRPC_RequestSpectate();
 	}
@@ -196,17 +202,13 @@ void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APaw
 	const float BlendTime = 0.4f;
 	SetViewTargetWithBlend(NewTarget, BlendTime);
 
-	FText SpectatingPlayerName = FText::GetEmpty();
-	if (TObjectPtr<APlayerState> PS = NewTarget->GetPlayerState())
-	{
-		SpectatingPlayerName = FText::FromString(PS->GetPlayerName());
-	}
+	TObjectPtr<ACharacter> SpectatedCharacter = Cast<ACharacter>(NewTarget);
 	
 	if (SpectateWidget)
 	{
 		if (TObjectPtr<UAO_SpectateWidget> SpectateUI = Cast<UAO_SpectateWidget>(SpectateWidget))
 		{
-			SpectateUI->SetSpectatingPlayerName(SpectatingPlayerName);
+			SpectateUI->SetObservedCharacter(SpectatedCharacter);
 		}
 	}
 }
