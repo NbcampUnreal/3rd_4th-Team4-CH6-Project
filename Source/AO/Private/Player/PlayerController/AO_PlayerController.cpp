@@ -9,22 +9,25 @@ void AAO_PlayerController::CreateSettingsWidgetInstance(const int32 ZOrder, cons
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (SettingsWidgetInstance)		// 위젯 중복 생성 방지
+	if (!AO_ENSURE(!SettingsWidgetInstance, TEXT("Settings Widget Instance is Already Created")))
+	// if (SettingsWidgetInstance)		// 위젯 중복 생성 방지
 	{
-		AO_LOG(LogJM, Warning, TEXT("Settings Widget Instance is Already Created"));
+		// AO_LOG(LogJM, Warning, TEXT("Settings Widget Instance is Already Created"));
 		return;
 	}
 
-	if (!SettingsWidgetClass)
+	if (!AO_ENSURE(SettingsWidgetClass, TEXT("Settings Widget Class is nullptr")))
+	// if (!SettingsWidgetClass)
 	{
-		AO_LOG(LogJM, Warning, TEXT("Settings Widget Class is nullptr"));
+		// AO_LOG(LogJM, Warning, TEXT("Settings Widget Class is nullptr"));
 		return;
 	}
 
 	SettingsWidgetInstance = CreateWidget<UAO_UserWidget>(this, SettingsWidgetClass);
-	if (!SettingsWidgetInstance)
+	if (!AO_ENSURE(SettingsWidgetInstance, TEXT("Settings Widget Instance Create Failed")))
+	// if (!SettingsWidgetInstance)
 	{
-		AO_LOG(LogJM, Warning, TEXT("Settings Widget Instance is nullptr"));
+		// AO_LOG(LogJM, Warning, TEXT("Settings Widget Instance is nullptr"));
 		return;
 	}
 

@@ -1055,21 +1055,24 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (!TargetPS)
+	if (!AO_ENSURE(TargetPS, TEXT("TargetPS is Null")))
+	// if (!TargetPS)
 	{
-		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
+		// AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
 		return;
 	}
 	
 	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
-	if (!TargetPSId.IsValid())
+	if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	// if (!TargetPSId.IsValid())
 	{
 		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
 		return;
 	}
 	
 	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
-	if (!VoiceInterface.IsValid())
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	// if (!VoiceInterface.IsValid())
 	{
 		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
 		return;
@@ -1082,8 +1085,16 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 	else
 	{
 		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Unmute 시도)
-		AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
-		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
+		// AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
+		AO_ENSURE(false, TEXT("Unmute Failed. Try Register Remote Talker"));
+		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
+		{
+			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+		}
+		else
+		{
+			AO_ENSURE(false, TEXT("Failed to Register Remote Talker"));
+		}
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));

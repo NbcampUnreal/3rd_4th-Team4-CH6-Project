@@ -19,7 +19,8 @@ void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 		return;
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -53,7 +54,8 @@ void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -72,7 +74,8 @@ void UAO_GameSettingsManager::ApplyResolutionSettings()
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -92,7 +95,8 @@ void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -111,12 +115,14 @@ void UAO_GameSettingsManager::SetToDefaults()
 			AO_LOG(LogJM, Log, TEXT("Broadcast DelegateManager::OnResetAllSettings"));
 		}
 		else{
-			AO_LOG(LogJM, Warning, TEXT("Failed to get DelegateManager"));
+			// AO_LOG(LogJM, Warning, TEXT("Failed to get DelegateManager"));
+			AO_ENSURE(false, TEXT("Failed to Get DelegateManager"));
 		}
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -131,7 +137,8 @@ void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -146,7 +153,8 @@ void UAO_GameSettingsManager::SetAntiAliasingScalability(EScalabilityLevel NewLe
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -161,7 +169,8 @@ void UAO_GameSettingsManager::SetViewDistanceScalability(EScalabilityLevel NewLe
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -176,7 +185,8 @@ void UAO_GameSettingsManager::SetShadowScalability(EScalabilityLevel NewLevel)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -191,7 +201,8 @@ void UAO_GameSettingsManager::SetGlobalIlluminationScalability(EScalabilityLevel
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -206,7 +217,8 @@ void UAO_GameSettingsManager::SetReflectionScalability(EScalabilityLevel NewLeve
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -221,7 +233,8 @@ void UAO_GameSettingsManager::SetTextureScalability(EScalabilityLevel NewLevel)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -236,7 +249,8 @@ void UAO_GameSettingsManager::SetVisualEffectScalability(EScalabilityLevel NewLe
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -251,7 +265,8 @@ void UAO_GameSettingsManager::SetPostProcessingScalability(EScalabilityLevel New
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -266,7 +281,8 @@ void UAO_GameSettingsManager::SetFoliageScalability(EScalabilityLevel NewLevel)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -281,7 +297,8 @@ void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -296,7 +313,8 @@ void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -311,7 +329,8 @@ void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMo
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -330,12 +349,14 @@ void UAO_GameSettingsManager::SetScreenResolutionByIndex(int32 ResolutionIndex)
 		}
 		else
 		{
-			AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+			// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+			AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 		}
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Resolution Index is not valid"));
+		// AO_LOG(LogJM, Warning, TEXT("Resolution Index is not valid"));
+		AO_ENSURE(false, TEXT("Resolution Index is InValid"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -362,7 +383,8 @@ int32 UAO_GameSettingsManager::GetCurrentResolutionIndex() const
 		}
 	}
 
-	AO_LOG(LogJM, Warning, TEXT("Index Not Found (return -1)"));
+	// AO_LOG(LogJM, Warning, TEXT("Index Not Found (return -1)"));
+	AO_ENSURE(false, TEXT("Index Not Found (return -1)"));
 	return -1;
 }
 
@@ -375,7 +397,8 @@ FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 		AO_LOG(LogJM, Log, TEXT("End"));
 		return Settings->GetScreenResolution();
 	}
-	AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings. (Apply Default Settings 1920x1080)"));
+	// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings. (Apply Default Settings 1920x1080)"));
+	AO_ENSURE(false, TEXT("Failed to Get GameUserSettings. (Apply Default Settings 1920x1080"));
 	return FIntPoint(1920, 1080);	// 포인터가 유효하지 않으면 1920x1080 해상도 반환
 }
 
@@ -401,10 +424,12 @@ float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
  			return Settings->AmbientVolume;
  		default:
  			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
+ 			AO_ENSURE(false, TEXT("InValid AudioType %d"), static_cast<int32>(AudioType));
  			return 1.0;
  		}
  	}
-	AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+	// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+	AO_ENSURE(false, TEXT("Failed go Get Game User Settings"));
  	return 1.0;
 }
 
@@ -436,13 +461,15 @@ void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const f
 			Settings->AmbientVolume = ClampedVolume;
 			break;
 		default:
-			AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
+			// AO_LOG(LogJM, Warning, TEXT("Invalid AudioType"));
+			AO_ENSURE(false, TEXT("InValid AudioType %d"), static_cast<int32>(AudioType));
 			break;
 		}
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		// AO_LOG(LogJM, Warning, TEXT("Failed to get game user settings."));
+		AO_ENSURE(false, TEXT("Failed go Get Game User Settings"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
