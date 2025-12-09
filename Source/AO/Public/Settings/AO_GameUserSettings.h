@@ -25,7 +25,7 @@ class AO_API UAO_GameUserSettings : public UGameUserSettings
 	GENERATED_BODY()
 
 public:
-	static UAO_GameUserSettings* GetGameUserSettings();
+	static TObjectPtr<UAO_GameUserSettings> GetGameUserSettings();	// UFUNCTION 으로 쓸거면 다시 raw pointer로 전환
 
 public:
 	virtual void ApplyCustomSettings();		// NOTE: 엔진 정의 함수 아니고, 사용자 정의 함수임
