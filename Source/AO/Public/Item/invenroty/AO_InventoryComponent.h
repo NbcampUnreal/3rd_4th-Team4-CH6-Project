@@ -1,12 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffect.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "Components/ActorComponent.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "AO_InventoryComponent.generated.h"
 
+struct FGameplayEventData;
 class AAO_MasterItem;
 
 USTRUCT(BlueprintType)
@@ -28,6 +30,7 @@ struct FInventorySlot
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdated, const TArray<FInventorySlot>&, Slots);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectSlotUpdated, const int32, SelectedSlotIndex);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class AO_API UAO_InventoryComponent : public UActorComponent
@@ -60,20 +63,30 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventoryUpdated OnInventoryUpdated;
+
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnSelectSlotUpdated OnSelectSlotUpdated;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetSelectedSlot(int32 NewIndex);
 	void ServerSetSelectedSlot_Implementation(int32 NewIndex);
-		
+
+	void OnRightClick();
+	void OnLeftClick();
 	
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
-	void UseInventoryItem();
-	void DropInventoryItem();
+	UFUNCTION(Server, Reliable)
+	void UseInventoryItem_Server();
+	UFUNCTION(Server, Reliable)
+	void DropInventoryItem_Server();
 	
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	TArray<FInventorySlot> GetSlots() const { return Slots; }
 
+	UPROPERTY(Transient)
+	TArray<int32> EmptySlotList; 
+	
 	void ClearSlot();
 
 protected:
@@ -86,4 +99,10 @@ protected:
 	void OnRep_SelectedIndex();
 	
 	bool IsValidSlotIndex(int32 Index) const { return Index >= 0 && Index < Slots.Num(); }
+
+public:
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
+	UDataTable* ItemDataTable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UseItem")
+	TSubclassOf<UGameplayEffect> AddHealthClass;
 };
