@@ -17,12 +17,46 @@ bool UAO_HealthWidget::Initialize()
 	{
 		if (TObjectPtr<UAbilitySystemComponent> ASC = PlayerCharacter->GetAbilitySystemComponent())
 		{
-			BindHealthDelegates(ASC);
+			BindToASC(ASC);
 			return true;
 		}
 	}
 	
 	return false;
+}
+
+void UAO_HealthWidget::BindToASC(UAbilitySystemComponent* InASC)
+{
+	if (BoundASC == InASC)
+	{
+		return;
+	}
+
+	UnbindHealthDelegates();
+
+	BoundASC = InASC;
+	if (BoundASC)
+	{
+		BindHealthDelegates(BoundASC);
+	}
+}
+
+void UAO_HealthWidget::BindToCharacter(ACharacter* InCharacter)
+{
+	if (!InCharacter)
+	{
+		BindToASC(nullptr);
+		return;
+	}
+
+	if (TObjectPtr<UAbilitySystemComponent> ASC = InCharacter->FindComponentByClass<UAbilitySystemComponent>())
+	{
+		BindToASC(ASC);
+	}
+	else
+	{
+		BindToASC(nullptr);
+	}
 }
 
 void UAO_HealthWidget::BindHealthDelegates(UAbilitySystemComponent* ASC)
@@ -34,15 +68,43 @@ void UAO_HealthWidget::BindHealthDelegates(UAbilitySystemComponent* ASC)
 
 	if (const UAO_PlayerCharacter_AttributeSet* AttributeSet = ASC->GetSet<UAO_PlayerCharacter_AttributeSet>())
 	{
-		ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute())
-			.AddUObject(this, &UAO_HealthWidget::HealthChanged);
-		ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxHealthAttribute())
-			.AddUObject(this, &UAO_HealthWidget::MaxHealthChanged);
+		HealthChangedHandle = 
+			ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute())
+				.AddUObject(this, &UAO_HealthWidget::HealthChanged);
+		MaxHealthChangedHandle = 
+			ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxHealthAttribute())
+				.AddUObject(this, &UAO_HealthWidget::MaxHealthChanged);
 
 		CurrentHealth = AttributeSet->GetHealth();
 		MaxHealth = AttributeSet->GetMaxHealth();
 		OnHealthChanged(CurrentHealth, MaxHealth);
 	}
+}
+
+void UAO_HealthWidget::UnbindHealthDelegates()
+{
+	if (!BoundASC)
+	{
+		return;
+	}
+
+	if (HealthChangedHandle.IsValid())
+	{
+		BoundASC->GetGameplayAttributeValueChangeDelegate(
+			UAO_PlayerCharacter_AttributeSet::GetHealthAttribute())
+			.Remove(HealthChangedHandle);
+		HealthChangedHandle.Reset();
+	}
+
+	if (MaxHealthChangedHandle.IsValid())
+	{
+		BoundASC->GetGameplayAttributeValueChangeDelegate(
+			UAO_PlayerCharacter_AttributeSet::GetMaxHealthAttribute())
+			.Remove(MaxHealthChangedHandle);
+		MaxHealthChangedHandle.Reset();
+	}
+
+	BoundASC = nullptr;
 }
 
 void UAO_HealthWidget::HealthChanged(const FOnAttributeChangeData& Data)

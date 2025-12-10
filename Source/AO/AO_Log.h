@@ -19,3 +19,10 @@ DECLARE_LOG_CATEGORY_EXTERN(LogKSJ, Log, All);
 #define AO_LOG_NET(LogCategory, Verbosity, Format, ...) UE_LOG(LogCategory, Verbosity, TEXT("[%s] %s %s"), NETMODE_TCHAR, FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
 #define AO_LOG_ROLE(LogCat, Verbosity, Format, ...) UE_LOG(LogCat, Verbosity, TEXT("[%s][%s/%s] %s %s"), NETMODE_TCHAR, LOCAL_ROLE_TCHAR, REMOTE_ROLE_TCHAR, FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
 #define AO_LOG_SUBOBJECT_ROLE(LogCat, Verbosity, Format, ...) UE_LOG(LogCat, Verbosity, TEXT("[%s][%s/%s] %s %s"), NETMODE_TCHAR, SUBOBJECT_LOCAL_ROLE_TCHAR, SUBOBJECT_REMOTE_ROLE_TCHAR, FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
+
+#define AO_ENSURE(Cond, Format, ...) ensureMsgf(Cond, TEXT("%s : %s"), FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
+#define AO_ENSURE_ALWAYS(Cond, Format, ...) ensureAlwaysMsgf(Cond, TEXT("%s : %s"), FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
+
+#define AO_VERIFY(Cond, Format, ...) verifyf(Cond, TEXT("%s : %s"), FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))
+
+#define AO_CHECK(Cond, Format, ...) checkf(Cond, TEXT("%s : %s"), FUNCTION_TCHAR, *FString::Printf(Format, ##__VA_ARGS__))

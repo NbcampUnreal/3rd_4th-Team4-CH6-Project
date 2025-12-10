@@ -71,13 +71,13 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_OnlineSessionSubsystem* OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	if (TObjectPtr<UAO_OnlineSessionSubsystem> OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
 	{
 		OSSManager->StartVoiceChat();
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("No OSS Manager"));
+		AO_ENSURE(false, TEXT("OSS Manager is not Valid"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -85,13 +85,13 @@ void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
 void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_OnlineSessionSubsystem* OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	if (TObjectPtr<UAO_OnlineSessionSubsystem> OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
 	{
 		OSSManager->StopVoiceChat();
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("No OSS Manager"));
+		AO_ENSURE(false, TEXT("OSS Manager is not Valid"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -100,51 +100,45 @@ void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AA
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (!DeadPlayerState)
+	if (!AO_ENSURE(DeadPlayerState, TEXT("Dead PS is nullptr")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("Dead PlayerState is null"));
 		return;
 	}
 
-	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
-	if (!OSS)
+	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is nullptr")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("OSS is null"));
 		return;
 	}
 
-	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
-	if (!AO_PS)
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 		return;
 	}
 
 	if (DeadPlayerState == AO_PS)	// 내가 죽은 경우, 다른 사람 모두 Unmute
 	{
-		UWorld* World = GetWorld();
-		if (!World)
+		TObjectPtr<UWorld> World = GetWorld();
+		if (!AO_ENSURE(World, TEXT("No World")))
 		{
-			AO_LOG(LogJM, Warning, TEXT("No World"));
 			return;
 		}
 
-		for (APlayerState* OtherPS : World->GetGameState()->PlayerArray)
+		for (TObjectPtr<APlayerState> OtherPS : World->GetGameState()->PlayerArray)
 		{
-			if (!OtherPS->GetUniqueId().IsValid())
+			if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Not Valid")))
 			{
-				AO_LOG(LogJM, Warning, TEXT("PSId is Not Valid"));
 				continue;
 			}
 
-			AAO_PlayerState* AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
-			if (!AO_OtherPS)
+			TObjectPtr<AAO_PlayerState> AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+			if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
 			{
-				AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 				continue;
 			}
 			
-			if (OtherPS == AO_PS)
+			if (OtherPS == AO_PS)	// JM : Ensure 생략, 본인은 unmute 작업을 생략하려는 의도
 			{
 				AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
 				continue;
@@ -165,22 +159,21 @@ void AAO_PlayerController_InGameBase::Test_Server_SelfDie_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
-	if (!AO_PS)
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 		return;
 	}
 
 	AO_PS->bIsAlive = false;	// 변경을 서버에서 해야함(권한), replicate 설정도 해줘야 함
-	
-	if (AAO_GameMode_InGameBase* AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+
+	if (TObjectPtr<AAO_GameMode_InGameBase> AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
 	{
 		AO_GameMode_InGame->LetUpdateVoiceMemberForAllClients(this);
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed GameMode -> AO_GameMode_InGame"))
+		AO_ENSURE(false, TEXT("Cast Failed GM -> AO_GM_InGame"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -189,22 +182,21 @@ void AAO_PlayerController_InGameBase::Test_Server_SelfAlive_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
-	if (!AO_PS)
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 		return;
 	}
 
 	AO_PS->bIsAlive = true;	// 변경을 서버에서 해야함(권한), replicate 설정도 해줘야 함
-	
-	if (AAO_GameMode_InGameBase* AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+
+	if (TObjectPtr<AAO_GameMode_InGameBase> AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
 	{
 		AO_GameMode_InGame->Test_LetUnmuteVoiceMemberForSurvivor(this);
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed GameMode -> AO_GameMode_InGame"))
+		AO_ENSURE(false, TEXT("Cast Failed GM -> AO_GM_InGame"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -213,16 +205,14 @@ void AAO_PlayerController_InGameBase::Client_UnmuteVoiceMember_Implementation(AA
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (!AlivePlayerState)
+	if (!AO_ENSURE(AlivePlayerState, TEXT("Alive PS is InValid")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("InValid AlivePS"));
 		return;
 	}
 
-	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
-	if (!OSS)
+	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is Nullptr")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("OSS is Null"));
 		return;
 	}
 
@@ -243,48 +233,42 @@ void AAO_PlayerController_InGameBase::Test_Die()
 void AAO_PlayerController_InGameBase::Test_Alive()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	
-	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
-	if (!AO_PS)
+
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 		return;
 	}
 
-	UWorld* World = GetWorld();
-	if (!World)
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("No World")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("No World"));
 		return;
 	}
 
-	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
-	if (!OSS)
+	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is Null")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("OSS is null"));
 		return;
 	}
 	
 	// 사망자 모두 뮤트
-	for (APlayerState* OtherPS : World->GetGameState()->PlayerArray)
+	for (TObjectPtr<APlayerState> OtherPS : World->GetGameState()->PlayerArray)
 	{
-		if (!OtherPS->GetUniqueId().IsValid())
+		if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Not Valid")))
 		{
-			AO_LOG(LogJM, Warning, TEXT("PSId is Not Valid"));
 			continue;
 		}
 			
-		if (OtherPS == AO_PS)
+		if (OtherPS == AO_PS)  // JM : Ensure 안씀. 본인은 mute 작업을 생략하려는 의도
 		{
-			
 			AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
 			continue;
 		}
 
-		AAO_PlayerState* AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
-		if (!AO_OtherPS)
+		TObjectPtr<AAO_PlayerState> AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+		if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
 		{
-			AO_LOG(LogJM, Warning, TEXT("Cast Failed PS -> AO_PS"));
 			continue;
 		}
 
@@ -292,6 +276,7 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 		{
 			AO_LOG(LogJM, Warning, TEXT("AO_OtherPS is Survivor (Skip Mute)"));
 			continue;
+			// JM : Ensure 안씀. 생존자는 mute 작업을 생략하려는 의도
 		}
 			
 		OSS->MuteRemoteTalker(0, AO_OtherPS, false);
@@ -328,13 +313,13 @@ void AAO_PlayerController_InGameBase::TogglePauseMenu()
 	if (bPauseMenuVisible)
 	{
 		// JM : ESC 누르면 설정창도 같이 닫히게 하기
-		if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
 		{
 			DelegateManager->OnSettingsClose.Broadcast();
 		}
 		else
 		{
-			AO_LOG(LogJM, Warning, TEXT("Can't Get Delegate Manager"));
+			AO_ENSURE(false, TEXT("Can't Get Delegate Manager"));
 		}
 		HidePauseMenu();
 	}
@@ -384,19 +369,17 @@ void AAO_PlayerController_InGameBase::HidePauseMenu()
 
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestSettings()
 {
-	// TODO: 설정 UI 완성되면 여기서 띄우기
-	AO_LOG(LogJSH, Log, TEXT("Settings clicked (TODO)"));
-
-	// JM 코드추가 : 아.... 위젯에서 델리게이트를 호출해서 이 함수를 실행시키는구나..
+	AO_LOG(LogJSH, Log, TEXT("Settings clicked"));
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	
+	if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
 	{
 		DelegateManager->OnSettingsOpen.Broadcast();
 		AO_LOG(LogJM, Log, TEXT("Broadcast OnSettingsOpen"));
 	}
 	else
 	{
-		AO_LOG(LogJM, Warning, TEXT("Cant Get DelegateManager"));
+		AO_ENSURE(false, TEXT("Can't Get Delegate Manager"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 	

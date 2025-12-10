@@ -85,4 +85,7 @@ private:
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
 	bool bIsAlive = true;
+
+	FORCEINLINE bool GetIsAlive() const { return bIsAlive; };
+	void SetIsAlive(bool bInIsAlive);
 };
