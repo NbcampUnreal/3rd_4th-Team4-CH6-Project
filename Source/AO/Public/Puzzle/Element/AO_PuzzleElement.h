@@ -60,12 +60,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Puzzle")
 	void BroadcastPuzzleEvent(bool bActivate);
 
+	FORCEINLINE EPuzzleElementType GetElementType() const { return ElementType; }
+	FORCEINLINE bool IsActivated() const { return bIsActivated; }
+
 	// 외부에서 상태 강제 변경
 	UFUNCTION(BlueprintCallable, Category="Puzzle")
 	void SetActivationState(bool bNewState);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UStaticMeshComponent> InteractableMeshComponent;
 
 protected:
 	virtual void BeginPlay() override;
@@ -75,44 +81,54 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_IsActivated();
 
-	UFUNCTION(BlueprintImplementableEvent, Category="Puzzle")
-	void OnElementStateChanged(bool bIsActive);
+	virtual FTransform GetInteractionTransform() const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle")
+	virtual UStaticMeshComponent* GetInteractableMesh() const override 
+	{ 
+		return InteractableMeshComponent; 
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction|Puzzle")
 	EPuzzleElementType ElementType = EPuzzleElementType::OneTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction|Puzzle")
 	FGameplayTag ActivatedEventTag;		// 활성화 시 전송할 태그
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle", 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction|Puzzle", 
 		meta=(EditCondition="ElementType == EPuzzleElementType::Toggle || ElementType == EPuzzleElementType::HoldToggle", 
 		EditConditionHides))
 	FGameplayTag DeactivatedEventTag;	// 비활성화 시 전송할 태그
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Puzzle")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction|Puzzle")
 	TObjectPtr<AAO_PuzzleConditionChecker> LinkedChecker;
 
-	UPROPERTY(ReplicatedUsing=OnRep_IsActivated, BlueprintReadOnly, Category="Puzzle")
+	UPROPERTY(ReplicatedUsing=OnRep_IsActivated, BlueprintReadOnly, Category="Interaction|Puzzle")
 	bool bIsActivated = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Interaction")
+	// DataAsset에 있는 정보 사용 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
 	bool bUseInteractionDataAsset = false;
 
-	// DataAsset에 있는 정보 사용 여부
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Interaction",
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info",
 		meta=(EditCondition="bUseInteractionDataAsset", EditConditionHides))
 	TObjectPtr<UAO_InteractionDataAsset> InteractionDataAsset;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Puzzle|Interaction", 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info", 
 		meta=(EditCondition="!bUseInteractionDataAsset", EditConditionHides))
 	FAO_InteractionInfo PuzzleInteractionInfo;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="Puzzle")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
 	bool bInteractionEnabled = true;
 
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentHolder;	// 현재 홀딩 중인 액터
 
-	UPROPERTY(EditAnywhere, Category="Puzzle")
+	UPROPERTY(EditAnywhere, Category="Interaction|Puzzle")
 	bool bHandleToggleInOnInteractionSuccess = true;
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName InteractionSocketName = "InteractionPoint";
+    
+	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
+	FName WarpTargetName = "InteractionPoint";
 };

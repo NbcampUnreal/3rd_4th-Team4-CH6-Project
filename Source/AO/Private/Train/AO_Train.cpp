@@ -83,6 +83,7 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 		}
 	}
 
+	/*
 	if (Delta > 0.f)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
@@ -91,6 +92,7 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
+	*/
 
 	OnFuelChangedDelegate.Broadcast(NewFuel);
 }
@@ -129,22 +131,15 @@ void AAO_Train::HandleInteractionSuccess(AActor* Interactor)
 
 	if (!Inventory->Slots.IsValidIndex(Inventory->SelectedSlotIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Invalid slot index"));
 		return;
 	}
 
 	FInventorySlot& Slot = Inventory->Slots[Inventory->SelectedSlotIndex];
-	
-	UE_LOG(LogTemp, Warning, TEXT("DEBUG: Slot Index=%d, ItemID=%s, FuelAmount=%f"),
-	   Inventory->SelectedSlotIndex,
-	   *Slot.ItemID.ToString(),
-	   Slot.FuelAmount);
 
 	float FuelFromItem = Slot.FuelAmount;
 
 	if (FuelFromItem <= 0.f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Item has no fuel amount."));
 		return;
 	}
 	
@@ -160,6 +155,6 @@ void AAO_Train::HandleInteractionSuccess(AActor* Interactor)
 	   ActivationEventTag, 
 	   &EventData
 	);
-
+	
 	Inventory->ClearSlot();	
 }

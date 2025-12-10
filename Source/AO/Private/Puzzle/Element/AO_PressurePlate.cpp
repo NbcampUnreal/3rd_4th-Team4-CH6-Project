@@ -2,12 +2,15 @@
 #include "Puzzle/Element/AO_PressurePlate.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Net/UnrealNetwork.h"
+#include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 
 AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     // 압력판은 OneTime 타입 기반 (한번 활성화 후 유지되는 게 아니라 Overlap으로 제어)
     ElementType = EPuzzleElementType::OneTime;
+	AnimationSpeed = 5.0f;
 
     OverlapTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapTrigger"));
     OverlapTrigger->SetupAttachment(RootComponent);
@@ -15,6 +18,12 @@ AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer
     OverlapTrigger->SetCollisionResponseToAllChannels(ECR_Ignore);
     OverlapTrigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
     OverlapTrigger->SetGenerateOverlapEvents(true);
+}
+
+void AAO_PressurePlate::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AAO_PressurePlate, CurrentProgress);
 }
 
 void AAO_PressurePlate::BeginPlay()
@@ -35,7 +44,12 @@ void AAO_PressurePlate::BeginPlay()
 
 void AAO_PressurePlate::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	}
+	StopProgressTimer();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -49,11 +63,23 @@ void AAO_PressurePlate::ResetToInitialState()
 {
 	Super::ResetToInitialState();
     
-	GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+	}
     
 	if (MeshComponent)
 	{
 		MeshComponent->SetRelativeLocation(InitialMeshLocation);
+	}
+	
+	CurrentProgress = 0.0f;
+	StopProgressTimer();
+    
+	if (LinkedReactionActor)
+	{
+		LinkedReactionActor->SetProgress(0.0f);
 	}
 }
 
@@ -63,7 +89,7 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     if (!HasAuthority()) return;
     if (!bInteractionEnabled) return;
 
-    APawn* Pawn = Cast<APawn>(OtherActor);
+    TObjectPtr<APawn> Pawn = Cast<APawn>(OtherActor);
     if (!Pawn) return;
 
     if (OverlappingActors.Contains(OtherActor)) return;
@@ -80,6 +106,7 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     	// 눌리는 애니메이션
     	TargetMeshLocation = InitialMeshLocation - FVector(0, 0, PressDepth);
     	StartPlateAnimation();
+    	StartProgressTimer();
     }
 }
 
@@ -100,6 +127,7 @@ void AAO_PressurePlate::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, A
     	// 원위치 애니메이션
     	TargetMeshLocation = InitialMeshLocation;
     	StartPlateAnimation();
+    	StartProgressTimer();
     }
 }
 
@@ -107,13 +135,16 @@ void AAO_PressurePlate::StartPlateAnimation()
 {
 	if (!MeshComponent) return;
     
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in StartPlateAnimation"));
+    
 	TWeakObjectPtr<AAO_PressurePlate> WeakThis(this);
     
-	GetWorldTimerManager().SetTimer(
+	World->GetTimerManager().SetTimer(
 		PlateAnimationTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
 		{
-			if (AAO_PressurePlate* StrongThis = WeakThis.Get())
+			if (TObjectPtr<AAO_PressurePlate> StrongThis = WeakThis.Get())
 			{
 				StrongThis->UpdatePlateAnimation();
 			}
@@ -135,7 +166,82 @@ void AAO_PressurePlate::UpdatePlateAnimation()
 	if (FVector::Dist(NewLocation, TargetMeshLocation) < 0.1f)
 	{
 		MeshComponent->SetRelativeLocation(TargetMeshLocation);
-		GetWorldTimerManager().ClearTimer(PlateAnimationTimerHandle);
+		TObjectPtr<UWorld> World = GetWorld();
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(PlateAnimationTimerHandle);
+		}
+	}
+}
+
+void AAO_PressurePlate::StartProgressTimer()
+{
+	if (ProgressTimerHandle.IsValid())
+	{
+		return;
+	}
+    
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	TWeakObjectPtr<AAO_PressurePlate> WeakThis(this);
+	World->GetTimerManager().SetTimer(
+		ProgressTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (TObjectPtr<AAO_PressurePlate> StrongThis = WeakThis.Get())
+			{
+				StrongThis->UpdateProgress();
+			}
+		}),
+		0.1f,
+		true
+	);
+}
+
+void AAO_PressurePlate::StopProgressTimer()
+{
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(ProgressTimerHandle);
+	}
+}
+
+void AAO_PressurePlate::UpdateProgress()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	const float DeltaTime = 0.1f;
+	bool bSomeoneOn = OverlappingActors.Num() > 0;
+
+	if (bSomeoneOn)
+	{
+		// 밟고 있으면 진행도 증가
+		CurrentProgress = FMath::Min(CurrentProgress + ProgressSpeed * DeltaTime, 1.0f);
+	}
+	else
+	{
+		// 안 밟으면 진행도 감소
+		CurrentProgress = FMath::Max(CurrentProgress - ProgressSpeed * DeltaTime, 0.0f);
+	}
+    
+	// Reaction Actor에 진행도 전달
+	if (LinkedReactionActor)
+	{
+		LinkedReactionActor->SetProgress(CurrentProgress);
+	}
+
+	// 목표에 도달하면 타이머 정지
+	if ((bSomeoneOn && CurrentProgress >= 1.0f) || (!bSomeoneOn && CurrentProgress <= 0.0f))
+	{
+		StopProgressTimer();
 	}
 }
 

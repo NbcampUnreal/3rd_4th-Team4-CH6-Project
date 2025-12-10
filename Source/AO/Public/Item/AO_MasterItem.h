@@ -22,7 +22,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
+	virtual void OnConstruction(const FTransform& Transform) override;
+	
 public:
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor) override;
 

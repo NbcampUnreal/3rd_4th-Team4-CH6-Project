@@ -1,11 +1,15 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 
+#include "AbilitySystemComponent.h"
+#include "BlueprintEditor.h"
 #include "EnhancedInputComponent.h"
+#include "KismetTraceUtils.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Navigation/PathFollowingComponent.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
@@ -19,6 +23,7 @@ UAO_InventoryComponent::UAO_InventoryComponent()
 	}
 
 	SelectedSlotIndex = 1;
+	EmptySlotList = {1, 2, 3, 4};
 }
 
 void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
@@ -39,11 +44,11 @@ void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputCompo
 	}
 	if (IA_UseItem)
 	{
-		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::UseInventoryItem);
+		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnLeftClick);
 	}
 	if (IA_DropItem)
 	{
-		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::DropInventoryItem);	
+		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnRightClick);	
 	}
 }
 
@@ -65,6 +70,30 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 	//UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
 }
 
+void UAO_InventoryComponent::OnLeftClick()
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		UseInventoryItem_Server();
+	}
+	else
+	{
+		UseInventoryItem_Server_Implementation();
+	}
+}
+
+void UAO_InventoryComponent::OnRightClick()
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		DropInventoryItem_Server();
+	}
+	else
+	{
+		DropInventoryItem_Server_Implementation();
+	}
+}
+
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
@@ -75,46 +104,150 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 	
 	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
 	
-	Slots[SelectedSlotIndex] = IncomingItem;
-	Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
-	Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
-	OnInventoryUpdated.Broadcast(Slots);
-	
-	
 	if (OldSlot.ItemID != "empty")
 	{
-		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-
-		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-			DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
-			SpawnTransform,
-			nullptr,
-			nullptr,
-			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-		);
-
-		if (DropItem)
+		if (EmptySlotList.Num()>0)
 		{
-			DropItem->ItemID = OldSlot.ItemID;
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+			int32 findEmptyNum = EmptySlotList[0];
+			EmptySlotList.Remove(findEmptyNum);
+			
+			Slots[findEmptyNum] = IncomingItem;
+			Slots[findEmptyNum].ItemType = IncomingItem.ItemType;
+			Slots[findEmptyNum].FuelAmount = IncomingItem.FuelAmount;
+			OnInventoryUpdated.Broadcast(Slots);
+		}
+		else
+		{			
+			Slots[SelectedSlotIndex] = IncomingItem;
+			Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
+			Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
+			OnInventoryUpdated.Broadcast(Slots);
+
+			EmptySlotList.Remove(SelectedSlotIndex);
+			
+			FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+			FRotator SpawnRotation = FRotator::ZeroRotator;
+			FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+
+			AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+				DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+				SpawnTransform,
+				nullptr,
+				nullptr,
+				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+			);
+
+			if (DropItem)
+			{
+				DropItem->ItemID = OldSlot.ItemID;
+				UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+			}
 		}
 	}
 	else
 	{
+		Slots[SelectedSlotIndex] = IncomingItem;
+		Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
+		Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
+		OnInventoryUpdated.Broadcast(Slots);
+		
+		EmptySlotList.Remove(SelectedSlotIndex);
+		
 		WorldItemActor->Destroy();
+	}
+	
+	/*
+	FString DebugMessage;
+	for (int32 Index : EmptySlotList)
+	{
+		DebugMessage += FString::Printf(TEXT("%d "), Index);
+	}
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, DebugMessage);
+	*/
+}
+
+void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
+{
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
+	{
+		/*
+		 GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "consume"); 
+		 */
+		
+		static const FString Context00(TEXT("Inventory Item Use"));
+		float AddAmount = 0.0f;
+		const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
+		Slots[SelectedSlotIndex].ItemID, 
+		Context00      
+		);
+
+		if (ItemData)
+		{
+			AddAmount = ItemData->PassiveAmount;
+		}
+		const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive")); 
+    
+		FGameplayEventData EventData;
+		EventData.EventTag = ActivationEventTag;
+		EventData.EventMagnitude = AddAmount;
+		
+		AActor* OwnerActor = GetOwner();
+		if (!OwnerActor) return;
+		UAbilitySystemComponent* ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+		if (!ASC) return;
+		static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item"));    
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();  
+		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AddHealthClass, 1.f, Context);    
+		if (SpecHandle.IsValid())  
+		{
+			SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, EventData.EventMagnitude);  
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+		
+		ClearSlot();
+	}
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
+
+		FHitResult Hit;
+		FVector Start = GetOwner()->GetActorLocation();
+		FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(GetOwner());
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(
+			Hit,
+			Start,
+			End,
+			ECC_Visibility,
+			Params
+		);
+
+		if (bHit)
+		{
+			if (AActor* HitActor = Hit.GetActor())
+			{
+				UGameplayStatics::ApplyPointDamage(
+					HitActor,
+					1.0f,
+					(End - Start).GetSafeNormal(),
+					Hit,
+					GetOwner()->GetInstigatorController(),
+			GetOwner(),   
+					UDamageType::StaticClass()
+				);
+			}
+			DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
+
+			// effect
+		}
+
 	}
 }
 
-
-
-void UAO_InventoryComponent::UseInventoryItem()
-{
-	//
-}
-
-void UAO_InventoryComponent::DropInventoryItem()
+void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
@@ -138,13 +271,11 @@ void UAO_InventoryComponent::DropInventoryItem()
 		if (DropItem)
 		{
 			DropItem->ItemID = CurrentSlot.ItemID;
-			// DropItem->FuelAmount = CurrentSlot.FuelAmount; 
-
+			// DropItem->FuelAmount = CurrentSlot.FuelAmount;
 			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
 		}
+		ClearSlot();
 	}
-
-	ClearSlot();
 }
 
 void UAO_InventoryComponent::OnRep_Slots()
@@ -180,6 +311,7 @@ void UAO_InventoryComponent::ClearSlot()
 	{
 		OnInventoryUpdated.Broadcast(Slots);
 	}
+	EmptySlotList.Add(SelectedSlotIndex);
 }
 
 //ms_inventory key binding
@@ -191,5 +323,5 @@ void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
 	
 	ServerSetSelectedSlot(SlotIndex);
-	
+	OnSelectSlotUpdated.Broadcast(SlotIndex);
 }
