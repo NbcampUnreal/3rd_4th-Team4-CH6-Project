@@ -48,9 +48,6 @@ protected:
 	void EvaluateTeamWipe();
 	
 protected:
-	/* 열차(연료) 정보 받아오기 */
-	void SaveTrainFuelToGameInstance();
-	
 	/* 스테이지 종료 여부 */
 	bool bStageEnded = false;
 };

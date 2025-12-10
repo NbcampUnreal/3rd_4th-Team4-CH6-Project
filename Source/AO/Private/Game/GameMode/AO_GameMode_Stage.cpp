@@ -239,6 +239,7 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 	EvaluateTeamWipe();
 }
 
+/* 부활 관련 테스트 코드 */
 bool AAO_GameMode_Stage::TryRevivePlayer(APlayerController* ReviveTargetPC)
 {
 	if (HasAuthority() == false || ReviveTargetPC == nullptr)
@@ -382,50 +383,4 @@ void AAO_GameMode_Stage::EvaluateTeamWipe()
 		AO_LOG(LogJSH, Log, TEXT("EvaluateTeamWipe: No alive players but revive left (%d) -> Wait"),
 			AO_GI->GetSharedReviveCount());
 	}
-}
-
-void AAO_GameMode_Stage::SaveTrainFuelToGameInstance()
-{
-	if (HasAuthority() == false)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (World == nullptr)
-	{
-		return;
-	}
-
-	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
-	if (AO_GI == nullptr)
-	{
-		return;
-	}
-
-	AAO_Train* Train = nullptr;
-
-	for (TActorIterator<AAO_Train> It(World); It; ++It)
-	{
-		Train = *It;
-		break;
-	}
-
-	if (Train == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("SaveTrainFuelToGameInstance: Train not found"));
-		return;
-	}
-
-	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
-	if (ASC == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("SaveTrainFuelToGameInstance: Train has no ASC"));
-		return;
-	}
-
-	const float CurrentFuel = ASC->GetNumericAttribute(UAO_Fuel_AttributeSet::GetFuelAttribute());
-	AO_GI->SharedTrainFuel = CurrentFuel;
-
-	AO_LOG(LogJSH, Log, TEXT("SaveTrainFuelToGameInstance: Fuel=%.1f saved to GI"), CurrentFuel);
 }
