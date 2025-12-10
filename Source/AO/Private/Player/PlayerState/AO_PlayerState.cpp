@@ -188,3 +188,15 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 		Board->RebuildBoard();
 	}
 }
+
+void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
+{
+	if (HasAuthority())
+	{
+		if (bIsAlive != bInIsAlive)
+		{
+			bIsAlive = bInIsAlive;
+			OnRep_IsAlive();
+		}
+	}
+}

@@ -85,10 +85,7 @@ private:
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
 	bool bIsAlive = true;
-	
-	// 서버에서만 호출: 생존 여부 설정
-	void SetAlive(bool bNewAlive);
 
-	// 어디서나 호출: 현재 생존 여부 조회
-	bool IsAlive() const;
+	FORCEINLINE bool GetIsAlive() const { return bIsAlive; };
+	void SetIsAlive(bool bInIsAlive);
 };
