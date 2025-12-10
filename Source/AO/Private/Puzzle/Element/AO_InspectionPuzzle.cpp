@@ -25,6 +25,25 @@ void AAO_InspectionPuzzle::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AAO_InspectionPuzzle, bInteractionEnabled);
 }
 
+FAO_InspectionCameraSettings AAO_InspectionPuzzle::GetInspectionCameraSettings() const
+{
+	FAO_InspectionCameraSettings Settings;
+    
+	// 기본 카메라 설정
+	if (InspectableComponent)
+	{
+		FTransform CameraTransform = InspectableComponent->GetInspectionCameraTransform();
+		Settings.CameraMode = EInspectionCameraMode::RelativeToActor;
+		Settings.CameraLocation = CameraTransform.GetLocation();
+		Settings.CameraRotation = CameraTransform.Rotator();
+	}
+    
+	Settings.MovementType = EInspectionMovementType::None;
+	Settings.bHideCharacter = bHideCharacter;
+    
+	return Settings;
+}
+
 bool AAO_InspectionPuzzle::IsInternalComponentClickable(FName ComponentName) const
 {
 	for (const FAO_InspectionElementMapping& Mapping : ElementMappings)

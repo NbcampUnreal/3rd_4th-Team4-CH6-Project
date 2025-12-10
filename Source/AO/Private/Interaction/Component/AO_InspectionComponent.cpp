@@ -5,9 +5,11 @@
 #include "Interaction/Interface/AO_Interface_Inspectable.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AO_Log.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
@@ -16,6 +18,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Puzzle/Element/AO_InspectionPuzzle.h"
+#include "Puzzle/Element/AO_OverwatchInspectionPuzzle.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -112,6 +115,11 @@ void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComp
     {
         EnhancedInput->BindAction(CameraMoveAction, ETriggerEvent::Triggered, this, &UAO_InspectionComponent::OnCameraMoveInput);
     }
+
+	if (SpacebarAction)
+	{
+		EnhancedInput->BindAction(SpacebarAction, ETriggerEvent::Started, this, &UAO_InspectionComponent::OnSpacebarPressed);
+	}
 }
 
 void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
@@ -139,7 +147,9 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
 
     CurrentInspectedActor = InspectableActor;
 	// 이 값이 복제되면 PlayerCharacter의 Move()에서 입력 차단
-    bIsInspecting = true; 
+    bIsInspecting = true;
+
+	RegisterCancelTags();
 
     // Inspection 중에만 마우스 클릭으로 버튼을 누를 수 있도록 동적으로 클릭 어빌리티 부여
     TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
@@ -166,6 +176,7 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
         CameraSettings.CameraLocation = CameraTransform.GetLocation();
         CameraSettings.CameraRotation = CameraTransform.Rotator();
         CameraSettings.MovementType = EInspectionMovementType::None;
+    	CameraSettings.bHideCharacter = true;
     }
 
     // ClientRPC로 클라이언트도 어빌리티를 활성화할 수 있도록 Handle도 함께 전달
@@ -222,17 +233,27 @@ void UAO_InspectionComponent::ExitInspectionMode()
         }
     }
 
+	UnregisterCancelTags();
+
+	TObjectPtr<AActor> InspectableActorBackup = CurrentInspectedActor;
+
     // 상태 초기화 (복제됨)
     CurrentInspectedActor = nullptr;
     bIsInspecting = false; // PlayerCharacter의 Move()에서 입력 허용
 
     // ClientRPC로 클라이언트들에게 Inspection 종료 알림
-    ClientNotifyInspectionEnded();
+    ClientNotifyInspectionEnded(InspectableActorBackup);
     
     // 리슨서버에서 호스트인 경우 따로 처리
     TObjectPtr<APlayerController> LocalPC = Cast<APlayerController>(Owner->GetOwner());
     if (LocalPC && LocalPC->IsLocalController())
     {
+    	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(InspectableActorBackup);
+    	if (OverwatchPuzzle)
+    	{
+    		OverwatchPuzzle->ClearAllExternalHighlights();
+    	}
+    	
         ClientExitInspection();
     }
 }
@@ -244,6 +265,8 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActo
         return;
     }
 
+	CurrentInspectedActor = InspectableActor;
+
     // 서버에서 전달받은 Handle 저장
     GrantedClickAbilityHandle = AbilityHandle;
     CurrentCameraSettings = CameraSettings;
@@ -251,7 +274,7 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActo
     ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
 }
 
-void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
+void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation(AActor* InspectableActor)
 {
     TObjectPtr<AActor> Owner = GetOwner();
     if (!Owner)
@@ -263,6 +286,11 @@ void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
     {
         return;
     }
+
+	if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(InspectableActor))
+	{
+		OverwatchPuzzle->ClearAllExternalHighlights();
+	}
 
     ClientExitInspection();
 }
@@ -280,6 +308,16 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         return;
     }
 
+	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		// Inspection Context를 높은 우선순위로 추가
+		if (InspectionInputContext)
+		{
+			InputSubsystem->AddMappingContext(InspectionInputContext, InspectionInputPriority);
+		}
+	}
+
     // 이미 Inspection 카메라가 있으면 스킵(서버일 경우)
     if (InspectionCameraActor)
     {
@@ -287,7 +325,7 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
     }
 
 	TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
-    if (Character)
+    if (Character && CurrentCameraSettings.bHideCharacter)
     {
         // 자기 자신 캐릭터의 모든 Primitive 컴포넌트 숨기기(조사 중에는 자기 자신 메시가 안보여야 함)
         TArray<UPrimitiveComponent*> PrimitiveComponents;
@@ -324,6 +362,11 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
     // Inspection 카메라로 전환
     TransitionToInspectionCamera(CameraLocation, CameraRotation);
 
+	if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor))
+	{
+		OverwatchPuzzle->HighlightAllExternalMeshes();
+	}
+
     // 마우스 커서 표시, GameAndUI 모드로 전환
     PC->bShowMouseCursor = true;
     FInputModeGameAndUI InputMode;
@@ -356,11 +399,20 @@ void UAO_InspectionComponent::ClientExitInspection()
         return;
     }
 
+	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		if (InspectionInputContext)
+		{
+			InputSubsystem->RemoveMappingContext(InspectionInputContext);
+		}
+	}
+
     // 플레이어 카메라로 복귀
     TransitionToPlayerCamera();
 
     TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
-    if (Character)
+    if (Character && CurrentCameraSettings.bHideCharacter)
     {
         // 숨겼던 컴포넌트들 다시 표시
         for (TObjectPtr<UPrimitiveComponent> Comp : HiddenComponents)
@@ -494,6 +546,76 @@ void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Inst
     }
 
     InspectionCameraActor->SetActorLocation(NewLocation);
+}
+
+void UAO_InspectionComponent::OnSpacebarPressed()
+{
+	if (!bIsInspecting)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Not inspecting, ignoring"));
+		return;
+	}
+
+	if (!CurrentInspectedActor)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] No inspected actor, ignoring"));
+		return;
+	}
+
+	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor);
+	if (!OverwatchPuzzle)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Current actor is not OverwatchPuzzle: %s"), *CurrentInspectedActor->GetName());
+		return;
+	}
+
+	if (!OverwatchPuzzle->bUseSpacebar)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] OverwatchPuzzle.bUseSpacebar is false"));
+		return;
+	}
+
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Owner is null"));
+		return;
+	}
+
+	if (!Owner->HasAuthority())
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Client calling ServerRPC"));
+		ServerNotifySpacebarPressed();
+	}
+	else
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Server calling ActiveAllLinkedElements directly"));
+		OverwatchPuzzle->ActiveAllLinkedElements();
+	}
+}
+
+void UAO_InspectionComponent::ServerNotifySpacebarPressed_Implementation()
+{
+	if (!bIsInspecting || !CurrentInspectedActor)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: Invalid state"));
+		return;
+	}
+
+	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor);
+	if (!OverwatchPuzzle)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: Not OverwatchPuzzle"));
+		return;
+	}
+
+	if (!OverwatchPuzzle->bUseSpacebar)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: bUseSpacebar is false"));
+		return;
+	}
+
+	OverwatchPuzzle->ActiveAllLinkedElements();
 }
 
 // 조사 카메라로 전환
@@ -762,4 +884,75 @@ bool UAO_InspectionComponent::IsValidExternalClickTarget(AActor* HitActor, UPrim
     }
 
     return false;
+}
+
+void UAO_InspectionComponent::RegisterCancelTags()
+{
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return;
+	}
+
+	TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+	if (!ASC || CancelInspectionTags.IsEmpty())
+	{
+		return;
+	}
+
+	// 각 취소 태그에 대해 변경 감지 등록
+	for (const FGameplayTag& CancelTag : CancelInspectionTags)
+	{
+		if (!CancelTag.IsValid())
+		{
+			continue;
+		}
+
+		FDelegateHandle Handle = ASC->RegisterGameplayTagEvent(CancelTag, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &UAO_InspectionComponent::OnCancelTagChanged);
+        
+		CancelTagDelegateHandles.Add(Handle);
+	}
+}
+
+void UAO_InspectionComponent::UnregisterCancelTags()
+{
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+	if (!ASC)
+	{
+		return;
+	}
+
+	// 모든 델리게이트 해제
+	for (const FDelegateHandle& Handle : CancelTagDelegateHandles)
+	{
+		if (Handle.IsValid())
+		{
+			// 태그별로 등록된 델리게이트 제거
+			for (const FGameplayTag& CancelTag : CancelInspectionTags)
+			{
+				if (CancelTag.IsValid())
+				{
+					ASC->RegisterGameplayTagEvent(CancelTag, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
+				}
+			}
+		}
+	}
+
+	CancelTagDelegateHandles.Empty();
+}
+
+void UAO_InspectionComponent::OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	// 태그가 추가되었을 때만 (NewCount > 0) 취소
+	if (NewCount > 0 && bIsInspecting)
+	{
+		ExitInspectionMode();
+	}
 }

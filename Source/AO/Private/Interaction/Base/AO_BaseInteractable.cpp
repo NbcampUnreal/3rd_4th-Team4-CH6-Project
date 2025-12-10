@@ -4,6 +4,7 @@
 #include "Physics/AO_CollisionChannels.h"
 #include "Interaction/Base/GA_Interact_Base.h"
 #include "Net/UnrealNetwork.h"
+#include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 
 AAO_BaseInteractable::AAO_BaseInteractable(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -92,6 +93,28 @@ void AAO_BaseInteractable::GetMeshComponents(TArray<UMeshComponent*>& OutMeshCom
 	}
 }
 
+bool AAO_BaseInteractable::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
+{
+	return CanInteraction_BP(InteractionQuery);
+}
+
+bool AAO_BaseInteractable::CanInteraction_BP_Implementation(const FAO_InteractionQuery& InteractionQuery) const
+{
+	if (!Super::CanInteraction(InteractionQuery))
+	{
+		return false;
+	}
+
+	// 전역 비활성화 체크
+	if (!bInteractionEnabled)
+	{
+		return false;
+	}
+
+	// 기본적으로 허용
+	return true;
+}
+
 void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 {
 	Super::OnInteractionSuccess(Interactor);
@@ -107,11 +130,13 @@ void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 	{
 		bIsActivated = !bIsActivated;
 		StartInteractionAnimation(bIsActivated);
+		TriggerLinkedReactions(bIsActivated);
 	}
 	else
 	{
 		bIsActivated = true;
 		StartInteractionAnimation(true);
+		TriggerLinkedReactions(true);
 	}
 
 	OnInteractionSuccess_BP(Interactor);
@@ -121,6 +146,7 @@ void AAO_BaseInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, bIsActivated);
+	DOREPLIFETIME(ThisClass, bInteractionEnabled);
 }
 
 void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
@@ -131,6 +157,31 @@ void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Intera
 void AAO_BaseInteractable::OnRep_IsActivated()
 {
 	StartInteractionAnimation(bIsActivated);
+}
+
+void AAO_BaseInteractable::TriggerLinkedReactions(bool bActivate)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+    
+	for (TObjectPtr<AAO_PuzzleReactionActor> ReactionActor : LinkedReactionActors)
+	{
+		if (!ReactionActor)
+		{
+			continue;
+		}
+        
+		if (bActivate)
+		{
+			ReactionActor->ActivateReaction();
+		}
+		else
+		{
+			ReactionActor->DeactivateReaction();
+		}
+	}
 }
 
 FTransform AAO_BaseInteractable::GetInteractionTransform() const

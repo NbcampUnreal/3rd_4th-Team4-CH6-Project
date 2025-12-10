@@ -5,6 +5,8 @@
 #include "Interaction/Actor/AO_WorldInteractable.h"
 #include "AO_BaseInteractable.generated.h"
 
+class AAO_PuzzleReactionActor;
+
 /**
  * 간단한 상호작용 액터 베이스 클래스
  * 
@@ -27,6 +29,11 @@ public:
 
 	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const override;
+	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
+	// BP에서 오버라이드 가능
+	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
+	bool CanInteraction_BP(const FAO_InteractionQuery& InteractionQuery) const;
+	virtual bool CanInteraction_BP_Implementation(const FAO_InteractionQuery& InteractionQuery) const;
 
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 
@@ -38,6 +45,9 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsActivated, EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
 	bool bIsActivated = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Interaction|State")
+	bool bInteractionEnabled = true;
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -53,6 +63,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_IsActivated();
+	
+	UFUNCTION(BlueprintCallable, Category = "Interaction|Reaction")
+	void TriggerLinkedReactions(bool bActivate);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -90,6 +103,9 @@ protected:
     
 	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
 	FName WarpTargetName = "InteractionPoint";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Reaction")
+	TArray<TObjectPtr<AAO_PuzzleReactionActor>> LinkedReactionActors;
 
 private:
 	UPROPERTY()

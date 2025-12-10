@@ -41,6 +41,7 @@ FAO_InspectionCameraSettings AAO_OverwatchInspectionPuzzle::GetInspectionCameraS
     Settings.MovementSpeed = CameraMovementSpeed;
     Settings.MovementBoundsExtent = MovementBoundsExtent;
     Settings.MovementType = bEnableCameraMovement ? EInspectionMovementType::Planar : EInspectionMovementType::None;
+	Settings.bHideCharacter = bHideCharacter;
 
     if (CameraMode == EInspectionCameraMode::WorldAbsolute)
     {
@@ -81,12 +82,123 @@ bool AAO_OverwatchInspectionPuzzle::IsValidClickTarget(AActor* HitActor, UPrimit
     return false;
 }
 
+void AAO_OverwatchInspectionPuzzle::ActiveAllLinkedElements()
+{
+    if (!HasAuthority())
+    {
+        AO_LOG(LogHSJ, Warning, TEXT("[ActiveAll] Not authority, ignoring"));
+        return;
+    }
+
+    if (ExternalMeshMappings.Num() == 0)
+    {
+        AO_LOG(LogHSJ, Warning, TEXT("[ActiveAll] No external mesh mappings"));
+        return;
+    }
+
+    int32 ActivatedCount = 0;
+
+    for (int32 i = 0; i < ExternalMeshMappings.Num(); ++i)
+    {
+        const FAO_ExternalMeshMapping& Mapping = ExternalMeshMappings[i];
+        
+        if (!Mapping.TargetActor)
+        {
+            continue;
+        }
+
+        if (!Mapping.TargetActor->GetClass()->ImplementsInterface(UAO_Interface_Inspectable::StaticClass()))
+        {
+            continue;
+        }
+
+        TArray<UPrimitiveComponent*> PrimitiveComponents;
+        Mapping.TargetActor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+
+        bool bFoundComponent = false;
+        for (TObjectPtr<UPrimitiveComponent> Comp : PrimitiveComponents)
+        {
+            if (Comp && Comp->GetFName() == Mapping.ComponentName)
+            {
+                bFoundComponent = true;
+                
+                IAO_Interface_Inspectable* InspectableActor = Cast<IAO_Interface_Inspectable>(Mapping.TargetActor);
+                if (InspectableActor)
+                {
+                    InspectableActor->OnInspectionMeshClicked(Comp);
+                    ActivatedCount++;
+                }
+                break;
+            }
+        }
+    }
+}
+
+void AAO_OverwatchInspectionPuzzle::HighlightAllExternalMeshes()
+{
+	// 스페이스바 모드가 아니면 하이라이트 안 함
+	if (!bUseSpacebar)
+	{
+		return;
+	}
+
+	// 기존 하이라이트 클리어 (혹시 남아있을 수 있음)
+	ClearAllExternalHighlights();
+
+	// 모든 외부 메시 하이라이트
+	for (const FAO_ExternalMeshMapping& Mapping : ExternalMeshMappings)
+	{
+		if (!Mapping.TargetActor)
+		{
+			continue;
+		}
+
+		// 해당 액터에서 컴포넌트 찾기
+		TArray<UPrimitiveComponent*> PrimitiveComponents;
+		Mapping.TargetActor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+
+		for (TObjectPtr<UPrimitiveComponent> Comp : PrimitiveComponents)
+		{
+			if (Comp && Comp->GetFName() == Mapping.ComponentName)
+			{
+				// 메시 컴포넌트면 하이라이트 적용
+				if (TObjectPtr<UMeshComponent> MeshComp = Cast<UMeshComponent>(Comp))
+				{
+					MeshComp->SetRenderCustomDepth(true);
+					MeshComp->SetCustomDepthStencilValue(250);
+					HighlightedComponents.Add(Comp);
+				}
+				break;
+			}
+		}
+	}
+}
+
+void AAO_OverwatchInspectionPuzzle::ClearAllExternalHighlights()
+{
+	// 모든 하이라이트 해제
+	for (TWeakObjectPtr<UPrimitiveComponent>& WeakComp : HighlightedComponents)
+	{
+		if (TObjectPtr<UPrimitiveComponent> Comp = WeakComp.Get())
+		{
+			Comp->SetRenderCustomDepth(false);
+		}
+	}
+
+	HighlightedComponents.Empty();
+}
+
 void AAO_OverwatchInspectionPuzzle::OnInspectionMeshClicked(UPrimitiveComponent* ClickedComponent)
 {
     if (!ClickedComponent || !HasAuthority())
     {
         return;
     }
+
+	if (bUseSpacebar)
+	{
+		return;
+	}
 
     TObjectPtr<AActor> HitActor = ClickedComponent->GetOwner();
     if (!HitActor)
