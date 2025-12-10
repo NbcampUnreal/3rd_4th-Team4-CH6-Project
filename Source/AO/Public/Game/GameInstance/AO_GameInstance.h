@@ -26,6 +26,14 @@ public:
 	// 세션 동안 호스트로 유지될 플레이어의 UniqueNetId 문자열
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Lobby")
 	FString LobbyHostNetIdStr;
+	
+	// 공유하는 부활 기본 횟수 (런 시작 시 한 번만 사용)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AO|Revive")
+	int32 InitialSharedReviveCount;
+	
+	// 공유하는 부활 가능 횟수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Revive")
+	int32 SharedReviveCount;
 
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
@@ -52,13 +60,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|Route")
 	bool TryAdvanceStageIndex();
 
-	// ===== 세션 단위 데이터 리셋 (메인메뉴로 나갈 때 사용) =====
+	// 세션 단위 데이터 리셋
 	UFUNCTION(BlueprintCallable, Category="AO|Session")
 	void ResetSessionData();
 
-	// ===== 로비 호스트 관련 헬퍼 =====
+	/* ---------- 로비 호스트 관련 헬퍼 -------------- */
 	void ClearLobbyHostInfo();
 	bool HasLobbyHost() const;
 	void SetLobbyHostFromPlayerState(const class APlayerState* PlayerState);
 	bool IsLobbyHostPlayerState(const class APlayerState* PlayerState) const;
+	
+	/* ---------- 공유 부활 횟수 헬퍼 ----------- */
+	// 현재 부활 가능 횟수 조회
+	UFUNCTION(BlueprintCallable, Category="AO|Revive")
+	int32 GetSharedReviveCount() const;
+
+	// 휴식 레벨 구매 / 시체 회수 등으로 부활 횟수 증감
+	UFUNCTION(BlueprintCallable, Category="AO|Revive")
+	void AddSharedReviveCount(int32 Delta);
+
+	// 부활 시도: 0보다 크면 1 소모 후 true, 0이면 false
+	bool TryConsumeSharedReviveCount();
 };

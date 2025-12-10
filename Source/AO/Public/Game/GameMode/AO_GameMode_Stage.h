@@ -18,15 +18,36 @@ public:
 	AAO_GameMode_Stage();
 
 public:
+	virtual void BeginPlay() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
-	// 스테이지 출발 상호작용 시 서버에서 호출할 함수
+	/* 스테이지 출발 상호작용 시 서버에서 호출할 함수 */
 	void HandleStageExitRequest(AController* Requester);
 
-	// o 키 테스트용: 게임 실패 처리
+	/* 게임 실패 처리 */
 	void HandleStageFail(AController* Requester);
+			
+	/* 기차 연료 조건 미달시 실패 트리거 */
+	void TriggerStageFailByTrainFuel();
+	
+	/* 플레이어 생존 여부가 변경되었을 때 호출되는 함수 */
+	void NotifyPlayerAliveStateChanged(class AAO_PlayerState* ChangedPlayerState);
+	
+	/* 공유 부활 카운트를 사용해서 한 플레이어를 시작 지점에서 부활(추후에 부활 어빌리티로 대체) */
+	bool TryRevivePlayer(class APlayerController* ReviveTargetPC);
+	
+protected:
+	/* 아직 살아 있는 플레이어가 한 명이라도 있는지 여부 */
+	bool HasAnyAlivePlayer() const;
+
+	/* 공용 부활 횟수와 생존자 수를 보고 전멸 여부 평가 */
+	void EvaluateTeamWipe();
+	
+protected:
+	/* 스테이지 종료 여부 */
+	bool bStageEnded = false;
 };

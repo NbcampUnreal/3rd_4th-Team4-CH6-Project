@@ -10,6 +10,14 @@
 #include "GameFramework/GameStateBase.h"
 #include "UI/Widget/AO_SpectateWidget.h"
 
+/*----------- 테스트용 코드------------*/
+#include "Train/AO_Train.h"
+#include "AbilitySystemComponent.h"
+#include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
+#include "EngineUtils.h"
+#include "Train/GAS/AO_Fuel_AttributeSet.h"
+/*-----------------------------------*/
+
 AAO_PlayerController_Stage::AAO_PlayerController_Stage()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -55,28 +63,6 @@ void AAO_PlayerController_Stage::Server_RequestStageExit_Implementation()
 			AO_LOG(LogJSH, Warning, TEXT("Server_RequestStageExit: GameMode_Stage not found"));
 		}
 	}
-}
-
-void AAO_PlayerController_Stage::Server_RequestStageFail_Implementation()
-{
-	AO_LOG(LogJSH, Log, TEXT("StageFailTest: Server_RequestStageFail from %s"), *GetName());
-
-	UWorld* World = GetWorld();
-	if(World == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: World is null"));
-		return;
-	}
-
-	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
-	if(StageGM == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: GameMode is not AAO_GameMode_Stage"));
-		return;
-	}
-
-	// 여기서 실제 실패 처리 로직 호출
-	StageGM->HandleStageFail(this);
 }
 
 void AAO_PlayerController_Stage::ShowDeathUI()
@@ -286,13 +272,148 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 	return nullptr;
 }
 
-// 임시 키 입력 코드
+/* ---------------------임시 키 입력 코드----------------------- */
+void AAO_PlayerController_Stage::Server_RequestStageFail_Implementation()
+{
+	AO_LOG(LogJSH, Log, TEXT("StageFailTest: Server_RequestStageFail from %s"), *GetName());
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: World is null"));
+		return;
+	}
+
+	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+	if(StageGM == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: GameMode is not AAO_GameMode_Stage"));
+		return;
+	}
+
+	// 여기서 실제 실패 처리 로직 호출
+	StageGM->HandleStageFail(this);
+}
+
+void AAO_PlayerController_Stage::Server_TestRemoveFuel_Implementation()
+{
+	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Server_TestRemoveFuel from %s"), *GetName());
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: World is null"));
+		return;
+	}
+
+	// 월드에서 Train 한 대 찾기
+	AAO_Train* Train = nullptr;
+	for(TActorIterator<AAO_Train> It(World); It; ++It)
+	{
+		Train = *It;
+		break;
+	}
+
+	if(Train == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train not found in world"));
+		return;
+	}
+
+	// Train의 ASC 가져오기
+	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
+	if(ASC == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train has no AbilitySystemComponent"));
+		return;
+	}
+
+	// Fuel Attribute 값 직접 감소
+	const FGameplayAttribute FuelAttr = UAO_Fuel_AttributeSet::GetFuelAttribute();
+
+	const float OldFuel = ASC->GetNumericAttribute(FuelAttr);
+	const float NewFuel = OldFuel - 10.0f;	// 테스트용: 10씩 감소 (원하면 -5 등으로 조절)
+
+	ASC->SetNumericAttributeBase(FuelAttr, NewFuel);
+
+	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Fuel %.1f -> %.1f"), OldFuel, NewFuel);
+}
+
+void AAO_PlayerController_Stage::Server_RequestRevive_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+	if (!StageGM)
+	{
+		return;
+	}
+
+	const bool bSuccess = StageGM->TryRevivePlayer(this);
+
+	if (bSuccess)
+	{
+		AO_LOG(LogJSH, Log, TEXT("ReviveTest: Revive success for %s"), *GetName());
+		Client_OnRevived();
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("ReviveTest: Revive failed for %s"), *GetName());
+	}
+}
+
+void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
+{
+	// 1) Death UI 닫기
+	if (DeathWidget)
+	{
+		DeathWidget->RemoveFromParent();
+		DeathWidget = nullptr;
+	}
+
+	// 2) HUD 위젯 완전히 갈아끼우기
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+		HUDWidget = nullptr;
+	}
+
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+		if (HUDWidget)
+		{
+			HUDWidget->AddToViewport();
+		}
+	}
+
+	// 3) 입력 모드 복구
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	// 4) 관전 UI 떠 있었으면 닫기
+	if (SpectateWidget)
+	{
+		SpectateWidget->RemoveFromParent();
+		SpectateWidget = nullptr;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());
+}
+
 void AAO_PlayerController_Stage::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 	if(InputComponent != nullptr)
 	{
 		InputComponent->BindKey(EKeys::O, IE_Pressed, this, &AAO_PlayerController_Stage::HandleStageFailInput);
+		InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AAO_PlayerController_Stage::HandleTestRemoveFuelInput);
+		InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAO_PlayerController_Stage::HandleReviveInput);
 	}
 	else
 	{
@@ -309,3 +430,24 @@ void AAO_PlayerController_Stage::HandleStageFailInput()
 		Server_RequestStageFail();
 	}
 }
+
+void AAO_PlayerController_Stage::HandleTestRemoveFuelInput()
+{
+	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: J key pressed on %s"), *GetName());
+
+	if(IsLocalController())
+	{
+		Server_TestRemoveFuel();
+	}
+}
+
+void AAO_PlayerController_Stage::HandleReviveInput()
+{
+	AO_LOG(LogJSH, Log, TEXT("ReviveTest: K key pressed on %s"), *GetName());
+
+	if (IsLocalController())
+	{
+		Server_RequestRevive();
+	}
+}
+/*------------------------------------------------------------------*/

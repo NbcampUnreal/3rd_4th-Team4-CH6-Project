@@ -77,10 +77,28 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestStageFail();
 	
+	// 연로 감소 요청 RPC
+	UFUNCTION(Server, Reliable)
+	void Server_TestRemoveFuel();
+	
+	// 부활 요청 RPC
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRevive();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OnRevived();
+	
 protected:
 	void SetupInputComponent() override;
 	
 	// O 키 입력 처리 (클라이언트)
 	void HandleStageFailInput();
+
+	// j 키 입력 처리 (클라이언트)
+	void HandleTestRemoveFuelInput();
+	
+	// K 키 입력 처리 (클라이언트) - 부활 테스트
+	void HandleReviveInput();
+
 	/* --------------------------------------*/
 };
