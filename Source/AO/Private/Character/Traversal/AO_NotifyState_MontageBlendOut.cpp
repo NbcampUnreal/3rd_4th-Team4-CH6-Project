@@ -10,6 +10,12 @@ void UAO_NotifyState_MontageBlendOut::NotifyBegin(USkeletalMeshComponent* MeshCo
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
+	
 	Character = Cast<ACharacter>(MeshComp->GetOwner());
 	checkf(Character, TEXT("Failed to cast MeshComp to ACharacter"));
 
