@@ -110,6 +110,11 @@ bool AAO_BaseInteractable::CanInteraction_BP_Implementation(const FAO_Interactio
 	{
 		return false;
 	}
+	// 로컬 비활성화 체크
+	if (!bLocalInteractionEnabled)
+	{
+		return false;
+	}
 
 	// 기본적으로 허용
 	return true;
@@ -140,6 +145,12 @@ void AAO_BaseInteractable::OnInteractionSuccess(AActor* Interactor)
 	}
 
 	OnInteractionSuccess_BP(Interactor);
+	MulticastNotifyInteractionSuccess(Interactor);
+}
+
+void AAO_BaseInteractable::MulticastNotifyInteractionSuccess_Implementation(AActor* Interactor)
+{
+	OnInteractionSuccessMulticast_BP(Interactor);
 }
 
 void AAO_BaseInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

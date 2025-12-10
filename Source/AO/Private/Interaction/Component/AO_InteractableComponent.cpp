@@ -42,6 +42,11 @@ bool UAO_InteractableComponent::CanInteraction(const FAO_InteractionQuery& Inter
         return false;
     }
 
+	if (!bLocalInteractionEnabled)
+	{
+		return false;
+	}
+
     return true;
 }
 
@@ -88,9 +93,7 @@ void UAO_InteractableComponent::NotifyInteractionSuccess(AActor* Interactor)
     {
         return;
     }
-
-    // BP 이벤트 호출
-    OnInteractionSuccess.Broadcast(Interactor);
+	OnInteractionSuccess.Broadcast(Interactor);
 }
 
 FTransform UAO_InteractableComponent::GetInteractionTransform() const

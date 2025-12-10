@@ -37,6 +37,9 @@ public:
 
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastNotifyInteractionSuccess(AActor* Interactor);
+
 	FORCEINLINE bool IsToggleable() const { return bIsToggleable; }
 	FORCEINLINE bool IsActivated() const { return bIsActivated; }
 
@@ -49,12 +52,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Interaction|State")
 	bool bInteractionEnabled = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
+	bool bLocalInteractionEnabled = true;
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
 	
 	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
 	void OnInteractionSuccess_BP(AActor* Interactor);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Interaction")
+	void OnInteractionSuccessMulticast_BP(AActor* Interactor);
 
 	virtual UStaticMeshComponent* GetInteractableMesh() const override 
 	{ 
