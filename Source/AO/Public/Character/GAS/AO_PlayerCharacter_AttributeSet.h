@@ -7,6 +7,8 @@
 #include "AbilitySystemComponent.h"
 #include "AO_PlayerCharacter_AttributeSet.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnPlayerDeath);
+
 UCLASS()
 class AO_API UAO_PlayerCharacter_AttributeSet : public UAttributeSet
 {
@@ -38,6 +40,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxStamina, Category = "Health")
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, MaxStamina)
+
+	FOnPlayerDeath OnPlayerDeath;
 
 protected:
 	UFUNCTION()
