@@ -13,6 +13,7 @@
 #include "MotionWarpingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -20,6 +21,7 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -33,6 +35,8 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Player"));
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = true;
@@ -61,7 +65,6 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
-	TraversalComponent = CreateDefaultSubobject<UAO_TraversalComponent>(TEXT("TraversalComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
@@ -76,21 +79,31 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
-	if (!DefaultFoleyAudioBank)
-	{
-		AO_LOG(LogKH, Error, TEXT("DefaultFoleyAudioBank is null"));
-		return nullptr;
-	}
+	ensure(DefaultFoleyAudioBank);
+	
 	return DefaultFoleyAudioBank;
 }
 
 bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 {
-	if (GetCharacterMovement()->IsMovingOnGround() || TraversalComponent->GetDoingTraversal())
+	if (GetCharacterMovement()->IsMovingOnGround()
+		|| AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Traversal"))))
 	{
 		return true;
 	}
 	return false;
+}
+
+void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
+{
+	if (Camera)
+	{
+		Camera->GetCameraView(DeltaTime, OutResult);
+	}
+	else
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+	}
 }
 
 bool AAO_PlayerCharacter::IsInspecting() const
@@ -128,31 +141,11 @@ void AAO_PlayerCharacter::BeginPlay()
 
 		if (HasAuthority())
 		{
-			for (const auto& DefaultAbility : DefaultAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(DefaultAbility);
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
+			BindGameplayAbilities();
 
-			for (const auto& InputAbility : InputAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
-				AbilitySpec.InputID = InputAbility.Key;
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
-
-			for (const auto& DefaultEffect : DefaultEffects)
-			{
-				FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-				Context.AddInstigator(this, this);
-
-				FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
-
-				if (Handle.IsValid())
-				{
-					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
-				}
-			}
+			BindGameplayEffects();
+			
+			BindAttributeDelegates();
 		}
 	}
 
@@ -255,11 +248,13 @@ void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
 		LandVelocity = GetCharacterMovement()->Velocity;
 		bJustLanded = true;
 
-		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
-		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, [this]()
+		FTimerDelegate TimerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]()
 		{
 			bJustLanded = false;
-		}, 0.3f, false);
+		});
+
+		GetWorldTimerManager().ClearTimer(TimerHandle_JustLanded);
+		GetWorldTimerManager().SetTimer(TimerHandle_JustLanded, TimerDelegate, 0.3f, false);
 	}
 }
 
@@ -281,7 +276,7 @@ void AAO_PlayerCharacter::Move(const FInputActionValue& Value)
 		return;
 	}
 	
-	FVector2D InputValue = Value.Get<FVector2D>();
+	const FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
 	{
@@ -304,7 +299,7 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 		return;
 	}
 	
-	FVector2D InputValue = Value.Get<FVector2D>();
+	const FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (GetController())
 	{
@@ -331,12 +326,10 @@ void AAO_PlayerCharacter::HandleWalk()
 
 void AAO_PlayerCharacter::StartJump()
 {
-	if (TraversalComponent)
+	if (AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Traversal")))))
 	{
-		if (!TraversalComponent->GetDoingTraversal() && TraversalComponent->TryTraversal())
-		{
-			return;
-		}
+		return;
 	}
 
 	Jump();
@@ -344,19 +337,13 @@ void AAO_PlayerCharacter::StartJump()
 
 void AAO_PlayerCharacter::TriggerJump()
 {
-	if (TraversalComponent)
-	{
-		if (!TraversalComponent->GetDoingTraversal())
-		{
-			TraversalComponent->TryTraversal();
-		}
-	}
+	AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Traversal"))));
 }
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
 {
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
-	if (Spec)
+	if (FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID))
 	{
 		Spec->InputPressed = true;
 		if (Spec->IsActive())
@@ -372,8 +359,7 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputPressed(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 {
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID);
-	if (Spec)
+	if (FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromInputID(InInputID))
 	{
 		Spec->InputPressed = false;
 		if (Spec->IsActive())
@@ -385,8 +371,7 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleCrouch()
 {
-	UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement();
-	if (!CharacterMovementComponent || CharacterMovementComponent->IsFalling())
+	if (!GetCharacterMovement() || GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}
@@ -437,6 +422,74 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		PitchMultiplier);
 }
 
+void AAO_PlayerCharacter::BindGameplayAbilities()
+{
+	for (const auto& DefaultAbility : DefaultAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(DefaultAbility);
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+ 
+    for (const auto& InputAbility : InputAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
+    	AbilitySpec.InputID = InputAbility.Key;
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+}
+
+void AAO_PlayerCharacter::BindGameplayEffects()
+{
+	for (const auto& DefaultEffect : DefaultEffects)
+	{
+		FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+		Context.AddInstigator(this, this);
+
+		FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
+
+		if (Handle.IsValid())
+		{
+			AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
+		}
+	}
+}
+
+void AAO_PlayerCharacter::BindAttributeDelegates()
+{
+	if (!AttributeSet)
+	{
+		return;
+	}
+
+	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+}
+
+void AAO_PlayerCharacter::HandlePlayerDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
+	checkf(PS, TEXT("PlayerState is null"));
+
+	if (!PS->GetIsAlive())
+	{
+		return;
+	}
+
+	PS->SetIsAlive(false);
+
+	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
+	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+
+	if (Cast<APlayerController>(GetController()))
+	{
+		ClientRPC_HandleDeathView();
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -458,6 +511,19 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
+{
+	if (SpringArm)
+	{
+		SpringArm->TargetArmLength += DeathCameraArmOffset;
+	}
+
+	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
+	{
+		PC->ShowDeathUI();
 	}
 }
 

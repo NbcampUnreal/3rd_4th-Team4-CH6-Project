@@ -12,14 +12,12 @@ class AO_API UAO_Fuel_AttributeSet : public UAttributeSet
 
 public:
 	UAO_Fuel_AttributeSet();
-
-	/** Fuel 속성 */
+	
 	UPROPERTY(BlueprintReadOnly, Category="Fuel", ReplicatedUsing=OnRep_Fuel)
 	FGameplayAttributeData Fuel;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_Fuel_AttributeSet, Fuel)
 	
 protected:
-	/** Fuel 복제 시 콜백 */
 	UFUNCTION()
 	void OnRep_Fuel(const FGameplayAttributeData& OldFuel);
 

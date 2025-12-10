@@ -64,9 +64,11 @@ protected:
 	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
 	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
+	virtual void CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult) override;
+
 public:
-	FORCEINLINE USpringArmComponent* GetSpringArm() const {	return SpringArm; }
-	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+	FORCEINLINE TObjectPtr<USpringArmComponent> GetSpringArm() const {	return SpringArm; }
+	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
 
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
@@ -84,8 +86,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InteractionComponent> InteractionComponent;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
-	TObjectPtr<UAO_TraversalComponent> TraversalComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
@@ -132,12 +132,16 @@ public:
 	FVector LandVelocity;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "PlayerCharacter|Movement")
 	bool bJustLanded = false;
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacter|Movement")
+	float DeathCameraArmOffset = 300.f;
 
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetInputState(bool bWantsToSprint, bool bWantsToWalk);
 	UFUNCTION()
 	void OnRep_Gait();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_HandleDeathView();
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
@@ -160,6 +164,13 @@ private:
 	// Foley
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
+	// Bind GAS
+	void BindGameplayAbilities();
+	void BindGameplayEffects();
+	void BindAttributeDelegates();
+
+	// Death
+	void HandlePlayerDeath();
 	
 // JM : VOIPTalker Register to PS
 private:

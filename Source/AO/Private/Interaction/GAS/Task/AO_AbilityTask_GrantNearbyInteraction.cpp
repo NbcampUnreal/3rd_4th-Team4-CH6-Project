@@ -21,16 +21,30 @@ void UAO_AbilityTask_GrantNearbyInteraction::Activate()
 	SetWaitingOnAvatar();
 
 	// 주기적 탐색 시작
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(QueryTimerHandle, this, &UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables, InteractionAbilityScanRate, true);
-	}
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in Activate"));
+    
+	TWeakObjectPtr<UAO_AbilityTask_GrantNearbyInteraction> WeakThis(this);
+    
+	World->GetTimerManager().SetTimer(
+		QueryTimerHandle, 
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (TObjectPtr<UAO_AbilityTask_GrantNearbyInteraction> StrongThis = WeakThis.Get())
+			{
+				StrongThis->QueryInteractables();
+			}
+		}),
+		InteractionAbilityScanRate, 
+		true
+	);
 }
 
 void UAO_AbilityTask_GrantNearbyInteraction::OnDestroy(bool bInOwnerFinished)
 {
 	// 타이머 정리
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
 	{
 		World->GetTimerManager().ClearTimer(QueryTimerHandle);
 	}
@@ -40,8 +54,8 @@ void UAO_AbilityTask_GrantNearbyInteraction::OnDestroy(bool bInOwnerFinished)
 
 void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 {
-	UWorld* World = GetWorld();
-	AActor* AvatarActor = GetAvatarActor();
+	TObjectPtr<UWorld> World = GetWorld();
+	TObjectPtr<AActor> AvatarActor = GetAvatarActor();
 	
 	if (!World || !AvatarActor)
 	{
@@ -70,7 +84,7 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 		TArray<TScriptInterface<IAO_Interface_Interactable>> Interactables;
 		for (const FOverlapResult& OverlapResult : OverlapResults)
 		{
-			AActor* OverlapActor = OverlapResult.GetActor();
+			TObjectPtr<AActor> OverlapActor = OverlapResult.GetActor();
 			if (!OverlapActor)
 			{
 				continue;
@@ -85,7 +99,7 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 			else
 			{
 				// Actor에 InteractableComponent가 있는지 체크
-				if (UAO_InteractableComponent* InteractableComp = OverlapActor->FindComponentByClass<UAO_InteractableComponent>())
+				if (TObjectPtr<UAO_InteractableComponent> InteractableComp = OverlapActor->FindComponentByClass<UAO_InteractableComponent>())
 				{
 					Interactables.AddUnique(TScriptInterface<IAO_Interface_Interactable>(InteractableComp));
 				}
@@ -95,7 +109,10 @@ void UAO_AbilityTask_GrantNearbyInteraction::QueryInteractables()
 		// 상호작용 정보 수집
 		FAO_InteractionQuery InteractionQuery;
 		InteractionQuery.RequestingAvatar = AvatarActor;
-		InteractionQuery.RequestingController = Cast<AController>(AvatarActor->GetOwner());
+		if (TObjectPtr<AController> Controller = Cast<AController>(AvatarActor->GetOwner()))
+		{
+			InteractionQuery.RequestingController = Controller;
+		}
 		
 		for (TScriptInterface<IAO_Interface_Interactable>& Interactable : Interactables)
 		{

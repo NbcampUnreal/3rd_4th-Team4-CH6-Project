@@ -24,7 +24,11 @@ void AAO_RotationPuzzleElement::BeginPlay()
 
 void AAO_RotationPuzzleElement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    GetWorldTimerManager().ClearTimer(RotationTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(RotationTimerHandle);
+	}
     Super::EndPlay(EndPlayReason);
 }
 
@@ -59,7 +63,11 @@ void AAO_RotationPuzzleElement::ResetToInitialState()
     CurrentRotationIndex = 0;
 	bIsRotating = false;
     
-    GetWorldTimerManager().ClearTimer(RotationTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(RotationTimerHandle);
+	}
 
     if (MeshComponent)
     {
@@ -69,7 +77,7 @@ void AAO_RotationPuzzleElement::ResetToInitialState()
 
 void AAO_RotationPuzzleElement::RotateToNext()
 {
-    if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("RotateToNext called on client"));
 
 	bIsRotating = true;
 
@@ -99,20 +107,23 @@ void AAO_RotationPuzzleElement::RotateToNext()
         );
     }
 
-    TWeakObjectPtr<AAO_RotationPuzzleElement> WeakThis(this);
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in RotateToNext"));
     
-    GetWorldTimerManager().SetTimer(
-        RotationTimerHandle,
-        FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-        {
-            if (AAO_RotationPuzzleElement* StrongThis = WeakThis.Get())
-            {
-                StrongThis->UpdateRotationAnimation();
-            }
-        }),
-        0.016f,
-        true
-    );
+	TWeakObjectPtr<AAO_RotationPuzzleElement> WeakThis(this);
+    
+	World->GetTimerManager().SetTimer(
+		RotationTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (TObjectPtr<AAO_RotationPuzzleElement> StrongThis = WeakThis.Get())
+			{
+				StrongThis->UpdateRotationAnimation();
+			}
+		}),
+		0.016f,
+		true
+	);
 }
 
 void AAO_RotationPuzzleElement::CheckCorrectRotation()
@@ -171,7 +182,11 @@ void AAO_RotationPuzzleElement::UpdateRotationAnimation()
         // 정확히 목표값으로 설정 (오차 제거)
         MeshComponent->SetRelativeRotation(TargetRotation);
         
-        GetWorldTimerManager().ClearTimer(RotationTimerHandle);
+    	TObjectPtr<UWorld> World = GetWorld();
+    	if (World)
+    	{
+    		World->GetTimerManager().ClearTimer(RotationTimerHandle);
+    	}
 
     	if (HasAuthority())
     	{
@@ -183,40 +198,48 @@ void AAO_RotationPuzzleElement::UpdateRotationAnimation()
 void AAO_RotationPuzzleElement::OnRep_CurrentRotationIndex()
 {
     // 클라이언트에서 복제 받았을 때 회전 애니메이션 재생
-    if (MeshComponent)
-    {
-        if (CurrentRotationIndex == 0)
-        {
-            TargetRotation = InitialRotation;
-        }
-        else
-        {
-            float AnglePerStep = 360.0f / NumRotationSteps;
-            FRotator StepRotation = RotationAxisPerStep;
-            StepRotation.Normalize();
-            
-            TargetRotation = InitialRotation + FRotator(
-                StepRotation.Pitch * AnglePerStep * CurrentRotationIndex / 90.0f,
-                StepRotation.Yaw * AnglePerStep * CurrentRotationIndex / 90.0f,
-                StepRotation.Roll * AnglePerStep * CurrentRotationIndex / 90.0f
-            );
-        }
+	if (!MeshComponent)
+	{
+		return;
+	}
 
-        TWeakObjectPtr<AAO_RotationPuzzleElement> WeakThis(this);
+	if (CurrentRotationIndex == 0)
+	{
+		TargetRotation = InitialRotation;
+	}
+	else
+	{
+		float AnglePerStep = 360.0f / NumRotationSteps;
+		FRotator StepRotation = RotationAxisPerStep;
+		StepRotation.Normalize();
         
-        GetWorldTimerManager().SetTimer(
-            RotationTimerHandle,
-            FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-            {
-                if (AAO_RotationPuzzleElement* StrongThis = WeakThis.Get())
-                {
-                    StrongThis->UpdateRotationAnimation();
-                }
-            }),
-            0.016f,
-            true
-        );
-    }
+		TargetRotation = InitialRotation + FRotator(
+			StepRotation.Pitch * AnglePerStep * CurrentRotationIndex / 90.0f,
+			StepRotation.Yaw * AnglePerStep * CurrentRotationIndex / 90.0f,
+			StepRotation.Roll * AnglePerStep * CurrentRotationIndex / 90.0f
+		);
+	}
+
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+    
+	TWeakObjectPtr<AAO_RotationPuzzleElement> WeakThis(this);
+    
+	World->GetTimerManager().SetTimer(
+		RotationTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (TObjectPtr<AAO_RotationPuzzleElement> StrongThis = WeakThis.Get())
+			{
+				StrongThis->UpdateRotationAnimation();
+			}
+		}),
+		0.016f,
+		true
+	);
 }
 
 bool AAO_RotationPuzzleElement::IsRotatorNearlyEqual(const FRotator& A, const FRotator& B, float Tolerance) const

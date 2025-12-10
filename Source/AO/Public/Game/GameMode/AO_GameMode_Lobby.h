@@ -18,12 +18,11 @@ public:
 	AAO_GameMode_Lobby();
 
 public:
-	// TODO: virtual 키워드 붙여도 될까요? (주만 → 상현)
-	void PostLogin(APlayerController* NewPlayer) override;
-	void Logout(AController* Exiting) override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+	virtual void Logout(AController* Exiting) override;
 
 	// JM : 생명주기 테스트용
-	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:

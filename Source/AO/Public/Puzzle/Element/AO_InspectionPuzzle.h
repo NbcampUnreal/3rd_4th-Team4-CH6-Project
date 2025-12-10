@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "GameplayTagContainer.h"
 #include "Interaction/Interface/AO_Interface_Inspectable.h"
+#include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
 #include "Puzzle/Interface/AO_Interface_PuzzleElement.h"
 #include "AO_InspectionPuzzle.generated.h"
@@ -53,7 +54,8 @@ UCLASS()
 class AO_API AAO_InspectionPuzzle : public AActor,
 	public IAO_Interface_Interactable,
 	public IAO_Interface_Inspectable,
-	public IAO_Interface_PuzzleElement
+	public IAO_Interface_PuzzleElement,
+	public IAO_Interface_InspectionCameraProvider
 {
     GENERATED_BODY()
 
@@ -74,6 +76,8 @@ public:
 	virtual void ResetToInitialState() override;
 	virtual void SetInteractionEnabled(bool bEnabled) override;
 	virtual bool IsInteractionEnabled() const override { return bInteractionEnabled; }
+
+	virtual FAO_InspectionCameraSettings GetInspectionCameraSettings() const override;
 
 	// 내부 클릭 가능한 컴포넌트인지 확인
 	UFUNCTION(BlueprintPure, Category="Inspection")
@@ -106,6 +110,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|Info")
     TSubclassOf<UGameplayAbility> AbilityToGrant;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|Info")
+	bool bHideCharacter = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|Elements")
     TArray<FAO_InspectionElementMapping> ElementMappings;

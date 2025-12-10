@@ -7,6 +7,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
+#include "Game/GameInstance/AO_GameInstance.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 
@@ -27,13 +28,75 @@ void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 	// 로비에 이미 있는 플레이어들의 JoinOrder 를 보고 NextLobbyJoinOrder 재계산
 	UpdateNextLobbyJoinOrderFromExistingPlayers();
 
-	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여
+	// 새로 들어온 플레이어가 아직 순서를 안 받았다면 부여 + 호스트 여부 결정
 	if(NewPlayer != nullptr && NewPlayer->PlayerState != nullptr)
 	{
 		AssignJoinOrderIfNeeded(NewPlayer->PlayerState);
+
+		UWorld* World = GetWorld();
+		if(World != nullptr)
+		{
+			UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+			AAO_PlayerState* AOPS = Cast<AAO_PlayerState>(NewPlayer->PlayerState);
+
+			if(AO_GI != nullptr && AOPS != nullptr)
+			{
+				// 1) 아직 호스트가 정해져 있지 않으면 → 이 사람을 호스트로 기록
+				if(AO_GI->HasLobbyHost() == false)
+				{
+					AO_GI->SetLobbyHostFromPlayerState(AOPS);
+					AOPS->SetIsLobbyHost(true);
+				}
+				else
+				{
+					// 2) 이미 GI에 호스트가 있으면 → UniqueNetId 비교로 호스트 여부 설정
+					const bool bIsHost = AO_GI->IsLobbyHostPlayerState(AOPS);
+					AOPS->SetIsLobbyHost(bIsHost);
+				}
+			}
+		}
 	}
 
 	NotifyLobbyBoardChanged();
+}
+
+void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::HandleSeamlessTravelPlayer(C);
+
+	if(C == nullptr)
+	{
+		return;
+	}
+
+	AAO_PlayerState* AOPS = C->GetPlayerState<AAO_PlayerState>();
+	if(AOPS == nullptr)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
+	{
+		return;
+	}
+
+	// 필요하다면 로비 복귀 시에도 JoinOrder 재부여
+	AssignJoinOrderIfNeeded(AOPS);
+
+	const bool bIsHost = AO_GI->IsLobbyHostPlayerState(AOPS);
+	AOPS->SetIsLobbyHost(bIsHost);
+
+	NotifyLobbyBoardChanged();
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::Logout(AController* Exiting)
@@ -42,13 +105,6 @@ void AAO_GameMode_Lobby::Logout(AController* Exiting)
 
 	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
 	NotifyLobbyBoardChanged();
-}
-
-void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	Super::HandleSeamlessTravelPlayer(C);
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_GameMode_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -250,9 +306,31 @@ void AAO_GameMode_Lobby::NotifyLobbyBoardChanged()
 
 void AAO_GameMode_Lobby::TravelToStage()
 {
-	if (UWorld* World = GetWorld())
+	UWorld* World = GetWorld();
+	if(World == nullptr)
 	{
-		FString Path = "/Game/AVaOut/Maps/LV_Meadow?listen";
-		World->ServerTravel(Path);
+		return;
 	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	if(AO_GI == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Lobby: TravelToStage: GameInstance is not UAO_GameInstance"));
+		return;
+	}
+
+	// 새 판 시작 : 스테이지 인덱스 / 연료 초기화
+	AO_GI->ResetRun();
+
+	const FName StageMapName = AO_GI->GetCurrentStageMap();
+	if(StageMapName.IsNone())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Lobby: TravelToStage: StageMapName is None"));
+		return;
+	}
+
+	const FString Path = StageMapName.ToString() + TEXT("?listen");
+	AO_LOG(LogJSH, Log, TEXT("Lobby: TravelToStage → %s"), *Path);
+
+	World->ServerTravel(Path);
 }

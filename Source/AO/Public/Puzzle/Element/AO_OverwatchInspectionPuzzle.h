@@ -38,8 +38,7 @@ struct FAO_ExternalMeshMapping
  * 
  */
 UCLASS()
-class AO_API AAO_OverwatchInspectionPuzzle : public AAO_InspectionPuzzle,
-    public IAO_Interface_InspectionCameraProvider
+class AO_API AAO_OverwatchInspectionPuzzle : public AAO_InspectionPuzzle
 {
     GENERATED_BODY()
 
@@ -52,6 +51,15 @@ public:
     // IAO_Interface_InspectionCameraProvider
     virtual FAO_InspectionCameraSettings GetInspectionCameraSettings() const override;
     virtual bool IsValidClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const override;
+
+	UFUNCTION(BlueprintCallable, Category = "Overwatch")
+	void ActiveAllLinkedElements();
+
+	UFUNCTION(BlueprintCallable, Category = "Overwatch")
+	void HighlightAllExternalMeshes();
+
+	UFUNCTION(BlueprintCallable, Category = "Overwatch")
+	void ClearAllExternalHighlights();
 
 protected:
     virtual void BeginPlay() override;
@@ -91,8 +99,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Overwatch|ExternalMesh")
     TArray<FAO_ExternalMeshMapping> ExternalMeshMappings;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Overwatch")
+	bool bUseSpacebar = false;
+
 protected:
     // 복제용 외부 매핑
     UPROPERTY(Replicated)
     TArray<FAO_ExternalMeshMapping> ReplicatedExternalMappings;
+
+private:
+	TArray<TWeakObjectPtr<UPrimitiveComponent>> HighlightedComponents;
 };

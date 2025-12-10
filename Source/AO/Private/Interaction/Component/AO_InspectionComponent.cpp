@@ -5,9 +5,11 @@
 #include "Interaction/Interface/AO_Interface_Inspectable.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AO_Log.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
@@ -16,6 +18,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Puzzle/Element/AO_InspectionPuzzle.h"
+#include "Puzzle/Element/AO_OverwatchInspectionPuzzle.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -51,7 +54,7 @@ void UAO_InspectionComponent::ServerProcessInspectionClick_Implementation(AActor
     TArray<UPrimitiveComponent*> PrimitiveComponents;
     TargetActor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
     
-    for (UPrimitiveComponent* Comp : PrimitiveComponents)
+    for (TObjectPtr<UPrimitiveComponent> Comp : PrimitiveComponents)
     {
         if (Comp && Comp->GetFName() == ComponentName)
         {
@@ -76,7 +79,7 @@ void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 
 	// 모든 타이머 클리어
-	if (UWorld* World = GetWorld())
+	if (TObjectPtr<UWorld> World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
 	}
@@ -92,7 +95,7 @@ void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComp
         return;
     }
 
-    UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+    TObjectPtr<UEnhancedInputComponent> EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
     if (!EnhancedInput)
     {
         return;
@@ -112,34 +115,44 @@ void UAO_InspectionComponent::SetupInputBinding(UInputComponent* PlayerInputComp
     {
         EnhancedInput->BindAction(CameraMoveAction, ETriggerEvent::Triggered, this, &UAO_InspectionComponent::OnCameraMoveInput);
     }
+
+	if (SpacebarAction)
+	{
+		EnhancedInput->BindAction(SpacebarAction, ETriggerEvent::Started, this, &UAO_InspectionComponent::OnSpacebarPressed);
+	}
 }
 
 void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
 {
-    if (!InspectableActor || bIsInspecting)
-    {
-        return;
-    }
+	checkf(InspectableActor, TEXT("InspectableActor is null"));
 
-    AActor* Owner = GetOwner();
+	if (bIsInspecting)
+	{
+		return;
+	}
+
+    TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in EnterInspectionMode"));
     
-    if (!Owner || !Owner->HasAuthority())
-    {
-        return;
-    }
+	if (!Owner->HasAuthority())
+	{
+		return;
+	}
 
-    UAO_InspectableComponent* InspectableComp = InspectableActor->FindComponentByClass<UAO_InspectableComponent>();
-    if (!InspectableComp)
-    {
-        return;
-    }
+    TObjectPtr<UAO_InspectableComponent> InspectableComp = InspectableActor->FindComponentByClass<UAO_InspectableComponent>();
+	if (!InspectableComp)
+	{
+		return;
+	}
 
     CurrentInspectedActor = InspectableActor;
 	// 이 값이 복제되면 PlayerCharacter의 Move()에서 입력 차단
-    bIsInspecting = true; 
+    bIsInspecting = true;
+
+	RegisterCancelTags();
 
     // Inspection 중에만 마우스 클릭으로 버튼을 누를 수 있도록 동적으로 클릭 어빌리티 부여
-    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+    TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
     if (ASC)
     {
         TSubclassOf<UGameplayAbility> ClickAbilityClass = UAO_GameplayAbility_Inspect_Click::StaticClass();
@@ -163,18 +176,19 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
         CameraSettings.CameraLocation = CameraTransform.GetLocation();
         CameraSettings.CameraRotation = CameraTransform.Rotator();
         CameraSettings.MovementType = EInspectionMovementType::None;
+    	CameraSettings.bHideCharacter = true;
     }
 
     // ClientRPC로 클라이언트도 어빌리티를 활성화할 수 있도록 Handle도 함께 전달
     ClientNotifyInspectionStarted(InspectableActor, GrantedClickAbilityHandle, CameraSettings);
     
     // 리슨서버에서 ClientRPC는 호스트 본인에게는 전달되지 않으므로 로컬에서 직접 실행
-    APlayerController* LocalPC = Cast<APlayerController>(Owner->GetOwner());
-    if (LocalPC && LocalPC->IsLocalController())
-    {
-        CurrentCameraSettings = CameraSettings;
-        ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
-    }
+	TObjectPtr<APlayerController> LocalPC = Cast<APlayerController>(Owner->GetOwner());
+	if (LocalPC && LocalPC->IsLocalController())
+	{
+		CurrentCameraSettings = CameraSettings;
+		ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
+	}
 }
 
 void UAO_InspectionComponent::ExitInspectionMode()
@@ -184,14 +198,15 @@ void UAO_InspectionComponent::ExitInspectionMode()
         return;
     }
 
-    AActor* Owner = GetOwner();
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ExitInspectionMode"));
     
-    if (!Owner || !Owner->HasAuthority())
-    {
-        return;
-    }
+	if (!Owner->HasAuthority())
+	{
+		return;
+	}
 
-    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+    TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
     
     // 클릭 어빌리티 제거
     if (ASC && GrantedClickAbilityHandle.IsValid())
@@ -211,24 +226,34 @@ void UAO_InspectionComponent::ExitInspectionMode()
     // Lock 해제 (다른 플레이어가 검사할 수 있도록)
     if (CurrentInspectedActor)
     {
-        UAO_InspectableComponent* InspectableComp = CurrentInspectedActor->FindComponentByClass<UAO_InspectableComponent>();
+        TObjectPtr<UAO_InspectableComponent> InspectableComp = CurrentInspectedActor->FindComponentByClass<UAO_InspectableComponent>();
         if (InspectableComp)
         {
             InspectableComp->SetInspectionLocked(false, nullptr);
         }
     }
 
+	UnregisterCancelTags();
+
+	TObjectPtr<AActor> InspectableActorBackup = CurrentInspectedActor;
+
     // 상태 초기화 (복제됨)
     CurrentInspectedActor = nullptr;
     bIsInspecting = false; // PlayerCharacter의 Move()에서 입력 허용
 
     // ClientRPC로 클라이언트들에게 Inspection 종료 알림
-    ClientNotifyInspectionEnded();
+    ClientNotifyInspectionEnded(InspectableActorBackup);
     
     // 리슨서버에서 호스트인 경우 따로 처리
-    APlayerController* LocalPC = Cast<APlayerController>(Owner->GetOwner());
+    TObjectPtr<APlayerController> LocalPC = Cast<APlayerController>(Owner->GetOwner());
     if (LocalPC && LocalPC->IsLocalController())
     {
+    	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(InspectableActorBackup);
+    	if (OverwatchPuzzle)
+    	{
+    		OverwatchPuzzle->ClearAllExternalHighlights();
+    	}
+    	
         ClientExitInspection();
     }
 }
@@ -240,6 +265,8 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActo
         return;
     }
 
+	CurrentInspectedActor = InspectableActor;
+
     // 서버에서 전달받은 Handle 저장
     GrantedClickAbilityHandle = AbilityHandle;
     CurrentCameraSettings = CameraSettings;
@@ -247,9 +274,9 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActo
     ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
 }
 
-void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
+void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation(AActor* InspectableActor)
 {
-    AActor* Owner = GetOwner();
+    TObjectPtr<AActor> Owner = GetOwner();
     if (!Owner)
     {
         return;
@@ -260,24 +287,36 @@ void UAO_InspectionComponent::ClientNotifyInspectionEnded_Implementation()
         return;
     }
 
+	if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(InspectableActor))
+	{
+		OverwatchPuzzle->ClearAllExternalHighlights();
+	}
+
     ClientExitInspection();
 }
 
 // Inspection 진입 처리 (카메라 전환, UI 설정)
 void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocation, const FRotator& CameraRotation)
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ClientEnterInspection"));
 
-    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+	TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
     
     if (!PC || !PC->IsLocalController())
     {
         return;
     }
+
+	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		// Inspection Context를 높은 우선순위로 추가
+		if (InspectionInputContext)
+		{
+			InputSubsystem->AddMappingContext(InspectionInputContext, InspectionInputPriority);
+		}
+	}
 
     // 이미 Inspection 카메라가 있으면 스킵(서버일 경우)
     if (InspectionCameraActor)
@@ -285,8 +324,8 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         return;
     }
 
-    ACharacter* Character = Cast<ACharacter>(Owner);
-    if (Character)
+	TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
+    if (Character && CurrentCameraSettings.bHideCharacter)
     {
         // 자기 자신 캐릭터의 모든 Primitive 컴포넌트 숨기기(조사 중에는 자기 자신 메시가 안보여야 함)
         TArray<UPrimitiveComponent*> PrimitiveComponents;
@@ -294,7 +333,7 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         
         HiddenComponents.Empty();
         
-        for (UPrimitiveComponent* Comp : PrimitiveComponents)
+        for (TObjectPtr<UPrimitiveComponent> Comp : PrimitiveComponents)
         {
             // 이미 숨겨진 컴포넌트는 제외
             if (Comp && !Comp->bHiddenInGame)
@@ -305,10 +344,10 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         }
 
         // 애니메이션 정지 (Inspection 중에는 움직이면 안됨)
-        USkeletalMeshComponent* Mesh = Character->GetMesh();
+    	TObjectPtr<USkeletalMeshComponent> Mesh = Character->GetMesh();
         if (Mesh)
         {
-            UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
+        	TObjectPtr<UAnimInstance> AnimInstance = Mesh->GetAnimInstance();
             if (AnimInstance)
             {
                 AnimInstance->Montage_Stop(0.0f);
@@ -322,6 +361,11 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
     
     // Inspection 카메라로 전환
     TransitionToInspectionCamera(CameraLocation, CameraRotation);
+
+	if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor))
+	{
+		OverwatchPuzzle->HighlightAllExternalMeshes();
+	}
 
     // 마우스 커서 표시, GameAndUI 모드로 전환
     PC->bShowMouseCursor = true;
@@ -345,27 +389,33 @@ void UAO_InspectionComponent::ClientExitInspection()
 	// Hover trace 중지 및 하이라이트 해제
 	StopHoverTrace();
 
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ClientExitInspection"));
 
-    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+    TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
     
     if (!PC || !PC->IsLocalController())
     {
         return;
     }
 
+	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		if (InspectionInputContext)
+		{
+			InputSubsystem->RemoveMappingContext(InspectionInputContext);
+		}
+	}
+
     // 플레이어 카메라로 복귀
     TransitionToPlayerCamera();
 
-    ACharacter* Character = Cast<ACharacter>(Owner);
-    if (Character)
+    TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
+    if (Character && CurrentCameraSettings.bHideCharacter)
     {
         // 숨겼던 컴포넌트들 다시 표시
-        for (UPrimitiveComponent* Comp : HiddenComponents)
+        for (TObjectPtr<UPrimitiveComponent> Comp : HiddenComponents)
         {
             if (Comp)
             {
@@ -375,7 +425,7 @@ void UAO_InspectionComponent::ClientExitInspection()
         HiddenComponents.Empty();
 
         // 애니메이션 복구
-        USkeletalMeshComponent* Mesh = Character->GetMesh();
+        TObjectPtr<USkeletalMeshComponent> Mesh = Character->GetMesh();
         if (Mesh)
         {
             Mesh->SetComponentTickEnabled(true);
@@ -408,7 +458,7 @@ void UAO_InspectionComponent::OnExitPressed()
         return;
     }
 
-    AActor* Owner = GetOwner();
+    TObjectPtr<AActor> Owner = GetOwner();
     if (!Owner)
     {
         return;
@@ -432,14 +482,14 @@ void UAO_InspectionComponent::OnInspectionClick()
         return;
     }
 
-    AActor* Owner = GetOwner();
+    TObjectPtr<AActor> Owner = GetOwner();
     
     if (!Owner || !GrantedClickAbilityHandle.IsValid())
     {
         return;
     }
 
-    UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+    TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
     if (!ASC)
     {
         return;
@@ -468,7 +518,7 @@ void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Inst
         return;
     }
 
-    UWorld* World = GetWorld();
+    TObjectPtr<UWorld> World = GetWorld();
     if (!World)
     {
         return;
@@ -498,23 +548,90 @@ void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Inst
     InspectionCameraActor->SetActorLocation(NewLocation);
 }
 
+void UAO_InspectionComponent::OnSpacebarPressed()
+{
+	if (!bIsInspecting)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Not inspecting, ignoring"));
+		return;
+	}
+
+	if (!CurrentInspectedActor)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] No inspected actor, ignoring"));
+		return;
+	}
+
+	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor);
+	if (!OverwatchPuzzle)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Current actor is not OverwatchPuzzle: %s"), *CurrentInspectedActor->GetName());
+		return;
+	}
+
+	if (!OverwatchPuzzle->bUseSpacebar)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] OverwatchPuzzle.bUseSpacebar is false"));
+		return;
+	}
+
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Owner is null"));
+		return;
+	}
+
+	if (!Owner->HasAuthority())
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Client calling ServerRPC"));
+		ServerNotifySpacebarPressed();
+	}
+	else
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Server calling ActiveAllLinkedElements directly"));
+		OverwatchPuzzle->ActiveAllLinkedElements();
+	}
+}
+
+void UAO_InspectionComponent::ServerNotifySpacebarPressed_Implementation()
+{
+	if (!bIsInspecting || !CurrentInspectedActor)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: Invalid state"));
+		return;
+	}
+
+	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor);
+	if (!OverwatchPuzzle)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: Not OverwatchPuzzle"));
+		return;
+	}
+
+	if (!OverwatchPuzzle->bUseSpacebar)
+	{
+		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] ServerRPC: bUseSpacebar is false"));
+		return;
+	}
+
+	OverwatchPuzzle->ActiveAllLinkedElements();
+}
+
 // 조사 카메라로 전환
 void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& CameraLocation, const FRotator& CameraRotation)
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in TransitionToInspectionCamera"));
 
-    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+    TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
     if (!PC)
     {
         return;
     }
 
     // 현재 ViewTarget 저장 (나중에 복귀하기 위해)
-    AActor* CurrentViewTarget = PC->GetViewTarget();
+    TObjectPtr<AActor> CurrentViewTarget = PC->GetViewTarget();
     
     // InspectionCamera가 아닐 때만 저장 (이미 InspectionCamera면 잘못된 참조)
     if (!InspectionCameraActor || CurrentViewTarget != InspectionCameraActor)
@@ -522,21 +639,24 @@ void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& Camera
         OriginalViewTarget = CurrentViewTarget;
     }
 
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in TransitionToInspectionCamera"));
+
     // Inspection 카메라 액터 생성
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = Owner;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    InspectionCameraActor = GetWorld()->SpawnActor<ACameraActor>(
-        ACameraActor::StaticClass(),
-        CameraLocation,
-        CameraRotation,
-        SpawnParams
-    );
+	InspectionCameraActor = World->SpawnActor<ACameraActor>(
+		ACameraActor::StaticClass(),
+		CameraLocation,
+		CameraRotation,
+		SpawnParams
+	);
 
     if (InspectionCameraActor)
     {
-        UCameraComponent* CameraComp = InspectionCameraActor->GetCameraComponent();
+        TObjectPtr<UCameraComponent> CameraComp = InspectionCameraActor->GetCameraComponent();
         if (CameraComp)
         {
             CameraComp->SetFieldOfView(90.0f);
@@ -550,13 +670,10 @@ void UAO_InspectionComponent::TransitionToInspectionCamera(const FVector& Camera
 // 플레이어 카메라로 복귀
 void UAO_InspectionComponent::TransitionToPlayerCamera()
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in TransitionToPlayerCamera"));
 
-    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+    TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
     if (!PC)
     {
         return;
@@ -591,18 +708,22 @@ FVector UAO_InspectionComponent::ClampCameraPosition(const FVector& NewPosition)
 
 void UAO_InspectionComponent::StartHoverTrace()
 {
-    if (!GetWorld()) return;
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
 
     TWeakObjectPtr<UAO_InspectionComponent> WeakThis(this);
     
-    GetWorld()->GetTimerManager().SetTimer(
+    World->GetTimerManager().SetTimer(
         HoverTraceTimerHandle,
         FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
         {
-            if (UAO_InspectionComponent* StrongThis = WeakThis.Get())
-            {
-                StrongThis->PerformHoverTrace();
-            }
+        	if (TObjectPtr<UAO_InspectionComponent> StrongThis = WeakThis.Get())
+        	{
+				StrongThis->PerformHoverTrace();
+			}
         }),
         HoverTraceRate,
         true
@@ -611,10 +732,13 @@ void UAO_InspectionComponent::StartHoverTrace()
 
 void UAO_InspectionComponent::StopHoverTrace()
 {
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
-    }
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
 
     // 마지막 하이라이트 해제
     UpdateHoverHighlight(nullptr);
@@ -624,10 +748,10 @@ void UAO_InspectionComponent::PerformHoverTrace()
 {
 	if (!bIsInspecting || !CurrentInspectedActor) return;
 
-    AActor* Owner = GetOwner();
+	TObjectPtr<AActor> Owner = GetOwner();
     if (!Owner) return;
 
-    APlayerController* PC = Cast<APlayerController>(Owner->GetOwner());
+	TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
     if (!PC || !PC->IsLocalController()) return;
 
     // 마우스 커서 위치에서 Trace
@@ -650,7 +774,13 @@ void UAO_InspectionComponent::PerformHoverTrace()
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(Owner);
 
-    bool bHit = GetWorld()->LineTraceSingleByChannel(
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+    bool bHit = World->LineTraceSingleByChannel(
         HitResult,
         TraceStart,
         TraceEnd,
@@ -660,8 +790,8 @@ void UAO_InspectionComponent::PerformHoverTrace()
 
     if (bHit && HitResult.GetComponent() && HitResult.GetActor())
     {
-    	AActor* HitActor = HitResult.GetActor();
-    	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+    	TObjectPtr<AActor> HitActor = HitResult.GetActor();
+    	TObjectPtr<UPrimitiveComponent> HitComponent = HitResult.GetComponent();
         
     	// 자기 자신(InspectionPuzzle)이면 내부 메시인지 확인
     	if (HitActor == CurrentInspectedActor)
@@ -711,7 +841,7 @@ void UAO_InspectionComponent::UpdateHoverHighlight(UPrimitiveComponent* NewHover
     
     if (CurrentHoveredComponent.IsValid())
     {
-        if (UMeshComponent* MeshComp = Cast<UMeshComponent>(CurrentHoveredComponent.Get()))
+        if (TObjectPtr<UMeshComponent> MeshComp = Cast<UMeshComponent>(CurrentHoveredComponent.Get()))
         {
             MeshComp->SetRenderCustomDepth(true);
             MeshComp->SetCustomDepthStencilValue(250);
@@ -726,7 +856,7 @@ bool UAO_InspectionComponent::IsInternalClickableComponent(UPrimitiveComponent* 
 		return false;
 	}
 
-	if (AAO_InspectionPuzzle* InspectionPuzzle = Cast<AAO_InspectionPuzzle>(CurrentInspectedActor))
+	if (TObjectPtr<AAO_InspectionPuzzle> InspectionPuzzle = Cast<AAO_InspectionPuzzle>(CurrentInspectedActor))
 	{
 		return InspectionPuzzle->IsInternalComponentClickable(Component->GetFName());
 	}
@@ -754,4 +884,75 @@ bool UAO_InspectionComponent::IsValidExternalClickTarget(AActor* HitActor, UPrim
     }
 
     return false;
+}
+
+void UAO_InspectionComponent::RegisterCancelTags()
+{
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return;
+	}
+
+	TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+	if (!ASC || CancelInspectionTags.IsEmpty())
+	{
+		return;
+	}
+
+	// 각 취소 태그에 대해 변경 감지 등록
+	for (const FGameplayTag& CancelTag : CancelInspectionTags)
+	{
+		if (!CancelTag.IsValid())
+		{
+			continue;
+		}
+
+		FDelegateHandle Handle = ASC->RegisterGameplayTagEvent(CancelTag, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &UAO_InspectionComponent::OnCancelTagChanged);
+        
+		CancelTagDelegateHandles.Add(Handle);
+	}
+}
+
+void UAO_InspectionComponent::UnregisterCancelTags()
+{
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	TObjectPtr<UAbilitySystemComponent> ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
+	if (!ASC)
+	{
+		return;
+	}
+
+	// 모든 델리게이트 해제
+	for (const FDelegateHandle& Handle : CancelTagDelegateHandles)
+	{
+		if (Handle.IsValid())
+		{
+			// 태그별로 등록된 델리게이트 제거
+			for (const FGameplayTag& CancelTag : CancelInspectionTags)
+			{
+				if (CancelTag.IsValid())
+				{
+					ASC->RegisterGameplayTagEvent(CancelTag, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
+				}
+			}
+		}
+	}
+
+	CancelTagDelegateHandles.Empty();
+}
+
+void UAO_InspectionComponent::OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	// 태그가 추가되었을 때만 (NewCount > 0) 취소
+	if (NewCount > 0 && bIsInspecting)
+	{
+		ExitInspectionMode();
+	}
 }
