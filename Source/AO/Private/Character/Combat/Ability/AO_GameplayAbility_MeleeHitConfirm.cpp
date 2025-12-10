@@ -51,11 +51,11 @@ void UAO_GameplayAbility_MeleeHitConfirm::DoMeleeHitConfirm(const FGameplayAbili
 
 	const FAO_MeleeHitTraceParams& Params = Payload->Params;
 	
-	UWorld* World = GetWorld();
+	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("Failed to get World"));
 
 	TArray<FHitResult> HitResults;
-	TArray<AActor*> ActorsToIgnore;
+	TArray<TObjectPtr<AActor>> ActorsToIgnore;
 
 	if (bIgnoreInstigator)
 	{

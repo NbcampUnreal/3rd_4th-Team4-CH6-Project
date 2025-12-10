@@ -43,7 +43,20 @@ void UAO_PlayerCharacter_AttributeSet::PostGameplayEffectExecute(const struct FG
 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
-		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+		const float NewHealth = GetHealth();
+		
+		if (NewHealth <= 0.f)
+		{
+			if (AActor* Owner = GetOwningActor())
+			{
+				if (Owner->HasAuthority())
+				{
+					OnPlayerDeath.Broadcast();
+				}
+			}
+		}
+		
+		SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
 	}
 	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{

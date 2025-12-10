@@ -113,7 +113,7 @@ IOnlineSessionPtr UAO_OnlineSessionSubsystem::GetSessionInterface() const
 IOnlineVoicePtr UAO_OnlineSessionSubsystem::GetOnlineVoiceInterface() const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())		// JM : raw pointer 타입으로 반환됨
 	{
 		AO_LOG(LogJM, Log, TEXT("return OSS::Voice Interface"));
 		return OSS->GetVoiceInterface();
@@ -947,7 +947,6 @@ void UAO_OnlineSessionSubsystem::StartVoiceChat()
 		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
 		return;
 	}
-	// VoiceInterface->Init();		// TODO: 이번에 실험적으로 추가해봄
 	VoiceInterface->RegisterLocalTalker(0);
 	VoiceInterface->StartNetworkedVoice(0);
 	bIsEnableVoiceChat = true;
@@ -971,36 +970,6 @@ void UAO_OnlineSessionSubsystem::StopVoiceChat()
 	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
 	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
 	bIsEnableVoiceChat = false;
-
-	/* Unregister를 0.2초 뒤에 해서 정리될 시간을 줌 (필요시 추가) */
-	/* TWeakObjectPtr<UAO_OnlineSessionSubsystem> WeakThis(this);
-	if (UWorld* World = GetWorld())
-	{
-		FTimerHandle DelayHandle;
-		World->GetTimerManager().SetTimer(
-			DelayHandle,
-			[WeakThis]()
-			{
-				if (!WeakThis.IsValid())
-				{
-					return;
-				}
-				if (WeakThis->GetOnlineVoiceInterface().IsValid())
-				{
-					WeakThis.Pin()->GetOnlineVoiceInterface()->UnregisterLocalTalker(0);
-					AO_LOG(LogJM, Log, TEXT("Do Unregister Local Talker"));
-				}
-			},
-			0.2f,
-			false
-		);
-	}
-	else
-	{
-		AO_LOG(LogJM, Warning, TEXT("No World, but try to unregister local talker"));
-		VoiceInterface->UnregisterLocalTalker(0);
-	}
-	*/
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -1055,21 +1024,24 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (!TargetPS)
+	if (!AO_ENSURE(TargetPS, TEXT("TargetPS is Null")))
+	// if (!TargetPS)
 	{
-		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
+		// AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
 		return;
 	}
 	
 	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
-	if (!TargetPSId.IsValid())
+	if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	// if (!TargetPSId.IsValid())
 	{
 		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
 		return;
 	}
 	
 	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
-	if (!VoiceInterface.IsValid())
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	// if (!VoiceInterface.IsValid())
 	{
 		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
 		return;
@@ -1082,8 +1054,16 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 	else
 	{
 		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Unmute 시도)
-		AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
-		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
+		// AO_LOG(LogJM, Warning, TEXT("Unmute Failed. Try RegisterRemoteTalker & Unmute Again"));
+		AO_ENSURE(false, TEXT("Unmute Failed. Try Register Remote Talker"));
+		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
+		{
+			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+		}
+		else
+		{
+			AO_ENSURE(false, TEXT("Failed to Register Remote Talker"));
+		}
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));

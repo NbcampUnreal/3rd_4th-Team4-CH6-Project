@@ -2,7 +2,7 @@
 #include "Settings/AO_GameUserSettings.h"
 #include "AO_Log.h"
 
-UAO_GameUserSettings* UAO_GameUserSettings::GetGameUserSettings()
+TObjectPtr<UAO_GameUserSettings> UAO_GameUserSettings::GetGameUserSettings()
 {
 	return Cast<UAO_GameUserSettings>(UGameUserSettings::GetGameUserSettings());
 }

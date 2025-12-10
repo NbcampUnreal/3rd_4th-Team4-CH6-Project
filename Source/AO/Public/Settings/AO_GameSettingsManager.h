@@ -45,10 +45,15 @@ class AO_API UAO_GameSettingsManager : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	
+public:
+	UFUNCTION(BlueprintPure, Category = "AO|GameSettings")
+	static UAO_GameUserSettings* GetGameUserSettings();		// StalePointer를 방지하기 위해 캐싱하는 것보다 매번 Get 하는게 낫다(성능차이 없음)
+	
+private:
+	static const TArray<FResolutionInfo>& GetResolutionInfoList();
 
 public:
-	UFUNCTION(BlueprintPure, Category = "AO|GameSettings")	
-	UAO_GameUserSettings* GetGameUserSettings() const;		// StalePointer를 방지하기 위해 캐싱하는 것보다 매번 Get 하는게 낫다(성능차이 없음) 
 
 	UFUNCTION(BlueprintCallable, Category = "AO|Apply")
 	void ApplyAndSaveAllSettings();
@@ -133,7 +138,4 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "AO|Events")
 	FOnSettingsApplied OnSettingsApplied;		// 설정이 성공적으로 적용되고 저장되었을 때 호출되는 델리게이트
 
-private:
-	static const TArray<FResolutionInfo>& GetResolutionInfoList();
-	
 };
