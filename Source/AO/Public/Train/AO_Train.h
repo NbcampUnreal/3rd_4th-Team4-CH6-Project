@@ -46,7 +46,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Fuel")
 	FOnFuelChanged OnFuelChangedDelegate;
-	
+
 protected:
 	virtual void BeginPlay() override;
 	

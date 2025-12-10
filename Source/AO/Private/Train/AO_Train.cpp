@@ -161,8 +161,6 @@ void AAO_Train::HandleInteractionSuccess(AActor* Interactor)
 	   ActivationEventTag, 
 	   &EventData
 	);
-
-	//StaticMesh->AddWorldRotation(FRotator(0.0f, -20.0f, 0.0f));
 	
 	Inventory->ClearSlot();	
 }
