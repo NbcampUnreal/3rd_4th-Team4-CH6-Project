@@ -10,10 +10,22 @@ class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
 
+USTRUCT(BlueprintType)
+struct FOptionNameAndIndex
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ParameterName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString OptionName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 OptionIndex;
+};
+
 UENUM(BlueprintType)
 enum class ECharacterMesh : uint8
 {
-	None UMETA(DisplayName = "None"),
 	Elsa UMETA(DisplayName = "Elsa"),
 	Anka UMETA(DisplayName = "Anka"),
 };
@@ -28,11 +40,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
 	void ServerRPC_ChangeCharacter(ECharacterMesh MeshType);
-	UFUNCTION()
-	void ChangeCharacterMesh(UCustomizableObjectInstance* Instance);
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	UCustomizableObjectInstance* GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType);
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	ECharacterMesh GetCurrentMeshType() const;
+
+	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
+	void ServerRPC_ChangeCustomizingOption(FOptionNameAndIndex NewOptionData);
 
 	void PrintCustomizableObjectInstanceMap();
-	
 	
 protected:
 	virtual void BeginPlay() override;
@@ -47,10 +63,16 @@ private:
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
 	UPROPERTY(ReplicatedUsing = OnRep_MeshType)
-	ECharacterMesh CurrentMeshType = ECharacterMesh::None;
+	ECharacterMesh CurrentMeshType = ECharacterMesh::Elsa;
+	UPROPERTY(ReplicatedUsing = OnRep_ChangeOption)
+	FOptionNameAndIndex CurrentOptionData;
 
 	UFUNCTION()
 	void OnRep_MeshType();
+	UFUNCTION()
+	void ChangeCharacterMesh(UCustomizableObjectInstance* Instance);
+	UFUNCTION()
+	void OnRep_ChangeOption();
 
 		
 };
