@@ -37,10 +37,10 @@ void UAO_GameplayAbility_Inspect_Enter::ActivateAbility(
         return;
     }
 
-    AActor* TargetActor = const_cast<AActor*>(TriggerEventData->Target.Get());
-    AActor* Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
+    TObjectPtr<AActor> TargetActor = const_cast<AActor*>(TriggerEventData->Target.Get());
+    TObjectPtr<AActor> Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
 
-    UAO_InspectableComponent* InspectableComp = TargetActor->FindComponentByClass<UAO_InspectableComponent>();
+    TObjectPtr<UAO_InspectableComponent> InspectableComp = TargetActor->FindComponentByClass<UAO_InspectableComponent>();
     if (!InspectableComp)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -54,7 +54,7 @@ void UAO_GameplayAbility_Inspect_Enter::ActivateAbility(
         return;
     }
 
-    UAO_InspectionComponent* InspectionComp = Instigator->FindComponentByClass<UAO_InspectionComponent>();
+    TObjectPtr<UAO_InspectionComponent> InspectionComp = Instigator->FindComponentByClass<UAO_InspectionComponent>();
     if (!InspectionComp)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);

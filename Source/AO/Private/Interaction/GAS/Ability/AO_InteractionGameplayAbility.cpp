@@ -28,23 +28,23 @@ AController* UAO_InteractionGameplayAbility::GetControllerFromActorInfo() const
 		return nullptr;
 	}
 
-	if (AController* PC = CurrentActorInfo->PlayerController.Get())
+	if (TObjectPtr<AController> PC = CurrentActorInfo->PlayerController.Get())
 	{
 		return PC;
 	}
 
 	// Owner 체인을 따라 Controller 또는 Pawn의 Controller 탐색
-	AActor* TestActor = CurrentActorInfo->OwnerActor.Get();
+	TObjectPtr<AActor> TestActor = CurrentActorInfo->OwnerActor.Get();
 	while (TestActor)
 	{
 		// Controller 직접 발견
-		if (AController* C = Cast<AController>(TestActor))
+		if (TObjectPtr<AController> C = Cast<AController>(TestActor))
 		{
 			return C;
 		}
 
 		// Pawn 발견 시 해당 Pawn의 Controller 반환
-		if (APawn* Pawn = Cast<APawn>(TestActor))
+		if (TObjectPtr<APawn> Pawn = Cast<APawn>(TestActor))
 		{
 			return Pawn->GetController();
 		}

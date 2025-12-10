@@ -44,6 +44,9 @@ struct FAO_InspectionCameraSettings
 
 	UPROPERTY(BlueprintReadWrite)
 	FVector MovementBoundsExtent = FVector(500.f, 500.f, 0.f);
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bHideCharacter = true;
 };
 
 UINTERFACE(MinimalAPI, BlueprintType)

@@ -28,7 +28,7 @@ void UAO_GameplayAbility_Inspect_Click::ActivateAbility(
         return;
     }
 
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
+    TObjectPtr<AActor> AvatarActor = GetAvatarActorFromActorInfo();
     if (!AvatarActor)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -36,7 +36,7 @@ void UAO_GameplayAbility_Inspect_Click::ActivateAbility(
     }
 
 	// InspectionComponent에서 현재 검사 중인 액터 확인
-	UAO_InspectionComponent* InspectionComp = AvatarActor->FindComponentByClass<UAO_InspectionComponent>();
+	TObjectPtr<UAO_InspectionComponent> InspectionComp = AvatarActor->FindComponentByClass<UAO_InspectionComponent>();
 	if (!InspectionComp || !InspectionComp->GetInspectedActor())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
