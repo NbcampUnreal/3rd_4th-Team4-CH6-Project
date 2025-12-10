@@ -225,7 +225,7 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 		Log,
 		TEXT("NotifyPlayerAliveStateChanged: %s bIsAlive=%s"),
 		*ChangedPlayerState->GetPlayerName(),
-		ChangedPlayerState->IsAlive() ? TEXT("true") : TEXT("false")
+		ChangedPlayerState->GetIsAlive() ? TEXT("true") : TEXT("false")
 	);
 
 	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
@@ -248,7 +248,7 @@ bool AAO_GameMode_Stage::HasAnyAlivePlayer() const
 			continue;
 		}
 
-		if (AO_PS->IsAlive())
+		if (AO_PS->GetIsAlive())
 		{
 			// 한 명이라도 살아 있으면 전멸 아님
 			return true;

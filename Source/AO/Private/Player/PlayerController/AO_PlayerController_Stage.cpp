@@ -65,73 +65,6 @@ void AAO_PlayerController_Stage::Server_RequestStageExit_Implementation()
 	}
 }
 
-/* ---------------------임시 키 입력 코드----------------------- */
-void AAO_PlayerController_Stage::Server_RequestStageFail_Implementation()
-{
-	AO_LOG(LogJSH, Log, TEXT("StageFailTest: Server_RequestStageFail from %s"), *GetName());
-
-	UWorld* World = GetWorld();
-	if(World == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: World is null"));
-		return;
-	}
-
-	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
-	if(StageGM == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: GameMode is not AAO_GameMode_Stage"));
-		return;
-	}
-
-	// 여기서 실제 실패 처리 로직 호출
-	StageGM->HandleStageFail(this);
-}
-
-void AAO_PlayerController_Stage::Server_TestRemoveFuel_Implementation()
-{
-	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Server_TestRemoveFuel from %s"), *GetName());
-
-	UWorld* World = GetWorld();
-	if(World == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: World is null"));
-		return;
-	}
-
-	// 월드에서 Train 한 대 찾기
-	AAO_Train* Train = nullptr;
-	for(TActorIterator<AAO_Train> It(World); It; ++It)
-	{
-		Train = *It;
-		break;
-	}
-
-	if(Train == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train not found in world"));
-		return;
-	}
-
-	// Train의 ASC 가져오기
-	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
-	if(ASC == nullptr)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train has no AbilitySystemComponent"));
-		return;
-	}
-
-	// Fuel Attribute 값 직접 감소
-	const FGameplayAttribute FuelAttr = UAO_Fuel_AttributeSet::GetFuelAttribute();
-
-	const float OldFuel = ASC->GetNumericAttribute(FuelAttr);
-	const float NewFuel = OldFuel - 10.0f;	// 테스트용: 10씩 감소 (원하면 -5 등으로 조절)
-
-	ASC->SetNumericAttributeBase(FuelAttr, NewFuel);
-
-	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Fuel %.1f -> %.1f"), OldFuel, NewFuel);
-}
-
 void AAO_PlayerController_Stage::ShowDeathUI()
 {
 	if (!IsLocalController())
@@ -339,7 +272,73 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 	return nullptr;
 }
 
-// 임시 키 입력 코드
+/* ---------------------임시 키 입력 코드----------------------- */
+void AAO_PlayerController_Stage::Server_RequestStageFail_Implementation()
+{
+	AO_LOG(LogJSH, Log, TEXT("StageFailTest: Server_RequestStageFail from %s"), *GetName());
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: World is null"));
+		return;
+	}
+
+	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+	if(StageGM == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageFailTest: GameMode is not AAO_GameMode_Stage"));
+		return;
+	}
+
+	// 여기서 실제 실패 처리 로직 호출
+	StageGM->HandleStageFail(this);
+}
+
+void AAO_PlayerController_Stage::Server_TestRemoveFuel_Implementation()
+{
+	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Server_TestRemoveFuel from %s"), *GetName());
+
+	UWorld* World = GetWorld();
+	if(World == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: World is null"));
+		return;
+	}
+
+	// 월드에서 Train 한 대 찾기
+	AAO_Train* Train = nullptr;
+	for(TActorIterator<AAO_Train> It(World); It; ++It)
+	{
+		Train = *It;
+		break;
+	}
+
+	if(Train == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train not found in world"));
+		return;
+	}
+
+	// Train의 ASC 가져오기
+	UAbilitySystemComponent* ASC = Train->GetAbilitySystemComponent();
+	if(ASC == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TestRemoveFuel: Train has no AbilitySystemComponent"));
+		return;
+	}
+
+	// Fuel Attribute 값 직접 감소
+	const FGameplayAttribute FuelAttr = UAO_Fuel_AttributeSet::GetFuelAttribute();
+
+	const float OldFuel = ASC->GetNumericAttribute(FuelAttr);
+	const float NewFuel = OldFuel - 10.0f;	// 테스트용: 10씩 감소 (원하면 -5 등으로 조절)
+
+	ASC->SetNumericAttributeBase(FuelAttr, NewFuel);
+
+	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Fuel %.1f -> %.1f"), OldFuel, NewFuel);
+}
+
 void AAO_PlayerController_Stage::SetupInputComponent()
 {
 	Super::SetupInputComponent();

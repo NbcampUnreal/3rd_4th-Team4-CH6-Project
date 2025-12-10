@@ -107,33 +107,16 @@ void AAO_PlayerState::OnRep_IsAlive()
 	}
 }
 
-void AAO_PlayerState::SetAlive(bool bNewAlive)
+void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
 {
-	if (HasAuthority() == false)
+	if (HasAuthority())
 	{
-		return;
+		if (bIsAlive != bInIsAlive)
+		{
+			bIsAlive = bInIsAlive;
+			OnRep_IsAlive();
+		}
 	}
-
-	if (bIsAlive == bNewAlive)
-	{
-		return;
-	}
-
-	bIsAlive = bNewAlive;
-
-	if (!bIsAlive)
-	{
-		AO_LOG(LogJM, Log, TEXT("SetAlive: Now Dead (bIsAlive=false)"));
-	}
-	else
-	{
-		AO_LOG(LogJM, Log, TEXT("SetAlive: Now Alive (bIsAlive=true)"));
-	}
-}
-
-bool AAO_PlayerState::IsAlive() const
-{
-	return bIsAlive;
 }
 
 /* ==================== 이름 복제 ==================== */
@@ -186,17 +169,5 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 		}
 
 		Board->RebuildBoard();
-	}
-}
-
-void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
-{
-	if (HasAuthority())
-	{
-		if (bIsAlive != bInIsAlive)
-		{
-			bIsAlive = bInIsAlive;
-			OnRep_IsAlive();
-		}
 	}
 }
