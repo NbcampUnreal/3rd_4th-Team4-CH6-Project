@@ -1,6 +1,7 @@
 ﻿// HSJ : GA_Interact_Base.cpp
 #include "Interaction/Base/GA_Interact_Base.h"
 #include "Interaction/Actor/AO_WorldInteractable.h"
+#include "Interaction/Base/AO_BaseInteractable.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
 
@@ -38,11 +39,11 @@ void UGA_Interact_Base::ActivateAbility(
 		return;
 	}
 
-	AActor* TargetActor = const_cast<AActor*>(TriggerEventData->Target.Get());
-	AActor* Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
+	TObjectPtr<AActor> TargetActor = const_cast<AActor*>(TriggerEventData->Target.Get());
+	TObjectPtr<AActor> Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
 	
 	// WorldInteractable 체크(상속일 경우)
-	if (AAO_WorldInteractable* Interactable = Cast<AAO_WorldInteractable>(TargetActor))
+	if (TObjectPtr<AAO_WorldInteractable> Interactable = Cast<AAO_WorldInteractable>(TargetActor))
 	{
 		Interactable->OnInteractionSuccess(Instigator);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -50,12 +51,12 @@ void UGA_Interact_Base::ActivateAbility(
 	}
 	
 	// InteractableComponent 체크(컴포넌트일 경우)
-	if (UAO_InteractableComponent* InteractableComp = TargetActor->FindComponentByClass<UAO_InteractableComponent>())
+	if (TObjectPtr<UAO_InteractableComponent> InteractableComp = TargetActor->FindComponentByClass<UAO_InteractableComponent>())
 	{
 		InteractableComp->NotifyInteractionSuccess(Instigator);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
-
+	
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 }

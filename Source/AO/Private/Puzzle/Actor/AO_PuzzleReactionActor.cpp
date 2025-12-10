@@ -52,7 +52,11 @@ void AAO_PuzzleReactionActor::BeginPlay()
 
 void AAO_PuzzleReactionActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    GetWorldTimerManager().ClearTimer(TransformTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(TransformTimerHandle);
+	}
     Super::EndPlay(EndPlayReason);
 }
 
@@ -66,28 +70,31 @@ void AAO_PuzzleReactionActor::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 
 void AAO_PuzzleReactionActor::SetProgress(float Progress)
 {
-    if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("SetProgress called on client"));
     if (ReactionMode != EPuzzleReactionMode::HoldActive) return;
 
     // 진행도 클램프 (0.0 ~ 1.0)
     TargetProgress = FMath::Clamp(Progress, 0.0f, 1.0f);
 
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in SetProgress"));
+
     // Transform 타이머가 없으면 시작
-    if (!GetWorldTimerManager().IsTimerActive(TransformTimerHandle))
+    if (!World->GetTimerManager().IsTimerActive(TransformTimerHandle))
     {
         TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
-        GetWorldTimerManager().SetTimer(
-            TransformTimerHandle,
-            FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-            {
-                if (AAO_PuzzleReactionActor* StrongThis = WeakThis.Get())
-                {
-                    StrongThis->UpdateTransform();
-                }
-            }),
-            0.016f,
-            true
-        );
+    	World->GetTimerManager().SetTimer(
+			TransformTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			{
+				if (TObjectPtr<AAO_PuzzleReactionActor> StrongThis = WeakThis.Get())
+				{
+					StrongThis->UpdateTransform();
+				}
+			}),
+			0.016f,
+			true
+		);
     }
 }
 
@@ -109,7 +116,7 @@ void AAO_PuzzleReactionActor::OnTriggerTagChanged(const FGameplayTag Tag, int32 
 
 void AAO_PuzzleReactionActor::ActivateReaction()
 {
-    if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("ActivateReaction called on client"));
 
     switch (ReactionMode)
     {
@@ -129,25 +136,28 @@ void AAO_PuzzleReactionActor::ActivateReaction()
         return;
     }
 
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in ActivateReaction"));
+
     // Transform 애니메이션 시작
     TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
-    GetWorldTimerManager().SetTimer(
-        TransformTimerHandle,
-        FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-        {
-            if (AAO_PuzzleReactionActor* StrongThis = WeakThis.Get())
-            {
-                StrongThis->UpdateTransform();
-            }
-        }),
-        0.016f,
-        true
-    );
+	World->GetTimerManager().SetTimer(
+		 TransformTimerHandle,
+		 FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		 {
+		 	if (TObjectPtr<AAO_PuzzleReactionActor> StrongThis = WeakThis.Get())
+		 	{
+				 StrongThis->UpdateTransform();
+			 }
+		 }),
+		 0.016f,
+		 true
+	 );
 }
 
 void AAO_PuzzleReactionActor::DeactivateReaction()
 {
-    if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("DeactivateReaction called on client"));
 
     if (ReactionMode == EPuzzleReactionMode::OneTime) return;
 
@@ -155,21 +165,24 @@ void AAO_PuzzleReactionActor::DeactivateReaction()
     if (ReactionMode == EPuzzleReactionMode::Toggle)
     {
         bIsActivated = false;
+
+    	TObjectPtr<UWorld> World = GetWorld();
+    	checkf(World, TEXT("World is null in DeactivateReaction"));
         
         // Transform 애니메이션 시작
         TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
-        GetWorldTimerManager().SetTimer(
-            TransformTimerHandle,
-            FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-            {
-                if (AAO_PuzzleReactionActor* StrongThis = WeakThis.Get())
-                {
-                    StrongThis->UpdateTransform();
-                }
-            }),
-            0.016f,
-            true
-        );
+    	World->GetTimerManager().SetTimer(
+			TransformTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			{
+				if (TObjectPtr<AAO_PuzzleReactionActor> StrongThis = WeakThis.Get())
+				{
+					StrongThis->UpdateTransform();
+				}
+			}),
+			0.016f,
+			true
+		);
     }
 }
 
@@ -208,7 +221,11 @@ void AAO_PuzzleReactionActor::UpdateTransform()
     // HoldActive가 아니면서 목표 도달 시 타이머 정지
     if (bReachedTarget && ReactionMode != EPuzzleReactionMode::HoldActive)
     {
-        GetWorldTimerManager().ClearTimer(TransformTimerHandle);
+    	TObjectPtr<UWorld> World = GetWorld();
+    	if (World)
+    	{
+    		World->GetTimerManager().ClearTimer(TransformTimerHandle);
+    	}
     }
 }
 
@@ -218,18 +235,22 @@ void AAO_PuzzleReactionActor::OnRep_IsActivated()
     if (!HasAuthority())
     {
         TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
-        GetWorldTimerManager().SetTimer(
-            TransformTimerHandle,
-            FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-            {
-                if (AAO_PuzzleReactionActor* StrongThis = WeakThis.Get())
-                {
-                    StrongThis->UpdateTransform();
-                }
-            }),
-            0.016f,
-            true
-        );
+    	TObjectPtr<UWorld> World = GetWorld();
+    	if (World)
+    	{
+    		World->GetTimerManager().SetTimer(
+				TransformTimerHandle,
+				FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+				{
+					if (TObjectPtr<AAO_PuzzleReactionActor> StrongThis = WeakThis.Get())
+					{
+						StrongThis->UpdateTransform();
+					}
+				}),
+				0.016f,
+				true
+			);
+    	}
     }
 }
 
@@ -238,22 +259,25 @@ void AAO_PuzzleReactionActor::OnRep_TargetProgress()
     // 클라이언트 HoldActive 진행도 변경 시 Transform 업데이트
     if (!HasAuthority() && ReactionMode == EPuzzleReactionMode::HoldActive)
     {
-        if (!GetWorldTimerManager().IsTimerActive(TransformTimerHandle))
-        {
-            TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
-            GetWorldTimerManager().SetTimer(
-                TransformTimerHandle,
-                FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-                {
-                    if (AAO_PuzzleReactionActor* StrongThis = WeakThis.Get())
-                    {
-                        StrongThis->UpdateTransform();
-                    }
-                }),
-                0.016f,
-                true
-            );
-        }
+    	TObjectPtr<UWorld> World = GetWorld();
+    	
+    	if (World && !World->GetTimerManager().IsTimerActive(TransformTimerHandle))
+    	{
+    		TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
+            
+    		World->GetTimerManager().SetTimer(
+				TransformTimerHandle,
+				FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+				{
+					if (TObjectPtr<AAO_PuzzleReactionActor> StrongThis = WeakThis.Get())
+					{
+						StrongThis->UpdateTransform();
+					}
+				}),
+				0.016f,
+				true
+			);
+    	}
     }
 }
 

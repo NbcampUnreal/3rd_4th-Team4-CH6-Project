@@ -2,7 +2,6 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
-
 UAO_AddFuel_GameplayAbility::UAO_AddFuel_GameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -58,5 +57,6 @@ void UAO_AddFuel_GameplayAbility::ActivateAbility(
 
 		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
+	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

@@ -25,6 +25,25 @@ void AAO_InspectionPuzzle::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AAO_InspectionPuzzle, bInteractionEnabled);
 }
 
+FAO_InspectionCameraSettings AAO_InspectionPuzzle::GetInspectionCameraSettings() const
+{
+	FAO_InspectionCameraSettings Settings;
+    
+	// 기본 카메라 설정
+	if (InspectableComponent)
+	{
+		FTransform CameraTransform = InspectableComponent->GetInspectionCameraTransform();
+		Settings.CameraMode = EInspectionCameraMode::RelativeToActor;
+		Settings.CameraLocation = CameraTransform.GetLocation();
+		Settings.CameraRotation = CameraTransform.Rotator();
+	}
+    
+	Settings.MovementType = EInspectionMovementType::None;
+	Settings.bHideCharacter = bHideCharacter;
+    
+	return Settings;
+}
+
 bool AAO_InspectionPuzzle::IsInternalComponentClickable(FName ComponentName) const
 {
 	for (const FAO_InspectionElementMapping& Mapping : ElementMappings)
@@ -69,7 +88,7 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
 		return false;
 	}
     
-    AActor* RequestingActor = InteractionQuery.RequestingAvatar.Get();
+	TObjectPtr<AActor> RequestingActor = InteractionQuery.RequestingAvatar.Get();
     if (!RequestingActor)
     {
         return false;
@@ -82,7 +101,7 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
     }
     
     // 이미 자신이 검사 중이면 불가
-    UAO_InspectionComponent* InspectionComp = RequestingActor->FindComponentByClass<UAO_InspectionComponent>();
+	TObjectPtr<UAO_InspectionComponent> InspectionComp = RequestingActor->FindComponentByClass<UAO_InspectionComponent>();
     if (InspectionComp && InspectionComp->GetInspectedActor() == this)
     {
         return false;
@@ -93,16 +112,22 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
 
 void AAO_InspectionPuzzle::GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const
 {
-    TArray<UActorComponent*> Components;
-    GetComponents(UStaticMeshComponent::StaticClass(), Components);
-
-    for (UActorComponent* Comp : Components)
-    {
-        if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Comp))
-        {
-            OutMeshComponents.Add(MeshComp);
-        }
-    }
+	// 액터의 모든 메시 컴포넌트 수집 (재귀)
+	TArray<UMeshComponent*> AllMeshComponents;
+	GetComponents<UMeshComponent>(AllMeshComponents, true);
+    
+	for (TObjectPtr<UMeshComponent> MeshComp : AllMeshComponents)
+	{
+		if (!MeshComp) continue;
+        
+		if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
+		{
+			if (StaticMesh->GetStaticMesh())
+			{
+				OutMeshComponents.Add(MeshComp);
+			}
+		}
+	}
 }
 
 void AAO_InspectionPuzzle::OnInspectionMeshClicked(UPrimitiveComponent* ClickedComponent)

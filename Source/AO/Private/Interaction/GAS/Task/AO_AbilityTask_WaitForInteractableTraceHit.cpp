@@ -21,7 +21,7 @@ UAO_AbilityTask_WaitForInteractableTraceHit* UAO_AbilityTask_WaitForInteractable
 	bool bShowDebug, 
 	float SphereRadius)
 {
-	UAO_AbilityTask_WaitForInteractableTraceHit* Task = NewAbilityTask<UAO_AbilityTask_WaitForInteractableTraceHit>(OwningAbility);
+	TObjectPtr<UAO_AbilityTask_WaitForInteractableTraceHit> Task = NewAbilityTask<UAO_AbilityTask_WaitForInteractableTraceHit>(OwningAbility);
 	Task->InteractionTraceRange = InteractionTraceRange;
 	Task->InteractionTraceRate = InteractionTraceRate;
 	Task->StartLocation = StartLocation;
@@ -39,16 +39,30 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::Activate()
 	SetWaitingOnAvatar();
 
 	// 주기적 트레이스 시작
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
 	{
-		World->GetTimerManager().SetTimer(TraceTimerHandle, this, &ThisClass::PerformTrace, InteractionTraceRate, true);
+		TWeakObjectPtr<UAO_AbilityTask_WaitForInteractableTraceHit> WeakThis(this);
+		World->GetTimerManager().SetTimer(
+			TraceTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+			{
+				if (TObjectPtr<UAO_AbilityTask_WaitForInteractableTraceHit> StrongThis = WeakThis.Get())
+				{
+					StrongThis->PerformTrace();
+				}
+			}),
+			InteractionTraceRate,
+			true
+		);
 	}
 }
 
 void UAO_AbilityTask_WaitForInteractableTraceHit::OnDestroy(bool bInOwnerFinished)
 {
 	// 타이머 정리
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
 	{
 		World->GetTimerManager().ClearTimer(TraceTimerHandle);
 	}
@@ -58,7 +72,12 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::OnDestroy(bool bInOwnerFinishe
 
 void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 {
-	AActor* AvatarActor = Ability->GetCurrentActorInfo()->AvatarActor.Get();
+	checkf(Ability, TEXT("Ability is null in PerformTrace"));
+	
+	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
+	checkf(ActorInfo, TEXT("ActorInfo is null in PerformTrace"));
+	
+	TObjectPtr<AActor> AvatarActor = ActorInfo->AvatarActor.Get();
 	if (!AvatarActor)
 	{
 		return;
@@ -84,7 +103,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 	// Hit된 오브젝트에서 IAO_Interactable 찾기
 	TArray<TScriptInterface<IAO_Interface_Interactable>> Interactables;
 
-	AActor* HitActor = HitResult.GetActor();
+	TObjectPtr<AActor> HitActor = HitResult.GetActor();
 	if (HitActor)
 	{
 		// Actor 자체가 인터페이스 구현인지
@@ -96,7 +115,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 		else
 		{
 			// Actor에 InteractableComponent가 있는지 체크
-			if (UAO_InteractableComponent* InteractableComp = HitActor->FindComponentByClass<UAO_InteractableComponent>())
+			if (TObjectPtr<UAO_InteractableComponent> InteractableComp = HitActor->FindComponentByClass<UAO_InteractableComponent>())
 			{
 				Interactables.AddUnique(TScriptInterface<IAO_Interface_Interactable>(InteractableComp));
 			}
@@ -137,7 +156,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::AimWithPlayerController(
 		return;
 	}
 	
-	APlayerController* PlayerController = Ability->GetCurrentActorInfo()->PlayerController.Get();
+	TObjectPtr<APlayerController> PlayerController = Ability->GetCurrentActorInfo()->PlayerController.Get();
 	if (!PlayerController)
 	{
 		return;
@@ -321,7 +340,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::HighlightInteractables(
 
 	// CustomDepth 설정으로 하이라이트 on/off
 	// (포스트프로세스에서 CustomDepth=250인 오브젝트를 외곽선 표시)
-	for (UMeshComponent* MeshComponent : MeshComponents)
+	for (TObjectPtr<UMeshComponent> MeshComponent : MeshComponents)
 	{
 		if (bShouldHighlight)
 		{

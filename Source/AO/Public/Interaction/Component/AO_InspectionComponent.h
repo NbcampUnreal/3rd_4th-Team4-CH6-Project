@@ -12,6 +12,7 @@ class ACameraActor;
 class UInputAction;
 class UGameplayAbility;
 struct FInputActionInstance;
+class UInputMappingContext;
 
 /**
  * Inspection 시스템의 핵심 컴포넌트
@@ -76,6 +77,10 @@ private:
     void OnExitPressed();
     void OnInspectionClick();
     void OnCameraMoveInput(const FInputActionInstance& Instance);
+	void OnSpacebarPressed();
+
+	UFUNCTION(Server, Reliable)
+	void ServerNotifySpacebarPressed();
     
     void TransitionToInspectionCamera(const FVector& CameraLocation, const FRotator& CameraRotation);
     void TransitionToPlayerCamera();
@@ -89,7 +94,7 @@ private:
     void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings);
 
     UFUNCTION(Client, Reliable)
-    void ClientNotifyInspectionEnded();
+    void ClientNotifyInspectionEnded(AActor* InspectableActor);
 
     UFUNCTION(Server, Reliable)
     void ServerNotifyInspectionEnded();
@@ -104,17 +109,32 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> CameraMoveAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> SpacebarAction;
+
     UPROPERTY(EditAnywhere, Category = "Inspection")
     float CameraBlendTime = 0.5f;
 
 	TWeakObjectPtr<UPrimitiveComponent> CachedHoverComponent;
 	TWeakObjectPtr<AActor> CachedHoverActor;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> InspectionInputContext;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	int32 InspectionInputPriority = 10;
+
+	UPROPERTY(EditAnywhere, Category = "Inspection")
+	FGameplayTagContainer CancelInspectionTags;
+
 private:
 	void StartHoverTrace();
 	void StopHoverTrace();
 	void PerformHoverTrace();
 	void UpdateHoverHighlight(UPrimitiveComponent* NewHoveredComponent);
+	void RegisterCancelTags();
+	void UnregisterCancelTags();
+	void OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount);
 
 	FTimerHandle HoverTraceTimerHandle;
 	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;
@@ -148,4 +168,7 @@ private:
     
     // 초기 카메라 위치 (클램프 기준점)
     FVector InitialCameraLocation;
+
+	// 태그 변경 감지 핸들
+	TArray<FDelegateHandle> CancelTagDelegateHandles;
 };

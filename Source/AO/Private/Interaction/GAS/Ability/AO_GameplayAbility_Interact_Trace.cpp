@@ -22,7 +22,7 @@ void UAO_GameplayAbility_Interact_Trace::ActivateAbility(const FGameplayAbilityS
 	InteractionQuery.RequestingAvatar = GetAvatarActorFromActorInfo();
 	InteractionQuery.RequestingController = GetControllerFromActorInfo();
 
-	if (UAO_AbilityTask_WaitForInteractableTraceHit* TraceHitTask = UAO_AbilityTask_WaitForInteractableTraceHit::WaitForInteractableTraceHit(
+	if (TObjectPtr<UAO_AbilityTask_WaitForInteractableTraceHit> TraceHitTask = UAO_AbilityTask_WaitForInteractableTraceHit::WaitForInteractableTraceHit(
 		this, InteractionQuery, AO_TraceChannel_Interaction, 
 		MakeTargetLocationInfoFromOwnerActor(), 
 		InteractionTraceRange, InteractionTraceRate, bShowTraceDebug, TraceSphereRadius))
@@ -38,21 +38,21 @@ void UAO_GameplayAbility_Interact_Trace::ActivateAbility(const FGameplayAbilityS
 
 void UAO_GameplayAbility_Interact_Trace::UpdateInteractions(const TArray<FAO_InteractionInfo>& InteractionInfos)
 {
-	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	TObjectPtr<AActor> AvatarActor = GetAvatarActorFromActorInfo();
 	if (!AvatarActor)
 	{
 		AO_LOG(LogHSJ, Error, TEXT("AvatarActor is null"));
 		return;
 	}
 
-	UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>();
+	TObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>();
 	if (!InteractionComp)
 	{
 		AO_LOG(LogHSJ, Error, TEXT("InteractionComponent not found"));
 		return;
 	}
 	
-	if (UAO_InteractionWidgetController* Controller = InteractionComp->GetInteractionWidgetController())
+	if (TObjectPtr<UAO_InteractionWidgetController> Controller = InteractionComp->GetInteractionWidgetController())
 	{
 		FAO_InteractionMessage Message;
 		Message.MessageType = EAO_InteractionMessageType::Notice;
@@ -64,16 +64,16 @@ void UAO_GameplayAbility_Interact_Trace::UpdateInteractions(const TArray<FAO_Int
 	}
 	
 	// 타겟 액터 추출 및 설정
-	AActor* TargetActor = nullptr;
+	TObjectPtr<AActor> TargetActor = nullptr;
 	if (InteractionInfos.Num() > 0)
 	{
-		if (UObject* Object = InteractionInfos[0].Interactable.GetObject())
+		if (TObjectPtr<UObject> Object = InteractionInfos[0].Interactable.GetObject())
 		{
-			if (AActor* Actor = Cast<AActor>(Object))
+			if (TObjectPtr<AActor> Actor = Cast<AActor>(Object))
 			{
 				TargetActor = Actor;
 			}
-			else if (UActorComponent* Component = Cast<UActorComponent>(Object))
+			else if (TObjectPtr<UActorComponent> Component = Cast<UActorComponent>(Object))
 			{
 				TargetActor = Component->GetOwner();
 			}

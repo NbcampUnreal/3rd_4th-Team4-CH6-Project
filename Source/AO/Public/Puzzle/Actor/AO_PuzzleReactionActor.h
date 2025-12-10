@@ -38,6 +38,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Reaction")
     void SetProgress(float Progress);
 
+	void ActivateReaction();
+	void DeactivateReaction();
+
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -51,8 +54,6 @@ protected:
 
 private:
     void OnTriggerTagChanged(const FGameplayTag Tag, int32 NewCount);
-    void ActivateReaction();
-    void DeactivateReaction();
     
     // Transform 애니메이션 업데이트 (타이머 콜백)
     void UpdateTransform();

@@ -15,7 +15,7 @@ UAO_AbilityTask_WaitForInvalidInteraction* UAO_AbilityTask_WaitForInvalidInterac
 	float AcceptanceAngle, 
 	float AcceptanceDistance)
 {
-	UAO_AbilityTask_WaitForInvalidInteraction* Task = NewAbilityTask<UAO_AbilityTask_WaitForInvalidInteraction>(OwningAbility);
+	TObjectPtr<UAO_AbilityTask_WaitForInvalidInteraction> Task = NewAbilityTask<UAO_AbilityTask_WaitForInvalidInteraction>(OwningAbility);
 	Task->AcceptanceAngle = AcceptanceAngle;
 	Task->AcceptanceDistance = AcceptanceDistance;
 	return Task;
@@ -28,29 +28,64 @@ void UAO_AbilityTask_WaitForInvalidInteraction::Activate()
 	SetWaitingOnAvatar();
 
 	// 시작 시점의 방향과 위치 저장
-	CachedCharacterForward2D = GetAvatarActor() ? GetAvatarActor()->GetActorForwardVector().GetSafeNormal2D() : FVector::ZeroVector;
-	CachedCharacterLocation = GetAvatarActor() ? GetAvatarActor()->GetActorLocation() : FVector::ZeroVector;
-
+	TObjectPtr<AActor> AvatarActor = GetAvatarActor();
+	if (AvatarActor)
+	{
+		CachedCharacterForward2D = AvatarActor->GetActorForwardVector().GetSafeNormal2D();
+		CachedCharacterLocation = AvatarActor->GetActorLocation();
+	}
+	
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in Activate"));
+	
 	// 0.1초마다 체크 시작
-	GetWorld()->GetTimerManager().SetTimer(CheckTimerHandle, this, &ThisClass::PerformCheck, 0.1f, true);
+	TWeakObjectPtr<UAO_AbilityTask_WaitForInvalidInteraction> WeakThis(this);
+	World->GetTimerManager().SetTimer(
+		CheckTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+		{
+			if (TObjectPtr<UAO_AbilityTask_WaitForInvalidInteraction> StrongThis = WeakThis.Get())
+			{
+				StrongThis->PerformCheck();
+			}
+		}),
+		0.1f,
+		true
+	);
 }
 
 void UAO_AbilityTask_WaitForInvalidInteraction::OnDestroy(bool bInOwnerFinished)
 {
 	// 타이머 정리
-	GetWorld()->GetTimerManager().ClearTimer(CheckTimerHandle);
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(CheckTimerHandle);
+	}
 	
 	Super::OnDestroy(bInOwnerFinished);
 }
 
 void UAO_AbilityTask_WaitForInvalidInteraction::PerformCheck()
 {
-	ACharacter* Character = Cast<ACharacter>(Ability->GetCurrentActorInfo()->AvatarActor.Get());
-	UCharacterMovementComponent* CharacterMovement = Character ? Character->GetCharacterMovement() : nullptr;
+	checkf(Ability, TEXT("Ability is null in PerformCheck"));
+	
+	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
+	checkf(ActorInfo, TEXT("ActorInfo is null in PerformCheck"));
 
-	if (!Character || !CharacterMovement)
+	TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	if (!Character)
 	{
-		AO_LOG(LogHSJ, Error, TEXT("Character or CharacterMovement is null"));
+		AO_LOG(LogHSJ, Error, TEXT("Character is null"));
+		OnInvalidInteraction.Broadcast();
+		EndTask();
+		return;
+	}
+
+	TObjectPtr<UCharacterMovementComponent> CharacterMovement = Character->GetCharacterMovement();
+	if (!CharacterMovement)
+	{
+		AO_LOG(LogHSJ, Error, TEXT("CharacterMovement is null"));
 		OnInvalidInteraction.Broadcast();
 		EndTask();
 		return;
@@ -88,8 +123,8 @@ void UAO_AbilityTask_WaitForInvalidInteraction::PerformCheck()
 
 float UAO_AbilityTask_WaitForInvalidInteraction::CalculateAngle2D() const
 {
-	AActor* AvatarActor = Ability->GetCurrentActorInfo()->AvatarActor.Get();
-	APlayerController* PlayerController = Ability->GetCurrentActorInfo()->PlayerController.Get();
+	TObjectPtr<AActor> AvatarActor = Ability->GetCurrentActorInfo()->AvatarActor.Get();
+	TObjectPtr<APlayerController> PlayerController = Ability->GetCurrentActorInfo()->PlayerController.Get();
 	
 	if (!AvatarActor || !PlayerController)
 	{

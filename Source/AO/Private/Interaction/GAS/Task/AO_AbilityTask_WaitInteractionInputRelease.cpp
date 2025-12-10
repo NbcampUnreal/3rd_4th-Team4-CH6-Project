@@ -14,7 +14,12 @@ void UAO_AbilityTask_WaitInteractionInputRelease::Activate()
 	
 	SetWaitingOnAvatar();
 	
-	AActor* AvatarActor = Ability->GetCurrentActorInfo()->AvatarActor.Get();
+	checkf(Ability, TEXT("Ability is null in Activate"));
+	
+	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
+	checkf(ActorInfo, TEXT("ActorInfo is null in Activate"));
+	
+	TObjectPtr<AActor> AvatarActor = ActorInfo->AvatarActor.Get();
 	if (!AvatarActor)
 	{
 		EndTask();
@@ -32,42 +37,63 @@ void UAO_AbilityTask_WaitInteractionInputRelease::Activate()
 	// 델리게이트 구독
 	InteractionComp->OnInteractInputReleased.AddDynamic(this, &UAO_AbilityTask_WaitInteractionInputRelease::OnInputReleased);
 	
-	// 폴링 시작 (안전장치 - 델리게이트 누락 대비, WeakObjectPtr 사용)
-	GetWorld()->GetTimerManager().SetTimer(
-		CheckTimerHandle,
-		[this, InteractionComp]()
-		{
-			if (!InteractionComp.IsValid())
+	// 폴링 시작
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
+	{
+		TWeakObjectPtr<UAO_AbilityTask_WaitInteractionInputRelease> WeakThis(this);
+		
+		World->GetTimerManager().SetTimer(
+			CheckTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [WeakThis, InteractionComp]()
 			{
-				OnInputReleased();
-				return;
-			}
-            
-			if (!InteractionComp->bIsHoldingInteract)
-			{
-				OnInputReleased();
-			}
-		},
-		0.1f,
-		true
-	);
+				if (!InteractionComp.IsValid())
+				{
+					if (TObjectPtr<UAO_AbilityTask_WaitInteractionInputRelease> StrongThis = WeakThis.Get())
+					{
+						StrongThis->OnInputReleased();
+					}
+					return;
+				}
+                
+				if (!InteractionComp->bIsHoldingInteract)
+				{
+					if (TObjectPtr<UAO_AbilityTask_WaitInteractionInputRelease> StrongThis = WeakThis.Get())
+					{
+						StrongThis->OnInputReleased();
+					}
+				}
+			}),
+			0.1f,
+			true
+		);
+	}
 }
 
 void UAO_AbilityTask_WaitInteractionInputRelease::OnDestroy(bool bInOwnerFinished)
 {
 	// 타이머 정리
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (World)
 	{
 		World->GetTimerManager().ClearTimer(CheckTimerHandle);
 	}
 	
 	// 델리게이트 구독 해제
-	AActor* AvatarActor = Ability ? Ability->GetCurrentActorInfo()->AvatarActor.Get() : nullptr;
-	if (AvatarActor)
+	if (Ability)
 	{
-		if (UAO_InteractionComponent* InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>())
+		const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
+		if (ActorInfo)
 		{
-			InteractionComp->OnInteractInputReleased.RemoveDynamic(this, &UAO_AbilityTask_WaitInteractionInputRelease::OnInputReleased);
+			TObjectPtr<AActor> AvatarActor = ActorInfo->AvatarActor.Get();
+			if (AvatarActor)
+			{
+				TObjectPtr<UAO_InteractionComponent> InteractionComp = AvatarActor->FindComponentByClass<UAO_InteractionComponent>();
+				if (InteractionComp)
+				{
+					InteractionComp->OnInteractInputReleased.RemoveDynamic(this, &UAO_AbilityTask_WaitInteractionInputRelease::OnInputReleased);
+				}
+			}
 		}
 	}
 	
