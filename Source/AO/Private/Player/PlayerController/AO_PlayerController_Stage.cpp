@@ -208,7 +208,7 @@ void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APaw
 	{
 		if (TObjectPtr<UAO_SpectateWidget> SpectateUI = Cast<UAO_SpectateWidget>(SpectateWidget))
 		{
-			SpectateUI->SetObservedCharacter(SpectatedCharacter);
+			SpectateUI->SetSpectatingCharacter(SpectatedCharacter);
 		}
 	}
 }

@@ -17,9 +17,13 @@ class AO_API UAO_SpectateWidget : public UAO_UserWidget
 public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void SetSpectatingPlayerName(const FText& InName);
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void BeforeSpectatingCharacterChanged(ACharacter* InCharacter);
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void AfterSpectatingCharacterChanged(ACharacter* InCharacter);
 	
 	UFUNCTION(BlueprintCallable, Category = "Spectate")
-	void SetObservedCharacter(ACharacter* InCharacter);
+	void SetSpectatingCharacter(ACharacter* InCharacter);
 	
 protected:
 	UPROPERTY(meta = (BindWidget))
@@ -28,5 +32,5 @@ protected:
 	TObjectPtr<UAO_StaminaWidget> StaminaWidget;
 
 	UPROPERTY()
-	TObjectPtr<ACharacter> ObservedCharacter;
+	TObjectPtr<ACharacter> SpectatingCharacter;
 };

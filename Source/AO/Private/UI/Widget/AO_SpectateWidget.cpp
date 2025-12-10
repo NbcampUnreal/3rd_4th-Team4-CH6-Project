@@ -7,14 +7,16 @@
 #include "UI/HUD/AO_HealthWidget.h"
 #include "UI/HUD/AO_StaminaWidget.h"
 
-void UAO_SpectateWidget::SetObservedCharacter(ACharacter* InCharacter)
+void UAO_SpectateWidget::SetSpectatingCharacter(ACharacter* InCharacter)
 {
+	BeforeSpectatingCharacterChanged(SpectatingCharacter);
+	
 	checkf(InCharacter, TEXT("InCharacter is nullptr"));
-	ObservedCharacter = InCharacter;
+	SpectatingCharacter = InCharacter;
 
 	// 관전하는 플레이어 이름 설정
 	FText SpectatingPlayerName = FText::GetEmpty();
-	if (TObjectPtr<APlayerState> PS = ObservedCharacter->GetPlayerState())
+	if (TObjectPtr<APlayerState> PS = SpectatingCharacter->GetPlayerState())
 	{
 		SpectatingPlayerName = FText::FromString(PS->GetPlayerName());
 	}
@@ -32,4 +34,6 @@ void UAO_SpectateWidget::SetObservedCharacter(ACharacter* InCharacter)
 	{
 		StaminaWidget->BindToCharacter(InCharacter);
 	}
+
+	AfterSpectatingCharacterChanged(SpectatingCharacter);
 }
