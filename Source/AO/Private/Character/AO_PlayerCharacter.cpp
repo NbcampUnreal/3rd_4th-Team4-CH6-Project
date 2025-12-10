@@ -23,6 +23,7 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -115,6 +116,18 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 	return false;
 }
 
+void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
+{
+	if (Camera)
+	{
+		Camera->GetCameraView(DeltaTime, OutResult);
+	}
+	else
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+	}
+}
+
 bool AAO_PlayerCharacter::IsInspecting() const
 {
 	return InspectionComponent && InspectionComponent->IsInspecting();
@@ -150,31 +163,11 @@ void AAO_PlayerCharacter::BeginPlay()
 
 		if (HasAuthority())
 		{
-			for (const auto& DefaultAbility : DefaultAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(DefaultAbility);
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
+			BindGameplayAbilities();
 
-			for (const auto& InputAbility : InputAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
-				AbilitySpec.InputID = InputAbility.Key;
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
-
-			for (const auto& DefaultEffect : DefaultEffects)
-			{
-				FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-				Context.AddInstigator(this, this);
-
-				FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
-
-				if (Handle.IsValid())
-				{
-					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
-				}
-			}
+			BindGameplayEffects();
+			
+			BindAttributeDelegates();
 		}
 	}
 
@@ -451,6 +444,74 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		PitchMultiplier);
 }
 
+void AAO_PlayerCharacter::BindGameplayAbilities()
+{
+	for (const auto& DefaultAbility : DefaultAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(DefaultAbility);
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+ 
+    for (const auto& InputAbility : InputAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
+    	AbilitySpec.InputID = InputAbility.Key;
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+}
+
+void AAO_PlayerCharacter::BindGameplayEffects()
+{
+	for (const auto& DefaultEffect : DefaultEffects)
+	{
+		FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+		Context.AddInstigator(this, this);
+
+		FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
+
+		if (Handle.IsValid())
+		{
+			AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
+		}
+	}
+}
+
+void AAO_PlayerCharacter::BindAttributeDelegates()
+{
+	if (!AttributeSet)
+	{
+		return;
+	}
+
+	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+}
+
+void AAO_PlayerCharacter::HandlePlayerDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
+	checkf(PS, TEXT("PlayerState is null"));
+
+	if (!PS->GetIsAlive())
+	{
+		return;
+	}
+
+	PS->SetIsAlive(false);
+
+	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
+	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+
+	if (Cast<APlayerController>(GetController()))
+	{
+		ClientRPC_HandleDeathView();
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -472,6 +533,19 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
+{
+	if (SpringArm)
+	{
+		SpringArm->TargetArmLength += DeathCameraArmOffset;
+	}
+
+	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
+	{
+		PC->ShowDeathUI();
 	}
 }
 

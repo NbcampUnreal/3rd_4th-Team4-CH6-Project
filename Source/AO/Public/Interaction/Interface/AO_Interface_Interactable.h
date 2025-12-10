@@ -29,7 +29,11 @@ class IAO_Interface_Interactable
 	GENERATED_BODY()
 
 public:
-	// 🆕 상호작용 정보 반환 (GetPreInteractionInfo + GatherPostInteractionInfos 통합)
+	virtual FTransform GetInteractionTransform() const 
+	{ 
+		return FTransform::Identity; 
+	}
+	
 	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const 
 	{ 
 		return FAO_InteractionInfo(); 
