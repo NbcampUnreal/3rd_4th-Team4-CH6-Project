@@ -10,6 +10,7 @@
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "EngineUtils.h"
 #include "Game/GameState/AO_GameState.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
@@ -160,6 +161,12 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 	{
 		return;
 	}
+	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
 
 	UWorld* World = GetWorld();
 	if(World == nullptr)
@@ -230,6 +237,82 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 
 	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
 	EvaluateTeamWipe();
+}
+
+bool AAO_GameMode_Stage::TryRevivePlayer(APlayerController* ReviveTargetPC)
+{
+	if (HasAuthority() == false || ReviveTargetPC == nullptr)
+	{
+		return false;
+	}
+	
+	if (bStageEnded)
+	{
+		AO_LOG(LogJSH, Log, TEXT("TryRevivePlayer: Stage already ended, revive blocked."));
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return false;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+	if (AO_GI == nullptr || AO_GS == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TryRevivePlayer: GI or GS is null"));
+		return false;
+	}
+
+	AAO_PlayerState* AO_PS = ReviveTargetPC->GetPlayerState<AAO_PlayerState>();
+	if (AO_PS == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("TryRevivePlayer: PlayerState is null"));
+		return false;
+	}
+
+	// 이미 살아 있으면 부활 불필요
+	if (AO_PS->GetIsAlive())
+	{
+		AO_LOG(LogJSH, Log, TEXT("TryRevivePlayer: already alive (%s)"), *ReviveTargetPC->GetName());
+		return false;
+	}
+
+	// 부활 카운트 소모 (없으면 실패)
+	if (AO_GI->TryConsumeSharedReviveCount() == false)
+	{
+		AO_LOG(LogJSH, Log, TEXT("TryRevivePlayer: no shared revive left"));
+		return false;
+	}
+
+	// GameState에 최신 부활 카운트 동기화
+	AO_GS->SetSharedReviveCount(AO_GI->GetSharedReviveCount());
+
+	// 생존 플래그 되살리기
+	AO_PS->SetIsAlive(true);
+
+	// 기존 Pawn 정리 (넘어져 있는 시체/래그돌 제거)
+	if (APawn* OldPawn = ReviveTargetPC->GetPawn())
+	{
+		OldPawn->DetachFromControllerPendingDestroy();
+		OldPawn->Destroy();
+	}
+
+	// 시작 지점에서 리스폰 (기본 PlayerStart 사용)
+	RestartPlayer(ReviveTargetPC);
+
+	AO_LOG
+	(
+		LogJSH,
+		Log,
+		TEXT("TryRevivePlayer: revived %s, shared revive = %d"),
+		*ReviveTargetPC->GetName(),
+		AO_GI->GetSharedReviveCount()
+	);
+
+	return true;
 }
 
 bool AAO_GameMode_Stage::HasAnyAlivePlayer() const

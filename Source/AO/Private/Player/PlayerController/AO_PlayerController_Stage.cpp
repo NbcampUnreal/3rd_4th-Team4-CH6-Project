@@ -339,6 +339,73 @@ void AAO_PlayerController_Stage::Server_TestRemoveFuel_Implementation()
 	AO_LOG(LogJSH, Log, TEXT("TestRemoveFuel: Fuel %.1f -> %.1f"), OldFuel, NewFuel);
 }
 
+void AAO_PlayerController_Stage::Server_RequestRevive_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+	if (!StageGM)
+	{
+		return;
+	}
+
+	const bool bSuccess = StageGM->TryRevivePlayer(this);
+
+	if (bSuccess)
+	{
+		AO_LOG(LogJSH, Log, TEXT("ReviveTest: Revive success for %s"), *GetName());
+		Client_OnRevived();
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("ReviveTest: Revive failed for %s"), *GetName());
+	}
+}
+
+void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
+{
+	// 1) Death UI 닫기
+	if (DeathWidget)
+	{
+		DeathWidget->RemoveFromParent();
+		DeathWidget = nullptr;
+	}
+
+	// 2) HUD 위젯 완전히 갈아끼우기
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+		HUDWidget = nullptr;
+	}
+
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+		if (HUDWidget)
+		{
+			HUDWidget->AddToViewport();
+		}
+	}
+
+	// 3) 입력 모드 복구
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	// 4) 관전 UI 떠 있었으면 닫기
+	if (SpectateWidget)
+	{
+		SpectateWidget->RemoveFromParent();
+		SpectateWidget = nullptr;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());
+}
+
 void AAO_PlayerController_Stage::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -346,6 +413,7 @@ void AAO_PlayerController_Stage::SetupInputComponent()
 	{
 		InputComponent->BindKey(EKeys::O, IE_Pressed, this, &AAO_PlayerController_Stage::HandleStageFailInput);
 		InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AAO_PlayerController_Stage::HandleTestRemoveFuelInput);
+		InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAO_PlayerController_Stage::HandleReviveInput);
 	}
 	else
 	{
@@ -370,6 +438,16 @@ void AAO_PlayerController_Stage::HandleTestRemoveFuelInput()
 	if(IsLocalController())
 	{
 		Server_TestRemoveFuel();
+	}
+}
+
+void AAO_PlayerController_Stage::HandleReviveInput()
+{
+	AO_LOG(LogJSH, Log, TEXT("ReviveTest: K key pressed on %s"), *GetName());
+
+	if (IsLocalController())
+	{
+		Server_RequestRevive();
 	}
 }
 /*------------------------------------------------------------------*/

@@ -37,6 +37,9 @@ public:
 	/* 플레이어 생존 여부가 변경되었을 때 호출되는 함수 */
 	void NotifyPlayerAliveStateChanged(class AAO_PlayerState* ChangedPlayerState);
 	
+	/* 공유 부활 카운트를 사용해서 한 플레이어를 시작 지점에서 부활(추후에 부활 어빌리티로 대체) */
+	bool TryRevivePlayer(class APlayerController* ReviveTargetPC);
+	
 protected:
 	/* 아직 살아 있는 플레이어가 한 명이라도 있는지 여부 */
 	bool HasAnyAlivePlayer() const;
@@ -47,4 +50,7 @@ protected:
 protected:
 	/* 열차(연료) 정보 받아오기 */
 	void SaveTrainFuelToGameInstance();
+	
+	/* 스테이지 종료 여부 */
+	bool bStageEnded = false;
 };

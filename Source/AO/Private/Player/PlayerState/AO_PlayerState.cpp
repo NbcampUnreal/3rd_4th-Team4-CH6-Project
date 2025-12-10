@@ -5,6 +5,7 @@
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO_Log.h"
+#include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Net/UnrealNetwork.h"
 
 AAO_PlayerState::AAO_PlayerState()
@@ -115,6 +116,14 @@ void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
 		{
 			bIsAlive = bInIsAlive;
 			OnRep_IsAlive();
+			
+			if (UWorld* World = GetWorld())
+			{
+				if (AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>())
+				{
+					StageGM->NotifyPlayerAliveStateChanged(this);
+				}
+			}
 		}
 	}
 }
