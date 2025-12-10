@@ -94,16 +94,6 @@ void UAO_InventoryComponent::OnRightClick()
 	}
 }
 
-/*
-아이템과 상호작용을함
-
-현재 슬롯이 비어있는지 확인함.
-y -> 인벤토리에 해당 아이템을 복사함
-n -> 빈슬롯이 있는지 확인
-	있다 -> 빈슬롯에 넣는다
-	없다 -> 기존 아이템을 뱉어낸다
-	*/
-
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
@@ -166,19 +156,23 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 		WorldItemActor->Destroy();
 	}
 	
+	/*
 	FString DebugMessage;
 	for (int32 Index : EmptySlotList)
 	{
 		DebugMessage += FString::Printf(TEXT("%d "), Index);
 	}
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, DebugMessage);
+	*/
 }
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "consume");
+		/*
+		 GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "consume"); 
+		 */
 		
 		static const FString Context00(TEXT("Inventory Item Use"));
 		float AddAmount = 0.0f;
@@ -210,7 +204,6 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 		}
 		
-		
 		ClearSlot();
 	}
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
@@ -234,7 +227,6 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 
 		if (bHit)
 		{
-			// 데미지 적용
 			if (AActor* HitActor = Hit.GetActor())
 			{
 				UGameplayStatics::ApplyPointDamage(
@@ -257,7 +249,6 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 
 void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "DropItem");
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
 	

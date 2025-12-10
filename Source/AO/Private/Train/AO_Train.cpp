@@ -128,24 +128,15 @@ void AAO_Train::HandleInteractionSuccess(AActor* Interactor)
 
 	if (!Inventory->Slots.IsValidIndex(Inventory->SelectedSlotIndex))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Invalid slot index"));
 		return;
 	}
 
 	FInventorySlot& Slot = Inventory->Slots[Inventory->SelectedSlotIndex];
-	
-	/*
-	UE_LOG(LogTemp, Warning, TEXT("DEBUG: Slot Index=%d, ItemID=%s, FuelAmount=%f"),
-	   Inventory->SelectedSlotIndex,
-	   *Slot.ItemID.ToString(),
-	   Slot.FuelAmount);
-	   */
 
 	float FuelFromItem = Slot.FuelAmount;
 
 	if (FuelFromItem <= 0.f)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Item has no fuel amount."));
 		return;
 	}
 	

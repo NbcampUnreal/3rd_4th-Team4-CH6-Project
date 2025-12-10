@@ -21,10 +21,4 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="FuelAdd")
 	USoundBase* FuelSound;
-	
-	//virtual bool OnActive(...) const override;
-	//virtual bool WhileActive(...) const override;
-	//virtual bool OnRemove(...) const override;
-
-
 };
