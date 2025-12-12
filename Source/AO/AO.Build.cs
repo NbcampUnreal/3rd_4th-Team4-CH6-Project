@@ -49,6 +49,9 @@ public class AO : ModuleRules
 			
 			// Voice Chat
 			"Voice",
+			
+			// Loading Screen
+			"MoviePlayer",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
