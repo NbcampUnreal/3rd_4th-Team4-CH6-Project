@@ -52,6 +52,7 @@ public class AO : ModuleRules
 			
 			// Loading Screen
 			"MoviePlayer",
+			"CommonLoadingScreen",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
