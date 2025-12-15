@@ -39,6 +39,8 @@ public class AO : ModuleRules
 			// AI
 			"AIModule",
 			"NavigationSystem",
+			"StateTreeModule",
+			"GameplayStateTreeModule",
 			
 			// Chooser
 			"Chooser",
