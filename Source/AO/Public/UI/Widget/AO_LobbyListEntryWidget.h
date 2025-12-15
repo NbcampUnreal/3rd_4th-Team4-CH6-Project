@@ -42,6 +42,8 @@ private:
 	bool  bNeedsPassword = false;
 	int32 MaxSlots = 0;
 	int32 OpenSlots = 0;
+	
+	bool bInGame = false;
 
 	UAO_LobbyListWidget* GetParentLobby() const;
 };
