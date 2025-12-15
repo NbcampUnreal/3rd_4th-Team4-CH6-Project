@@ -1,6 +1,8 @@
 // AO_STTask_AIRoam.cpp
 
 #include "AI/StateTree/Task/AO_STTask_AIRoam.h"
+#include "AI/Character/AO_Crab.h"
+#include "AI/Component/AO_ItemCarryComponent.h"
 #include "AIController.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -47,6 +49,23 @@ EStateTreeRunStatus FAO_STTask_AIRoam::Tick(FStateTreeExecutionContext& Context,
 	if (!AIController)
 	{
 		return EStateTreeRunStatus::Failed;
+	}
+
+	// Crab인 경우 아이템 발견 체크 (아이템 발견 시 PickupItem State로 전환되도록 실패 반환)
+	if (APawn* Pawn = AIController->GetPawn())
+	{
+		if (AAO_Crab* Crab = Cast<AAO_Crab>(Pawn))
+		{
+			if (UAO_ItemCarryComponent* CarryComp = Crab->GetItemCarryComponent())
+			{
+				// 주변에 아이템이 있으면 실패 반환하여 다른 State로 전환되도록 함
+				AAO_MasterItem* NearbyItem = CarryComp->FindNearbyItem(1500.f);
+				if (NearbyItem)
+				{
+					return EStateTreeRunStatus::Failed;
+				}
+			}
+		}
 	}
 
 	// 대기 중인 경우

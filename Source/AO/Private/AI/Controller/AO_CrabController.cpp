@@ -90,7 +90,12 @@ FVector AAO_CrabController::GetNearestThreatLocation() const
 					}
 				}
 
+				AO_LOG(LogKSJ, Log, TEXT("GetNearestThreatLocation: Using memory location: %s"), *NearestLoc.ToString());
 				return NearestLoc;
+			}
+			else
+			{
+				AO_LOG(LogKSJ, Log, TEXT("GetNearestThreatLocation: No recent locations in memory"));
 			}
 		}
 	}

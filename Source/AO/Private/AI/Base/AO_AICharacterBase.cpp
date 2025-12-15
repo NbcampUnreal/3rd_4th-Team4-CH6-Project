@@ -3,6 +3,7 @@
 #include "AI/Base/AO_AICharacterBase.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "AI/GAS/AO_AIAttributeSet.h"
+#include "AI/GAS/Ability/AO_GA_AI_Stun.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 #include "Net/UnrealNetwork.h"
@@ -89,6 +90,42 @@ void AAO_AICharacterBase::HandleStunEnd()
 {
 	// 기절 해제 처리
 	AO_LOG(LogKSJ, Log, TEXT("AI Stun Ended: %s"), *GetName());
+}
+
+void AAO_AICharacterBase::TestStun()
+{
+	if (!AbilitySystemComponent)
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("TestStun: AbilitySystemComponent is null on %s"), *GetName());
+		return;
+	}
+
+	// Event.AI.Stunned 이벤트 발생
+	FGameplayTag StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));
+	FGameplayEventData EventData;
+	EventData.Instigator = this;
+	EventData.Target = this;
+	
+	AbilitySystemComponent->HandleGameplayEvent(StunEventTag, &EventData);
+	
+	AO_LOG(LogKSJ, Log, TEXT("TestStun: Triggered stun event on %s"), *GetName());
+}
+
+void AAO_AICharacterBase::TestStunEnd()
+{
+	if (!AbilitySystemComponent)
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("TestStunEnd: AbilitySystemComponent is null on %s"), *GetName());
+		return;
+	}
+
+	// 기절 Ability 태그로 취소 (프로젝트 내 다른 코드와 동일한 패턴)
+	FGameplayTagContainer StunAbilityTags;
+	StunAbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Stunned")));
+	
+	AbilitySystemComponent->CancelAbilities(&StunAbilityTags);
+	
+	AO_LOG(LogKSJ, Log, TEXT("TestStunEnd: Cancelled stun ability on %s"), *GetName());
 }
 
 void AAO_AICharacterBase::InitializeAbilitySystem()

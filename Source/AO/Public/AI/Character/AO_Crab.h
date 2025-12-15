@@ -48,8 +48,9 @@ public:
 	bool IsCarryingItem() const;
 
 	// 아이템 드롭 위치 계산 (플레이어들로부터 먼 곳)
+	// ExcludeLocation: 이전에 시도했던 위치 (이 위치 근처는 제외)
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Crab")
-	FVector CalculateItemDropLocation() const;
+	FVector CalculateItemDropLocation(const FVector& ExcludeLocation = FVector::ZeroVector) const;
 
 protected:
 	virtual void BeginPlay() override;

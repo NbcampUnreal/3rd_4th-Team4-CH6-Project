@@ -7,7 +7,6 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Crab_Flee::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -92,12 +91,29 @@ EStateTreeRunStatus FAO_STTask_Crab_Flee::Tick(FStateTreeExecutionContext& Conte
 	{
 		float DistFromThreat = FVector::Dist(Crab->GetActorLocation(), InstanceData.LastThreatLocation);
 		
-		// 시야 내 플레이어가 없고, 안전 거리만큼 멀어졌으면 도주 종료
+		// 시야 내 플레이어가 없고, 안전 거리만큼 멀어졌는지 확인
 		if (!Controller->HasPlayerInSight() && DistFromThreat >= InstanceData.SafeDistance)
 		{
-			Crab->SetFleeMode(false);
-			InstanceData.bIsFleeing = false;
-			return EStateTreeRunStatus::Succeeded;
+			// 추가 확인: 현재 위치에서 가장 가까운 위협이 여전히 멀리 있는지 확인
+			FVector CurrentThreatLocation = Controller->GetNearestThreatLocation();
+			if (!CurrentThreatLocation.IsZero())
+			{
+				float CurrentDistToThreat = FVector::Dist(Crab->GetActorLocation(), CurrentThreatLocation);
+				// 현재 위협도 안전 거리 이상 떨어져 있어야 종료
+				if (CurrentDistToThreat >= InstanceData.SafeDistance)
+				{
+					Crab->SetFleeMode(false);
+					InstanceData.bIsFleeing = false;
+					return EStateTreeRunStatus::Succeeded;
+				}
+			}
+			else
+			{
+				// 위협이 없으면 종료
+				Crab->SetFleeMode(false);
+				InstanceData.bIsFleeing = false;
+				return EStateTreeRunStatus::Succeeded;
+			}
 		}
 	}
 

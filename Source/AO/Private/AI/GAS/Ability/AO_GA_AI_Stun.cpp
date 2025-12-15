@@ -96,9 +96,14 @@ void UAO_GA_AI_Stun::ActivateAbility(
 
 			MontageTask->ReadyForActivation();
 		}
+		else
+		{
+			AO_LOG(LogKSJ, Warning, TEXT("AI Stun: Failed to create MontageTask"));
+		}
 	}
 	else
 	{
+		AO_LOG(LogKSJ, Warning, TEXT("AI Stun: StunMontage is null, using timer instead"));
 		// 모션이 없으면 타이머로 기절 종료 - DefaultStunDuration 후 자동 해제
 		UWorld* World = GetWorld();
 		if (ensure(World))

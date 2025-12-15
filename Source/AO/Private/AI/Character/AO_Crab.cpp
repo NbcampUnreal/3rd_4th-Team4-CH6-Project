@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NavigationSystem.h"
 #include "AO_Log.h"
+#include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
 
@@ -83,7 +84,7 @@ bool AAO_Crab::IsCarryingItem() const
 	return ItemCarryComponent && ItemCarryComponent->IsCarryingItem();
 }
 
-FVector AAO_Crab::CalculateItemDropLocation() const
+FVector AAO_Crab::CalculateItemDropLocation(const FVector& ExcludeLocation) const
 {
 	// 아이템을 들고 있지 않으면 현재 위치 반환
 	if (!IsCarryingItem())
@@ -100,11 +101,10 @@ FVector AAO_Crab::CalculateItemDropLocation() const
 
 	if (UAO_AISubsystem* Subsystem = World->GetSubsystem<UAO_AISubsystem>())
 	{
-		// 캐시된 플레이어 위치 사용 (아이템 줍을 때 기록)
-		// 추가로 현재 시야 내 플레이어 위치도 고려
+		// 1. 캐시된 플레이어 위치 (아이템 줍을 때 기록)
 		TArray<FVector> PlayerLocations = CachedPlayerLocationsOnPickup;
 
-		// 현재 시야 내 플레이어 위치 추가 (우선순위 높음)
+		// 2. 현재 시야 내 플레이어 위치 (우선순위 높음)
 		if (AAO_CrabController* CrabController = Cast<AAO_CrabController>(GetController()))
 		{
 			TArray<AAO_PlayerCharacter*> PlayersInSight = CrabController->GetPlayersInSight();
@@ -116,6 +116,27 @@ FVector AAO_Crab::CalculateItemDropLocation() const
 					PlayerLocations.Add(Player->GetActorLocation());
 					PlayerLocations.Add(Player->GetActorLocation());
 				}
+			}
+		}
+
+		// 3. Memory에 저장된 최근 플레이어 위치 (피해야 할 위치 - 별도 관리)
+		TArray<FVector> RecentThreatLocations; // 최근에 플레이어를 본 위치 (회피 우선순위 높음)
+		if (UAO_AIMemoryComponent* Memory = GetMemoryComponent())
+		{
+			// 최근 30초 이내에 플레이어를 본 위치들 (더 강력하게 회피)
+			RecentThreatLocations = Memory->GetRecentLostLocations(30.f);
+			
+			// 소리로 감지된 위치도 위협으로 간주
+			FVector HeardLocation = Memory->GetLastHeardLocation();
+			if (!HeardLocation.IsZero())
+			{
+				RecentThreatLocations.Add(HeardLocation);
+			}
+			
+			// 일반 PlayerLocations에도 추가 (거리 계산용)
+			for (const FVector& Loc : RecentThreatLocations)
+			{
+				PlayerLocations.Add(Loc);
 			}
 		}
 
@@ -132,19 +153,70 @@ FVector AAO_Crab::CalculateItemDropLocation() const
 			return GetActorLocation();
 		}
 
-		FVector BestLocation = GetActorLocation();
+		FVector BestLocation = FVector::ZeroVector; // 기본값을 ZeroVector로 변경 (실패 감지용)
 		float BestMinDistance = 0.f;
 
-		const int32 NumSamples = 16;
+		// 랜덤 시작 오프셋 추가 (매번 다른 순서로 샘플링하여 다른 결과 유도)
+		const int32 NumSamples = 32;
+		const int32 RandomOffset = FMath::RandRange(0, NumSamples - 1);
+		
+		// 제외할 위치와의 최소 거리
+		const float ExcludeRadius = 800.f;
+		
 		for (int32 i = 0; i < NumSamples; ++i)
 		{
-			const float Angle = (2.f * PI * i) / NumSamples;
+			// 랜덤 오프셋을 적용하여 매번 다른 순서로 탐색
+			const int32 ShuffledIndex = (i + RandomOffset) % NumSamples;
+			const float Angle = (2.f * PI * ShuffledIndex) / NumSamples;
 			const FVector SampleDir = FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f);
 			const FVector SamplePoint = GetActorLocation() + SampleDir * ItemDropSearchRadius;
 
 			FNavLocation NavLocation;
 			if (NavSys->ProjectPointToNavigation(SamplePoint, NavLocation))
 			{
+				// 0차 필터링: 이전에 시도했던 위치(ExcludeLocation) 근처는 제외
+				if (!ExcludeLocation.IsZero() && FVector::Dist(NavLocation.Location, ExcludeLocation) < ExcludeRadius)
+				{
+					continue; // 이전에 실패한 위치 근처는 스킵
+				}
+				
+				// 1차 필터링: 최근 위협 위치(플레이어를 본 곳) 반경 1500 이내는 완전히 제외
+				bool bIsTooCloseToRecentThreat = false;
+				const float RecentThreatAvoidanceRadius = 1500.f; // 최근 위협에 대한 더 큰 회피 반경
+				
+				for (const FVector& ThreatLoc : RecentThreatLocations)
+				{
+					if (FVector::Dist(NavLocation.Location, ThreatLoc) < RecentThreatAvoidanceRadius)
+					{
+						bIsTooCloseToRecentThreat = true;
+						break;
+					}
+				}
+				
+				if (bIsTooCloseToRecentThreat)
+				{
+					continue; // 최근 위협 위치 근처는 아예 고려하지 않음
+				}
+
+				// 2차 필터링: 일반 플레이어 위치 반경 1000 이내는 제외
+				bool bIsTooCloseToPlayer = false;
+				const float MinSafeDistance = 1000.f;
+
+				for (const FVector& PlayerLoc : PlayerLocations)
+				{
+					if (FVector::Dist(NavLocation.Location, PlayerLoc) < MinSafeDistance)
+					{
+						bIsTooCloseToPlayer = true;
+						break;
+					}
+				}
+
+				// 위험한 위치면 점수 계산조차 하지 않고 스킵
+				if (bIsTooCloseToPlayer)
+				{
+					continue;
+				}
+
 				// 이 위치에서 가장 가까운 플레이어까지의 거리 계산
 				float MinDistToPlayer = FLT_MAX;
 				for (const FVector& PlayerLoc : PlayerLocations)
@@ -161,7 +233,14 @@ FVector AAO_Crab::CalculateItemDropLocation() const
 			}
 		}
 
-		return BestLocation;
+		// 유효한 위치를 찾았으면 반환, 못찾았으면 현재 위치 반환
+		if (!BestLocation.IsZero())
+		{
+			return BestLocation;
+		}
+		
+		AO_LOG(LogKSJ, Warning, TEXT("Crab: Could not find safe drop location, using current location"));
+		return GetActorLocation();
 	}
 
 	return GetActorLocation();

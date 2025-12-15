@@ -44,6 +44,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Memory")
 	UAO_AIMemoryComponent* GetMemoryComponent() const { return MemoryComponent; }
 
+	// 테스트용: 기절 트리거 (에디터/블루프린트에서 호출 가능)
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "AO|AI|Debug")
+	void TestStun();
+
+	// 테스트용: 기절 해제 (에디터/블루프린트에서 호출 가능)
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "AO|AI|Debug")
+	void TestStunEnd();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
