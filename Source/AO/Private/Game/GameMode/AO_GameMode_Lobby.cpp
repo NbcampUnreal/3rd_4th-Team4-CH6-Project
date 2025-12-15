@@ -216,14 +216,6 @@ bool AAO_GameMode_Lobby::IsEveryoneReadyExceptHost() const
 		return false;
 	}
 
-	const int32 TotalPlayers = GameState->PlayerArray.Num();
-
-	// 최소 2명 이상 있어야 시작 가능
-	if (TotalPlayers <= 1)
-	{
-		return false;
-	}
-
 	AController* Host = GetHostController();
 	if (!Host)
 	{
