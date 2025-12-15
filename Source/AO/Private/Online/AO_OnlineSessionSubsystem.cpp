@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Online/AO_OnlineSessionSubsystem.h"
+
+#include "LoadingScreenManager.h"
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
@@ -122,6 +124,41 @@ IOnlineVoicePtr UAO_OnlineSessionSubsystem::GetOnlineVoiceInterface() const
 	return nullptr;
 }
 
+void UAO_OnlineSessionSubsystem::SetSessionInGame(const bool bInGame)
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: Session interface invalid"));
+		return;
+	}
+
+	FOnlineSessionSettings* Settings = Session->GetSessionSettings(NAME_GameSession);
+	if (!Settings)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: Session settings not found"));
+		return;
+	}
+
+	Settings->Set(
+		AO_SessionKeys::KEY_IN_GAME,
+		bInGame,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+	
+	Settings->bAllowJoinInProgress = !bInGame;
+	Settings->bAllowJoinViaPresence = !bInGame;
+
+	if (!Session->UpdateSession(NAME_GameSession, *Settings))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: UpdateSession failed (bInGame=%d)"), static_cast<int32>(bInGame));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("SetSessionInGame: Updated (bInGame=%d)"), static_cast<int32>(bInGame));
+	}
+}
+
 // JM NOTE : 이렇게 Depth 가 깊어지는 경우 Early Return 방식을 쓰면 코드가 조금 더 깔끔해집니다
 bool UAO_OnlineSessionSubsystem::IsLocalHost() const
 {
@@ -177,8 +214,15 @@ void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
 	AO_LOG(LogJSH, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
 		static_cast<int32>(FailureType), *ErrorString);
 
-	// 연결 끊어지면 보이스 채팅 중지
+	// JM : 연결 끊어지면 보이스 채팅 중지
 	StopVoiceChat();
+
+	// JM : 연결이 끊어지면 로딩화면을 네트워크 실패 (혹은 메인메뉴) 로딩화면으로 설정
+	ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
+	if (AO_ENSURE(LSM, TEXT("LSM is Not Valid")))
+	{
+		LSM->PendingMapName = TEXT("NetworkFailure");
+	}
 
 	// 세션 정리: 이후 조인/호스트 재시도 꼬임 방지
 	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
@@ -294,7 +338,7 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.Set(KEY_SERVER_NAME, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_PASSWORD_MD5, ToMD5(Password), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-
+	Settings.Set(KEY_IN_GAME, false, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(SEARCH_LOBBIES, true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 	if (CreateHandle.IsValid())
@@ -814,6 +858,18 @@ FString UAO_OnlineSessionSubsystem::GetServerNameByIndex(int32 Index) const
 	FString Name;
 	LastSearchResults[Index].Session.SessionSettings.Get(KEY_SERVER_NAME, Name);
 	return Name;
+}
+
+bool UAO_OnlineSessionSubsystem::IsInGameByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return false;
+	}
+
+	bool bInGame = false;
+	LastSearchResults[Index].Session.SessionSettings.Get(KEY_IN_GAME, bInGame);
+	return bInGame;
 }
 
 bool UAO_OnlineSessionSubsystem::IsPasswordRequiredByIndex(int32 Index) const
