@@ -106,6 +106,10 @@ void UAO_PlayerCharacter_AttributeSet::HandleStaminaLockout(const struct FGamepl
 		if (!ASC->HasMatchingGameplayTag(LockoutTag))
 		{
 			ASC->AddLooseGameplayTag(LockoutTag);
+			
+			FGameplayTagContainer SprintTag;
+			SprintTag.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Sprint")));
+			ASC->CancelAbilities(&SprintTag);
 		}
 	}
 	else if (ASC->HasMatchingGameplayTag(LockoutTag) && NewStamina >= Threshold)

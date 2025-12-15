@@ -55,8 +55,6 @@ protected:
 		bool bWasCancelled) override;
 	
 private:
-	void OnStaminaChanged(const FOnAttributeChangeData& Data);
-
 	UPROPERTY()
 	TObjectPtr<AAO_PlayerCharacter> Character = nullptr;
 	UPROPERTY()
