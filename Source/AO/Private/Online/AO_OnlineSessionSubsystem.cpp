@@ -143,6 +143,9 @@ void UAO_OnlineSessionSubsystem::SetSessionInGame(const bool bInGame)
 		bInGame,
 		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
 	);
+	
+	Settings->bAllowJoinInProgress = !bInGame;
+	Settings->bAllowJoinViaPresence = !bInGame;
 
 	if (!Session->UpdateSession(NAME_GameSession, *Settings))
 	{
