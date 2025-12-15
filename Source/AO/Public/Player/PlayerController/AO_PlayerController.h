@@ -16,6 +16,9 @@ class AO_API AAO_PlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+
+public:
 	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
 	
 protected:

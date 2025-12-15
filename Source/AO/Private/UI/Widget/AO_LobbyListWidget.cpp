@@ -297,6 +297,12 @@ void UAO_LobbyListWidget::RebuildFilter()
 			FilteredIndices.Reserve(Count);
 			for(int32 i = 0; i < Count; ++i)
 			{
+				// 스테이지 진행중 방 숨김
+				if (Sub->IsInGameByIndex(i))
+				{
+					continue;
+				}
+
 				FilteredIndices.Add(i);
 			}
 		}
@@ -305,6 +311,12 @@ void UAO_LobbyListWidget::RebuildFilter()
 			const FString Query = CurrentSearch.ToLower();
 			for(int32 i = 0; i < Count; ++i)
 			{
+				// 스테이지 진행중 방 숨김
+				if (Sub->IsInGameByIndex(i))
+				{
+					continue;
+				}
+
 				const FString Name = Sub->GetServerNameByIndex(i).ToLower();
 				if(Name.Contains(Query))
 				{
@@ -431,6 +443,20 @@ void UAO_LobbyListWidget::HandleJoin(int32 Index, bool bNeedsPassword)
 {
 	AO_LOG(LogJSH, Log, TEXT("HandleJoin: Index=%d, NeedsPassword=%d"),
 		Index, static_cast<int32>(bNeedsPassword));
+	
+	if (UAO_OnlineSessionSubsystem* Sub = GetSub())
+	{
+		if (Sub->IsInGameByIndex(Index))
+		{
+			AO_LOG(LogJSH, Warning, TEXT("HandleJoin: Blocked join - session already in game (Index=%d)"), Index);
+			return;
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HandleJoin: Sub is null, cannot validate InGame"));
+		return;
+	}
 
 	if(!bNeedsPassword)
 	{
