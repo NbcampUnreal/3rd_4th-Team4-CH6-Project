@@ -4,6 +4,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AO_Log.h"
 #include "EnhancedInputComponent.h"
+#include "MotionWarpingComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/Character.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
@@ -27,14 +28,10 @@ void UAO_InteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AActor* Owner = GetOwner();
-	if (!Owner)
-	{
-		AO_LOG(LogHSJ, Error, TEXT("Owner is null"));
-		return;
-	}
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in BeginPlay"));
 
-	UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent();
+	TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent();
 	if (!ASC)
 	{
 		AO_LOG(LogHSJ, Error, TEXT("ASC not found on owner"));
@@ -48,9 +45,9 @@ void UAO_InteractionComponent::BeginPlay()
 	}
 
 	// 로컬 플레이어만 UI 초기화
-	if (APawn* Pawn = Cast<APawn>(Owner))
+	if (TObjectPtr<APawn> Pawn = Cast<APawn>(Owner))
 	{
-		if (APlayerController* PC = Cast<APlayerController>(Pawn->GetController()))
+		if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(Pawn->GetController()))
 		{
 			if (PC->IsLocalController())
 			{
@@ -67,7 +64,7 @@ void UAO_InteractionComponent::SetupInputBinding(UInputComponent* PlayerInputCom
 		return;
 	}
 
-	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	if (TObjectPtr<UEnhancedInputComponent> EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &UAO_InteractionComponent::OnInteractPressed);
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Completed, this, &UAO_InteractionComponent::OnInteractReleased);
@@ -84,7 +81,7 @@ void UAO_InteractionComponent::ServerTriggerInteract_Implementation(AActor* Targ
 	bIsHoldingInteract = true;
 	
 	// GameplayEvent로 Execute 어빌리티 트리거
-	if (UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent())
+	if (TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent())
 	{
 		FGameplayEventData Payload;
 		Payload.EventTag = AO_InteractionTags::Ability_Action_AbilityInteract_Execute;
@@ -129,7 +126,7 @@ void UAO_InteractionComponent::InitializeInteractionUI(APlayerController* PC)
 
 void UAO_InteractionComponent::GiveDefaultAbilities()
 {
-	UAbilitySystemComponent* ASC = GetOwnerAbilitySystemComponent();
+	TObjectPtr<UAbilitySystemComponent> ASC = GetOwnerAbilitySystemComponent();
 	if (!ASC || !GetOwner()->HasAuthority())
 	{
 		return;
@@ -164,20 +161,34 @@ void UAO_InteractionComponent::OnInteractReleased()
 	ServerNotifyInteractReleased();
 }
 
-void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(UAnimMontage* MontageToPlay)
+void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(
+	UAnimMontage* MontageToPlay, 
+	FTransform WarpTransform, 
+	FName WarpName)
 {
 	if (!MontageToPlay)
 	{
 		return;
 	}
 
-	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	TObjectPtr<ACharacter> Character = Cast<ACharacter>(GetOwner());
 	if (!Character)
 	{
 		return;
 	}
 
-	if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+	// 모션 워핑 설정 (모든 클라이언트에서 실행)
+	if (!WarpName.IsNone())
+	{
+		TObjectPtr<UMotionWarpingComponent> MWC = Character->FindComponentByClass<UMotionWarpingComponent>();
+		if (MWC)
+		{
+			MWC->AddOrUpdateWarpTargetFromLocation(WarpName,WarpTransform.GetLocation());
+		}
+	}
+
+	// 몽타주 재생
+	if (TObjectPtr<UAnimInstance> AnimInstance = Character->GetMesh()->GetAnimInstance())
 	{
 		AnimInstance->Montage_Play(MontageToPlay);
 	}
@@ -185,7 +196,7 @@ void UAO_InteractionComponent::MulticastPlayInteractionMontage_Implementation(UA
 
 UAbilitySystemComponent* UAO_InteractionComponent::GetOwnerAbilitySystemComponent() const
 {
-	if (AActor* Owner = GetOwner())
+	if (TObjectPtr<AActor> Owner = GetOwner())
 	{
 		return UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Owner);
 	}

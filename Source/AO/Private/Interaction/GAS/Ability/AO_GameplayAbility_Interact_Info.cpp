@@ -14,7 +14,7 @@ bool UAO_GameplayAbility_Interact_Info::InitializeAbility(AActor* TargetActor)
 	// 그렇지 않으면 InteractableComponent 컴포넌트가 있는지 찾기
 	if (!TargetInteractable)
 	{
-		if (UAO_InteractableComponent* InteractableComp = TargetActor->FindComponentByClass<UAO_InteractableComponent>())
+		if (TObjectPtr<UAO_InteractableComponent> InteractableComp = TargetActor->FindComponentByClass<UAO_InteractableComponent>())
 		{
 			TargetInteractable = TScriptInterface<IAO_Interface_Interactable>(InteractableComp);
 		}

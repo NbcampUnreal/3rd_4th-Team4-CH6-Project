@@ -41,16 +41,15 @@ void UGA_Interact_PuzzleElement::ActivateAbility(
 		return;
 	}
 
-	AAO_PuzzleElement* PuzzleElement = Cast<AAO_PuzzleElement>(const_cast<AActor*>(TriggerEventData->Target.Get()));
+	TObjectPtr<AAO_PuzzleElement> PuzzleElement = Cast<AAO_PuzzleElement>(const_cast<AActor*>(TriggerEventData->Target.Get()));
 	if (!PuzzleElement)
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("Target is not PuzzleElement"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
 	// PuzzleElement의 상호작용 로직 실행
-	AActor* Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
+	TObjectPtr<AActor> Instigator = const_cast<AActor*>(TriggerEventData->Instigator.Get());
 	PuzzleElement->OnInteractionSuccess(Instigator);
 	
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);

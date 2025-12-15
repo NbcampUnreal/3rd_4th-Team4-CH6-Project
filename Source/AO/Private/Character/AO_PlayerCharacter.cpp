@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/Traversal/AO_TraversalComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -21,6 +22,8 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
+#include "MuCO/CustomizableSkeletalComponent.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -69,6 +72,26 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
+	//세훈: Customizable Object Instance
+	BaseSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BaseSkeletalMesh"));
+	BaseSkeletalMesh->SetupAttachment(GetMesh());
+	
+	BodySkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodySkeletalMesh"));
+	BodySkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	BodyComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("BodyComponent"));
+	BodyComponent->SetupAttachment(BodySkeletalMesh);
+	BodyComponent->SetComponentName(FName("Body"));
+	BodyComponent->SetIsReplicated(true);
+	
+	HeadSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadSkeletalMesh"));
+	HeadSkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	HeadComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("HeadComponent"));
+	HeadComponent->SetupAttachment(HeadSkeletalMesh);
+	HeadComponent->SetComponentName(FName("Head"));
+	HeadComponent->SetIsReplicated(true);
+
+	CustomizingComponent = CreateDefaultSubobject<UAO_CustomizingComponent>(TEXT("CustomizingComponent"));
+	CustomizingComponent->SetIsReplicated(true);
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -91,6 +114,18 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 		return true;
 	}
 	return false;
+}
+
+void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
+{
+	if (Camera)
+	{
+		Camera->GetCameraView(DeltaTime, OutResult);
+	}
+	else
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+	}
 }
 
 bool AAO_PlayerCharacter::IsInspecting() const
@@ -128,31 +163,11 @@ void AAO_PlayerCharacter::BeginPlay()
 
 		if (HasAuthority())
 		{
-			for (const auto& DefaultAbility : DefaultAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(DefaultAbility);
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
+			BindGameplayAbilities();
 
-			for (const auto& InputAbility : InputAbilities)
-			{
-				FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
-				AbilitySpec.InputID = InputAbility.Key;
-				AbilitySystemComponent->GiveAbility(AbilitySpec);
-			}
-
-			for (const auto& DefaultEffect : DefaultEffects)
-			{
-				FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-				Context.AddInstigator(this, this);
-
-				FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
-
-				if (Handle.IsValid())
-				{
-					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
-				}
-			}
+			BindGameplayEffects();
+			
+			BindAttributeDelegates();
 		}
 	}
 
@@ -429,6 +444,74 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		PitchMultiplier);
 }
 
+void AAO_PlayerCharacter::BindGameplayAbilities()
+{
+	for (const auto& DefaultAbility : DefaultAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(DefaultAbility);
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+ 
+    for (const auto& InputAbility : InputAbilities)
+    {
+    	FGameplayAbilitySpec AbilitySpec(InputAbility.Value);
+    	AbilitySpec.InputID = InputAbility.Key;
+    	AbilitySystemComponent->GiveAbility(AbilitySpec);
+    }
+}
+
+void AAO_PlayerCharacter::BindGameplayEffects()
+{
+	for (const auto& DefaultEffect : DefaultEffects)
+	{
+		FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+		Context.AddInstigator(this, this);
+
+		FGameplayEffectSpecHandle Handle = AbilitySystemComponent->MakeOutgoingSpec(DefaultEffect, 1.f, Context);
+
+		if (Handle.IsValid())
+		{
+			AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Handle.Data.Get());
+		}
+	}
+}
+
+void AAO_PlayerCharacter::BindAttributeDelegates()
+{
+	if (!AttributeSet)
+	{
+		return;
+	}
+
+	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+}
+
+void AAO_PlayerCharacter::HandlePlayerDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
+	checkf(PS, TEXT("PlayerState is null"));
+
+	if (!PS->GetIsAlive())
+	{
+		return;
+	}
+
+	PS->SetIsAlive(false);
+
+	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
+	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+
+	if (Cast<APlayerController>(GetController()))
+	{
+		ClientRPC_HandleDeathView();
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -450,6 +533,19 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
+{
+	if (SpringArm)
+	{
+		SpringArm->TargetArmLength += DeathCameraArmOffset;
+	}
+
+	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
+	{
+		PC->ShowDeathUI();
 	}
 }
 
@@ -495,4 +591,36 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
+{
+	return BodyComponent;
+}
+
+TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetHeadComponent() const
+{
+	return HeadComponent;
+}
+
+void AAO_PlayerCharacter::ChangeCharacterMesh_Implementation(UCustomizableObjectInstance* ChangeMesh)
+{
+	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
+	*GetName(), HasAuthority(), IsLocallyControlled());
+	
+	if (IsValid(ChangeMesh))
+	{
+		BodyComponent->SetCustomizableObjectInstance(ChangeMesh);
+		HeadComponent->SetCustomizableObjectInstance(ChangeMesh);
+		BodyComponent->UpdateSkeletalMeshAsync();
+		HeadComponent->UpdateSkeletalMeshAsync();
+	
+		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *ChangeMesh->GetName());
+		
+	}
+	else
+	{
+		AO_LOG(LogKSH, Error, TEXT("ChangeCharacterMesh: ChangeMesh is invalid"));
+	}
+	CustomizingComponent->PrintCustomizableObjectInstanceMap();
 }

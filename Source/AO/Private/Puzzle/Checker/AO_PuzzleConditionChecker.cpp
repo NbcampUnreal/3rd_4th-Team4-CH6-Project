@@ -170,12 +170,12 @@ bool AAO_PuzzleConditionChecker::CheckSingleCondition(const FPuzzleCondition& Co
 
 void AAO_PuzzleConditionChecker::CompletePuzzle()
 {
-	if (!HasAuthority()) return;
+	checkf(HasAuthority(), TEXT("CompletePuzzle called on client"));
 
 	// 일회성이고 이미 완료됨
 	if (bOneTimeCompletion && bIsCompleted) return;
 
-	AO_LOG_NET(LogHSJ, Warning, TEXT("Puzzle completed!"));
+	//AO_LOG_NET(LogHSJ, Warning, TEXT("Puzzle completed!"));
 
 	bIsCompleted = true;
 	ClearAllTimers();
@@ -183,21 +183,28 @@ void AAO_PuzzleConditionChecker::CompletePuzzle()
 	// CompletionTag를 TargetActors에 부여
 	if (CompletionTag.IsValid())
 	{
-		for (AActor* TargetActor : TargetActors)
+		for (TObjectPtr<AActor> TargetActor : TargetActors)
 		{
-			if (!TargetActor) continue;
+			if (!TargetActor)
+			{
+				continue;
+			}
 
 			IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(TargetActor);
-			if (ASI && ASI->GetAbilitySystemComponent())
+			if (!ASI)
 			{
-				UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+				continue;
+			}
+
+			TObjectPtr<UAbilitySystemComponent> ASC = ASI->GetAbilitySystemComponent();
+			if (ASC)
+			{
 				ASC->AddLooseGameplayTag(CompletionTag);
-				
 				//AO_LOG_NET(LogHSJ, Log, TEXT("Added completion tag to: %s"), *TargetActor->GetName());
 			}
 		}
 	}
-
+	
 	// 퍼즐 성공 시 요소들 비활성화
 	if (bDisableElementsOnComplete)
 	{
@@ -262,11 +269,22 @@ void AAO_PuzzleConditionChecker::StartConditionTimer(int32 ConditionIndex, float
 {
 	if (Duration <= 0.0f) return;
 
+	TObjectPtr<UWorld> World = GetWorld();
+	checkf(World, TEXT("World is null in StartConditionTimer"));
+
 	FTimerHandle& TimerHandle = ConditionTimerHandles.FindOrAdd(ConditionIndex);
-	
-	GetWorld()->GetTimerManager().SetTimer(
+    
+	TWeakObjectPtr<AAO_PuzzleConditionChecker> WeakThis(this);
+    
+	World->GetTimerManager().SetTimer(
 		TimerHandle,
-		FTimerDelegate::CreateUObject(this, &AAO_PuzzleConditionChecker::OnConditionTimeout, ConditionIndex),
+		FTimerDelegate::CreateWeakLambda(this, [WeakThis, ConditionIndex]()
+		{
+			if (TObjectPtr<AAO_PuzzleConditionChecker> StrongThis = WeakThis.Get())
+			{
+				StrongThis->OnConditionTimeout(ConditionIndex);
+			}
+		}),
 		Duration,
 		false
 	);
@@ -298,15 +316,18 @@ void AAO_PuzzleConditionChecker::MulticastPuzzleFailed_Implementation()
 
 void AAO_PuzzleConditionChecker::ClearAllTimers()
 {
-	if (UWorld* World = GetWorld())
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!World)
 	{
-		TArray<int32> TimerKeys;
-		ConditionTimerHandles.GetKeys(TimerKeys);
+		return;
+	}
+	
+	TArray<int32> TimerKeys;
+	ConditionTimerHandles.GetKeys(TimerKeys);
 		
-		for (int32 Key : TimerKeys)
-		{
-			World->GetTimerManager().ClearTimer(ConditionTimerHandles[Key]);
-		}
+	for (int32 Key : TimerKeys)
+	{
+		World->GetTimerManager().ClearTimer(ConditionTimerHandles[Key]);
 	}
 	
 	ConditionTimerHandles.Empty();
@@ -316,7 +337,7 @@ void AAO_PuzzleConditionChecker::ResetLinkedElements()
 {
 	if (!HasAuthority()) return;
 
-	for (AActor* Actor : LinkedElements)
+	for (TObjectPtr<AActor> Actor : LinkedElements)
 	{
 		if (Actor)
 		{
@@ -332,7 +353,7 @@ void AAO_PuzzleConditionChecker::DisableLinkedElements()
 {
 	if (!HasAuthority()) return;
 
-	for (AActor* Actor : LinkedElements)
+	for (TObjectPtr<AActor> Actor : LinkedElements)
 	{
 		if (Actor)
 		{
@@ -348,7 +369,7 @@ void AAO_PuzzleConditionChecker::EnableLinkedElements()
 {
 	if (!HasAuthority()) return;
 
-	for (AActor* Actor : LinkedElements)
+	for (TObjectPtr<AActor> Actor : LinkedElements)
 	{
 		if (Actor)
 		{

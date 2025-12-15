@@ -45,6 +45,13 @@ void AAO_MasterItem::BeginPlay()
 	}
 }
 
+void AAO_MasterItem::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	ApplyItemData();
+}
+
 void AAO_MasterItem::OnRep_ItemID()
 {
 	if (MeshComponent)

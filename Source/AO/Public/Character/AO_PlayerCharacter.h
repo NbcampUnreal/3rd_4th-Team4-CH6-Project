@@ -12,6 +12,8 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_CustomizingComponent;
+class UCustomizableObjectInstance;
 class UAO_PlayerCharacter_AttributeSet;
 class UGameplayAbility;
 class UGameplayEffect;
@@ -27,6 +29,7 @@ class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
 class UAO_FoleyAudioBank;
+class UCustomizableSkeletalComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -64,6 +67,8 @@ protected:
 	virtual UAO_FoleyAudioBank* GetFoleyAudioBank_Implementation() const override;
 	virtual bool CanPlayFootstepSounds_Implementation() const override;
 
+	virtual void CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult) override;
+
 public:
 	FORCEINLINE TObjectPtr<USpringArmComponent> GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
@@ -88,6 +93,7 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
@@ -103,6 +109,20 @@ protected:
 	TMap<int32, TSubclassOf<UGameplayAbility>> InputAbilities;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+
+	//세훈: Customizable Object Instance
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> BaseSkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> BodySkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<USkeletalMeshComponent> HeadSkeletalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UCustomizableSkeletalComponent> BodyComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UCustomizableSkeletalComponent> HeadComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_CustomizingComponent> CustomizingComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -130,12 +150,16 @@ public:
 	FVector LandVelocity;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "PlayerCharacter|Movement")
 	bool bJustLanded = false;
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacter|Movement")
+	float DeathCameraArmOffset = 300.f;
 
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetInputState(bool bWantsToSprint, bool bWantsToWalk);
 	UFUNCTION()
 	void OnRep_Gait();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_HandleDeathView();
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
@@ -158,6 +182,13 @@ private:
 	// Foley
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
+	// Bind GAS
+	void BindGameplayAbilities();
+	void BindGameplayEffects();
+	void BindAttributeDelegates();
+
+	// Death
+	void HandlePlayerDeath();
 	
 // JM : VOIPTalker Register to PS
 private:
@@ -168,4 +199,11 @@ private:
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void UseInvenrotyItem();
 	void DropInvenrotyItem();
+
+//세훈: Customizable Object Instance
+public:
+	UFUNCTION(NetMulticast, Reliable)
+	void ChangeCharacterMesh(UCustomizableObjectInstance* ChangeMesh);
+	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const;
+	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const;
 };

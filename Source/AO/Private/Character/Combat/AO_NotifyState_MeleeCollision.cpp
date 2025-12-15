@@ -19,6 +19,12 @@ void UAO_NotifyState_MeleeCollision::NotifyBegin(USkeletalMeshComponent* MeshCom
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
+	
 	checkf(MeshComp, TEXT("MeshComp is invalid"));
 	
 	OwningActor = MeshComp->GetOwner();
@@ -38,6 +44,12 @@ void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp,
 	const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
+
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
 
 	if (!MeshComp || !OwningActor.IsValid() || !DamageEffectClass)
 	{

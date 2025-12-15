@@ -407,6 +407,11 @@ bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<TObjectPtr<UObject>
 	EvaluateObjects = UChooserFunctionLibrary::EvaluateObjectChooserBaseMulti(
 		 EvaluationContext, ResultInstances, UAnimMontage::StaticClass());
 
+	if (EvaluateObjects.Num() == 0)
+	{
+		return false;
+	}
+	
 	TraversalResult.ActionType = OutputData.ActionType;
 	if (TraversalResult.ActionType == ETraversalActionType::None)
 	{
@@ -436,7 +441,11 @@ bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<TObjectPtr<UObj
 		MotionMatchResult);
 
 	TObjectPtr<UAnimMontage> SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
-	checkf(SelectedAnim, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
+	if (!SelectedAnim)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
+		return false;
+	}
 
 	if (DrawDebugLevel >= 1)
 	{
@@ -446,6 +455,8 @@ bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<TObjectPtr<UObj
 	TraversalResult.ChosenMontage = SelectedAnim;
 	TraversalResult.StartTime = MotionMatchResult.SelectedTime;
 	TraversalResult.PlayRate = MotionMatchResult.WantedPlayRate;
+
+	AO_LOG(LogKH, Display, TEXT("Start Time : %f"), TraversalResult.StartTime);
 
 	return true;
 }
