@@ -8,7 +8,6 @@
 
 void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::Initialize(Collection);
 
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
@@ -21,26 +20,20 @@ void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 		return;
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::Deinitialize()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::Deinitialize();
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 UAO_GameUserSettings* UAO_GameSettingsManager::GetGameUserSettings()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	AO_LOG(LogJM, Log, TEXT("End"));
 	return UAO_GameUserSettings::GetGameUserSettings();
 }
 
 void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->ApplySettings(false);	// 변경된 설정 값 반영
@@ -52,12 +45,10 @@ void UAO_GameSettingsManager::ApplyAndSaveAllSettings()
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::ApplyResolutionSettings()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->ApplyResolutionSettings(false);
@@ -70,12 +61,10 @@ void UAO_GameSettingsManager::ApplyResolutionSettings()
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->ApplyNonResolutionSettings();
@@ -89,19 +78,16 @@ void UAO_GameSettingsManager::ApplyNonResolutionSettings()
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetToDefaults()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetToDefaults();
 		if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
 		{
 			DelegateManager->OnResetAllSettings.Broadcast();
-			AO_LOG(LogJM, Log, TEXT("Broadcast DelegateManager::OnResetAllSettings"));
 		}
 		else{
 			AO_ENSURE(false, TEXT("Failed to Get DelegateManager"));
@@ -111,12 +97,10 @@ void UAO_GameSettingsManager::SetToDefaults()
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetOverallScalabilityLevel(static_cast<int32>(NewLevel));
@@ -125,12 +109,10 @@ void UAO_GameSettingsManager::SetOverallScalability(EScalabilityLevel NewLevel)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetAntiAliasingScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetAntiAliasingQuality(static_cast<int32>(NewLevel));
@@ -139,12 +121,10 @@ void UAO_GameSettingsManager::SetAntiAliasingScalability(EScalabilityLevel NewLe
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetViewDistanceScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetViewDistanceQuality(static_cast<int32>(NewLevel));
@@ -153,12 +133,10 @@ void UAO_GameSettingsManager::SetViewDistanceScalability(EScalabilityLevel NewLe
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetShadowScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetShadowQuality(static_cast<int32>(NewLevel));
@@ -167,12 +145,10 @@ void UAO_GameSettingsManager::SetShadowScalability(EScalabilityLevel NewLevel)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetGlobalIlluminationScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetGlobalIlluminationQuality(static_cast<int32>(NewLevel));
@@ -181,12 +157,10 @@ void UAO_GameSettingsManager::SetGlobalIlluminationScalability(EScalabilityLevel
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetReflectionScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetReflectionQuality(static_cast<int32>(NewLevel));
@@ -195,12 +169,10 @@ void UAO_GameSettingsManager::SetReflectionScalability(EScalabilityLevel NewLeve
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetTextureScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetTextureQuality(static_cast<int32>(NewLevel));
@@ -209,12 +181,10 @@ void UAO_GameSettingsManager::SetTextureScalability(EScalabilityLevel NewLevel)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetVisualEffectScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetVisualEffectQuality(static_cast<int32>(NewLevel));
@@ -223,12 +193,10 @@ void UAO_GameSettingsManager::SetVisualEffectScalability(EScalabilityLevel NewLe
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetPostProcessingScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetPostProcessingQuality(static_cast<int32>(NewLevel));
@@ -237,12 +205,10 @@ void UAO_GameSettingsManager::SetPostProcessingScalability(EScalabilityLevel New
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetFoliageScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetFoliageQuality(static_cast<int32>(NewLevel));
@@ -251,12 +217,10 @@ void UAO_GameSettingsManager::SetFoliageScalability(EScalabilityLevel NewLevel)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetShadingQuality(static_cast<int32>(NewLevel));
@@ -265,12 +229,10 @@ void UAO_GameSettingsManager::SetShadingScalability(EScalabilityLevel NewLevel)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetVSyncEnabled(bEnable);
@@ -279,12 +241,10 @@ void UAO_GameSettingsManager::SetVSyncEnabled(bool bEnable)
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMode)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		Settings->SetFullscreenMode(InFullscreenMode);
@@ -293,12 +253,10 @@ void UAO_GameSettingsManager::SetFullscreenMode(EWindowMode::Type InFullscreenMo
 	{
 		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void UAO_GameSettingsManager::SetScreenResolutionByIndex(int32 ResolutionIndex)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	const TArray<FResolutionInfo>& ResolutionInfoList = GetResolutionInfoList();
 
 	if (ResolutionInfoList.IsValidIndex(ResolutionIndex))
@@ -316,19 +274,15 @@ void UAO_GameSettingsManager::SetScreenResolutionByIndex(int32 ResolutionIndex)
 	{
 		AO_ENSURE(false, TEXT("Resolution Index is InValid"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 TArray<FResolutionInfo> UAO_GameSettingsManager::GetSupportedScreenResolutionInfos() const
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
-	AO_LOG(LogJM, Log, TEXT("End"));
 	return GetResolutionInfoList();
 }
 
 int32 UAO_GameSettingsManager::GetCurrentResolutionIndex() const
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	const FIntPoint CurrentResolution = GetAppliedScreenResolution();
 	const TArray<FResolutionInfo>& ResolutionList = GetResolutionInfoList();
 
@@ -347,10 +301,8 @@ int32 UAO_GameSettingsManager::GetCurrentResolutionIndex() const
 
 FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
-		AO_LOG(LogJM, Log, TEXT("End"));
 		return Settings->GetScreenResolution();
 	}
 	AO_ENSURE(false, TEXT("Failed to Get GameUserSettings. (Apply Default Settings 1920x1080"));
@@ -359,7 +311,6 @@ FIntPoint UAO_GameSettingsManager::GetAppliedScreenResolution() const
 
 float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
  	{
  		switch (AudioType)
@@ -388,7 +339,6 @@ float UAO_GameSettingsManager::GetAudioVolume(const EAudioType AudioType) const
 
 void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const float NewVolume)
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
 		const float ClampedVolume = FMath::Clamp(NewVolume, 0.0f, 1.0f);
@@ -421,7 +371,6 @@ void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const f
 	{
 		AO_ENSURE(false, TEXT("Failed go Get Game User Settings"));
 	}
-	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 const TArray<FResolutionInfo>& UAO_GameSettingsManager::GetResolutionInfoList()

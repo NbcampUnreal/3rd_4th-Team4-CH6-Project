@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Online/AO_OnlineSessionSubsystem.h"
+
+#include "LoadingScreenManager.h"
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
@@ -212,8 +214,15 @@ void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
 	AO_LOG(LogJSH, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
 		static_cast<int32>(FailureType), *ErrorString);
 
-	// 연결 끊어지면 보이스 채팅 중지
+	// JM : 연결 끊어지면 보이스 채팅 중지
 	StopVoiceChat();
+
+	// JM : 연결이 끊어지면 로딩화면을 네트워크 실패 (혹은 메인메뉴) 로딩화면으로 설정
+	ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
+	if (AO_ENSURE(LSM, TEXT("LSM is Not Valid")))
+	{
+		LSM->PendingMapName = TEXT("NetworkFailure");
+	}
 
 	// 세션 정리: 이후 조인/호스트 재시도 꼬임 방지
 	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
