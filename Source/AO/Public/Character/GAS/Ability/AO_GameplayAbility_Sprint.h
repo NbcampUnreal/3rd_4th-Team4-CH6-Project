@@ -53,14 +53,9 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		bool bReplicateEndAbility,
 		bool bWasCancelled) override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sprint")
-	float RequiredStaminaPercent = 0.25f;
 	
 private:
 	void OnStaminaChanged(const FOnAttributeChangeData& Data);
-
-	bool bIsStaminaLockOut = false;
 
 	UPROPERTY()
 	TObjectPtr<AAO_PlayerCharacter> Character = nullptr;

@@ -61,6 +61,8 @@ void UAO_PlayerCharacter_AttributeSet::PostGameplayEffectExecute(const struct FG
 	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
+
+		HandleStaminaLockout(Data);
 	}
 }
 
@@ -82,4 +84,32 @@ void UAO_PlayerCharacter_AttributeSet::OnRep_Stamina(const FGameplayAttributeDat
 void UAO_PlayerCharacter_AttributeSet::OnRep_MaxStamina(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAO_PlayerCharacter_AttributeSet, MaxStamina, OldValue);
+}
+
+void UAO_PlayerCharacter_AttributeSet::HandleStaminaLockout(const struct FGameplayEffectModCallbackData& Data)
+{
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponentChecked();
+
+	AActor* OwningActor = GetOwningActor();
+	if (!OwningActor || !OwningActor->HasAuthority())
+	{
+		return;
+	}
+
+	const float NewStamina = GetStamina();
+
+	const float Threshold = GetMaxStamina() * StaminaLockoutPercent;
+	const FGameplayTag LockoutTag = FGameplayTag::RequestGameplayTag(FName("Status.Lockout.Stamina"));
+	
+	if (NewStamina <= 0.f)
+	{
+		if (!ASC->HasMatchingGameplayTag(LockoutTag))
+		{
+			ASC->AddLooseGameplayTag(LockoutTag);
+		}
+	}
+	else if (ASC->HasMatchingGameplayTag(LockoutTag) && NewStamina >= Threshold)
+	{
+		ASC->RemoveLooseGameplayTag(LockoutTag);
+	}
 }

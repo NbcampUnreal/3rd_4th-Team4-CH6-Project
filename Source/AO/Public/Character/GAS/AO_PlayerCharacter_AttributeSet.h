@@ -41,6 +41,9 @@ public:
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, MaxStamina)
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lockout")
+	float StaminaLockoutPercent = 0.25f;
+	
 	FOnPlayerDeath OnPlayerDeath;
 
 protected:
@@ -52,4 +55,7 @@ protected:
 	void OnRep_Stamina(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_MaxStamina(const FGameplayAttributeData& OldValue);
+
+private:
+	void HandleStaminaLockout(const struct FGameplayEffectModCallbackData& Data);
 };

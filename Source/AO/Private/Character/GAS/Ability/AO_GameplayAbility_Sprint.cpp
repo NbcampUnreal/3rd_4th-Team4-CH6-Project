@@ -14,6 +14,9 @@ UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 	SetAssetTags(SprintTag);
 
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Lockout.Stamina")));
 }
 
 void UAO_GameplayAbility_Sprint::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo,
@@ -62,20 +65,6 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 
 	const UAO_PlayerCharacter_AttributeSet* AttributeSet = Character->GetAbilitySystemComponent()->GetSet<UAO_PlayerCharacter_AttributeSet>();
 	checkf(AttributeSet, TEXT("Failed to get AttributeSet"));
-	
-	const float CurrentStamina = AttributeSet->GetStamina();
-	const float MaxStamina = AttributeSet->GetMaxStamina();
-
-	if (bIsStaminaLockOut && CurrentStamina < MaxStamina * RequiredStaminaPercent)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	if (bIsStaminaLockOut && CurrentStamina >= MaxStamina * RequiredStaminaPercent)
-	{
-		bIsStaminaLockOut = false;
-	}
 	
 	Character->StartSprint_GAS(true);
 
@@ -131,8 +120,6 @@ void UAO_GameplayAbility_Sprint::OnStaminaChanged(const FOnAttributeChangeData& 
 {
 	if (Data.NewValue <= 0.f)
 	{
-		bIsStaminaLockOut = true;
-		
-		K2_EndAbility();
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 }
