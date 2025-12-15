@@ -110,8 +110,9 @@ bool AAO_BaseInteractable::CanInteraction_BP_Implementation(const FAO_Interactio
 	{
 		return false;
 	}
-	// 로컬 비활성화 체크
-	if (!bLocalInteractionEnabled)
+
+	TObjectPtr<AActor> RequestingActor = InteractionQuery.RequestingAvatar.Get();
+	if (IsPlayerDisabled(RequestingActor))
 	{
 		return false;
 	}
@@ -158,6 +159,7 @@ void AAO_BaseInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, bIsActivated);
 	DOREPLIFETIME(ThisClass, bInteractionEnabled);
+	DOREPLIFETIME(AAO_BaseInteractable, DisabledPlayers);
 }
 
 void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
@@ -193,6 +195,35 @@ void AAO_BaseInteractable::TriggerLinkedReactions(bool bActivate)
 			ReactionActor->DeactivateReaction();
 		}
 	}
+}
+
+void AAO_BaseInteractable::AddDisabledPlayer(AActor* Player)
+{
+	if (!HasAuthority()) 
+	{
+		return;
+	}
+	
+	if (!Player) return;
+	
+	DisabledPlayers.AddUnique(Player);
+}
+
+void AAO_BaseInteractable::RemoveDisabledPlayer(AActor* Player)
+{
+	if (!HasAuthority()) 
+	{
+		return;
+	}
+	
+	if (!Player) return;
+	
+	DisabledPlayers.Remove(Player);
+}
+
+bool AAO_BaseInteractable::IsPlayerDisabled(AActor* Player) const
+{
+	return Player && DisabledPlayers.Contains(Player);
 }
 
 FTransform AAO_BaseInteractable::GetInteractionTransform() const

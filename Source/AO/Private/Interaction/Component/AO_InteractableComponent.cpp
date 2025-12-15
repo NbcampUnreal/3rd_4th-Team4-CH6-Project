@@ -3,6 +3,7 @@
 #include "Interaction/Base/GA_Interact_Base.h"
 #include "Components/MeshComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Physics/AO_CollisionChannels.h"
 
 UAO_InteractableComponent::UAO_InteractableComponent()
 {
@@ -41,11 +42,6 @@ bool UAO_InteractableComponent::CanInteraction(const FAO_InteractionQuery& Inter
     {
         return false;
     }
-
-	if (!bLocalInteractionEnabled)
-	{
-		return false;
-	}
 
     return true;
 }
@@ -117,4 +113,25 @@ FTransform UAO_InteractableComponent::GetInteractionTransform() const
 	}
     
 	return Owner->GetActorTransform();
+}
+
+void UAO_InteractableComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	SetupMeshCollisions();
+}
+
+void UAO_InteractableComponent::SetupMeshCollisions()
+{
+	TArray<UMeshComponent*> Meshes;
+	GetMeshComponents(Meshes);
+    
+	for (TObjectPtr<UMeshComponent> Mesh : Meshes)
+	{
+		if (Mesh)
+		{
+			Mesh->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Block);
+		}
+	}
 }

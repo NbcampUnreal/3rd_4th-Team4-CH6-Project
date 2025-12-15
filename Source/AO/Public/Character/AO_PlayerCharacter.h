@@ -28,6 +28,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
+class UAO_InteractableComponent;
 class UAO_FoleyAudioBank;
 class UCustomizableSkeletalComponent;
 
@@ -93,6 +94,8 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InteractableComponent> InteractableComponent;
 	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;

@@ -16,6 +16,7 @@
 #include "Character/Traversal/AO_TraversalComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -67,6 +68,8 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
+	InteractableComponent = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
+	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
@@ -505,6 +508,11 @@ void AAO_PlayerCharacter::HandlePlayerDeath()
 
 	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+
+	if (InteractableComponent)
+	{
+		InteractableComponent->bInteractionEnabled = true;
+	}
 
 	if (Cast<APlayerController>(GetController()))
 	{

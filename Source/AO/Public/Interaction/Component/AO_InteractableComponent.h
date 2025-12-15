@@ -55,9 +55,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="Interaction")
     bool bInteractionEnabled = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
-	bool bLocalInteractionEnabled = true;
-
     // 상호작용 성공 시 호출되는 이벤트
     UPROPERTY(BlueprintAssignable, Category="Interaction")
     FOnInteractableSuccess OnInteractionSuccess;
@@ -67,4 +64,10 @@ public:
     
 	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
 	FName WarpTargetName = "InteractionPoint";
+
+protected:
+	virtual void BeginPlay() override;
+
+private:
+	void SetupMeshCollisions();
 };
