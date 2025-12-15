@@ -12,8 +12,9 @@ UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
-
-	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
+	
+	const FGameplayTagContainer TraversalTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
+	SetAssetTags(TraversalTag);
 
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
 }

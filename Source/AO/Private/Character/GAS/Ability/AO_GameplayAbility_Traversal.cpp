@@ -26,6 +26,7 @@ UAO_GameplayAbility_Traversal::UAO_GameplayAbility_Traversal()
 	SetAssetTags(TraversalTag);
 
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Traversal")));
+	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Debuff.NoStaminaChange")));
 }
 
 void UAO_GameplayAbility_Traversal::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo,
@@ -143,6 +144,21 @@ void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle 
 			
 			CharacterMovement->bIgnoreClientMovementErrorChecksAndCorrection = false;
 			CharacterMovement->bServerAcceptClientAuthoritativePosition = false;
+		}
+
+		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+		checkf(ASC, TEXT("Failed to get AbilitySystemComponent"));
+		
+		checkf(PostSprintNoRegenEffectClass, TEXT("PostSprintNoRegenEffectClass is null"));
+		if (ActorInfo->IsNetAuthority())
+		{
+			const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+			const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoRegenEffectClass, 1.f, Context);
+
+			if (SpecHandle.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			}
 		}
 
 		Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

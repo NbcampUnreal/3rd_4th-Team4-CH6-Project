@@ -53,6 +53,10 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		bool bReplicateEndAbility,
 		bool bWasCancelled) override;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Sprint|Stamina")
+	TSubclassOf<UGameplayEffect> PostSprintNoRegenEffectClass;
 	
 private:
 	UPROPERTY()
