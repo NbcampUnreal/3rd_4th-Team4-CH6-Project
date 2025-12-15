@@ -201,7 +201,7 @@ void ULoadingScreenManager::UnregisterLoadingProcessor(TScriptInterface<ILoading
 
 void ULoadingScreenManager::HandlePreLoadMap(const FWorldContext& WorldContext, const FString& MapName)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("JM : HandlePreLoadMap(%s)"), *MapName), false);	// JM : 디버그용
+	// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("JM : HandlePreLoadMap(%s)"), *MapName), false);	// JM : 디버그용
 	if (WorldContext.OwningGameInstance == GetGameInstance())
 	{
 		bCurrentlyInLoadMap = true;
@@ -522,6 +522,7 @@ void ULoadingScreenManager::ShowLoadingScreen()
 		}
 		else
 		{
+			// UE_LOG(LogLoadingScreen, Error, TEXT("Failed to load the loading screen widget %s, falling back to placeholder."), *Settings->LoadingScreenWidget.ToString());
 			UE_LOG(LogLoadingScreen, Error, TEXT("Failed to load the loading screen widget %s, falling back to placeholder."), *WidgetPath.ToString());
 			LoadingScreenWidget = SNew(SThrobber);
 		}

@@ -182,7 +182,7 @@ void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
 	// JM : 연결 끊어지면 보이스 채팅 중지
 	StopVoiceChat();
 
-	// JM : 연결이 끊어지면 로딩화면을 메인메뉴 로딩화면으로 설정
+	// JM : 연결이 끊어지면 로딩화면을 네트워크 실패 (혹은 메인메뉴) 로딩화면으로 설정
 	ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
 	if (AO_ENSURE(LSM, TEXT("LSM is Not Valid")))
 	{

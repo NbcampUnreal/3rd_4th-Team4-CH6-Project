@@ -13,8 +13,8 @@ UCommonLoadingScreenSettings::UCommonLoadingScreenSettings()
 
 FSoftClassPath UCommonLoadingScreenSettings::GetLoadingScreenWidgetPathForMap(const FString& MapName) const
 {
-	if (!ensureMsgf(!MapName.IsEmpty(), TEXT("Map Name is Empty")))
-	// if (MapName.IsEmpty())
+	// if (!ensureMsgf(!MapName.IsEmpty(), TEXT("Map Name is Empty"))) // JM : ensure할 필요는 없을듯
+	if (MapName.IsEmpty())
 	{
 		return DefaultLoadingScreenWidget;	// 맵 이름이 비어있으면 기본값 반환
 	}
