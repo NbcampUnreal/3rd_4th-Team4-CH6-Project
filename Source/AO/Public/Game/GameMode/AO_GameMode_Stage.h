@@ -47,6 +47,9 @@ protected:
 	/* 공용 부활 횟수와 생존자 수를 보고 전멸 여부 평가 */
 	void EvaluateTeamWipe();
 	
+	/* 방 진행정보 초기화 */
+	void RollbackSessionInGameFlag();
+
 protected:
 	/* 스테이지 종료 여부 */
 	bool bStageEnded = false;
