@@ -13,7 +13,7 @@
 #include "MotionWarpingComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
-#include "Character/Traversal/AO_TraversalComponent.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
@@ -99,10 +99,28 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void AAO_PlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	checkf(AbilitySystemComponent, TEXT("AbilitySystemComponent is null"));
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	
+	if (HasAuthority())
+	{
+		InitializeAttributes();
+		
+		BindGameplayAbilities();
+		
+		BindGameplayEffects();
+		
+		BindAttributeDelegates();
+	}
+}
+
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
-	ensure(DefaultFoleyAudioBank);
-	
 	return DefaultFoleyAudioBank;
 }
 
@@ -157,19 +175,7 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-		if (HasAuthority())
-		{
-			BindGameplayAbilities();
-
-			BindGameplayEffects();
-			
-			BindAttributeDelegates();
-		}
-	}
+	BindSpeedAttributeDelegates();
 
 	if (IsLocallyControlled())
 	{
@@ -233,11 +239,6 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		InventoryComp->SetupInputBinding(PlayerInputComponent);
 	}
-}
-
-void AAO_PlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -354,7 +355,8 @@ void AAO_PlayerCharacter::StartJump()
 		return;
 	}
 
-	Jump();
+	AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Jump"))));
 }
 
 void AAO_PlayerCharacter::TriggerJump()
@@ -393,7 +395,9 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleCrouch()
 {
-	if (!GetCharacterMovement() || GetCharacterMovement()->IsFalling())
+	checkf(GetCharacterMovement(), TEXT("CharacterMovement is null"));
+	
+	if (GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}
@@ -429,11 +433,7 @@ void AAO_PlayerCharacter::SetCurrentGait()
 void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier, float PitchMultiplier)
 {
 	TObjectPtr<UAO_FoleyAudioBank> FoleyAudioBank = Execute_GetFoleyAudioBank(this);
-	if (!FoleyAudioBank)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get FoleyAudioBank"));
-		return;
-	}
+	checkf(FoleyAudioBank, TEXT("FoleyAudioBank is null"));
 
 	UGameplayStatics::PlaySoundAtLocation(
 		this,
@@ -442,6 +442,27 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		FRotator::ZeroRotator,
 		VolumeMultiplier,
 		PitchMultiplier);
+}
+
+void AAO_PlayerCharacter::InitializeAttributes()
+{
+	checkf(AttributeDefaults, TEXT("AttributeDefaults is null"));
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AttributeSet->InitHealth(AttributeDefaults->Health);
+	AttributeSet->InitMaxHealth(AttributeDefaults->MaxHealth);
+
+	AttributeSet->InitStamina(AttributeDefaults->Stamina);
+	AttributeSet->InitMaxStamina(AttributeDefaults->MaxStamina);
+
+	AttributeSet->InitWalkSpeed(AttributeDefaults->WalkSpeed);
+	AttributeSet->InitRunSpeed(AttributeDefaults->RunSpeed);
+	AttributeSet->InitSprintSpeed(AttributeDefaults->SprintSpeed);
 }
 
 void AAO_PlayerCharacter::BindGameplayAbilities()
@@ -478,12 +499,22 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
-	if (!AttributeSet)
-	{
-		return;
-	}
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
 
 	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+}
+
+void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
+{
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	// 이동속도 변경 시 발생할 델리게이트 연결
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetWalkSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetRunSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetSprintSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
 }
 
 void AAO_PlayerCharacter::HandlePlayerDeath()
@@ -512,6 +543,16 @@ void AAO_PlayerCharacter::HandlePlayerDeath()
 	}
 }
 
+void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	SetCurrentGait();
+	
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -525,13 +566,13 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	switch (Gait)
 	{
 	case EGait::Walk:
-		GetCharacterMovement()->MaxWalkSpeed = 200.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetWalkSpeed();
 		break;
 	case EGait::Run:
-		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetRunSpeed();
 		break;
 	case EGait::Sprint:
-		GetCharacterMovement()->MaxWalkSpeed = 800.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetSprintSpeed();
 		break;
 	}
 }

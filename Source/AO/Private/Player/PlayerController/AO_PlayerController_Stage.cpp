@@ -142,10 +142,16 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 	for (int32 i = 0; i < NumPlayers; ++i)
 	{
 		TObjectPtr<AAO_PlayerState> PS = Cast<AAO_PlayerState>(Players[i]);
-		if (!PS || PS == MyPS || !PS->GetIsAlive()) continue;
+		if (!PS || PS == MyPS || !PS->GetIsAlive())
+		{
+			continue;
+		}
 
 		TObjectPtr<APawn> OtherPawn = PS->GetPawn();
-		if (!OtherPawn) continue;
+		if (!OtherPawn)
+		{
+			continue;
+		}
 
 		NewIndex = i;
 		NewTarget = OtherPawn;
@@ -177,7 +183,9 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 
 void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APawn* NewTarget, int32 NewPlayerIndex)
 {
-	if (!IsLocalController() || !NewTarget)
+	checkf(NewTarget, TEXT("NewTarget is null"));
+	
+	if (!IsLocalController())
 	{
 		return;
 	}
@@ -225,8 +233,11 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 		TObjectPtr<AAO_PlayerState> PS = Cast<AAO_PlayerState>(Players[i]);
 		if (!PS || PS == MyPS
 			|| !PS->GetIsAlive()
-			|| !PS->GetPawn()) continue;
-
+			|| !PS->GetPawn())
+		{
+			continue;
+		}
+			
 		AliveIndices.Add(i);
 	}
 
@@ -260,11 +271,17 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 		}
 
 		TObjectPtr<AAO_PlayerState> PS = Cast<AAO_PlayerState>(Players[RawIndex]);
-		if (!PS || PS == MyPS || !PS->GetIsAlive()) continue;
+		if (!PS || PS == MyPS || !PS->GetIsAlive())
+		{
+			continue;
+		}
 
 		TObjectPtr<APawn> OtherPawn = PS->GetPawn();
-		if (!OtherPawn) continue;
-
+		if (!OtherPawn)
+		{
+			continue;
+		}
+		
 		OutNewIndex = RawIndex;
 		return OtherPawn;
 	}
