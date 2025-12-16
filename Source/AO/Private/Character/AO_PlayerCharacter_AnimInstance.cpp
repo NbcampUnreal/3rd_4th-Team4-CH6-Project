@@ -55,7 +55,12 @@ void UAO_PlayerCharacter_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UAO_PlayerCharacter_AnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
-	ensure(Proxy.Owner && Proxy.Character && Proxy.MovementComponent);
+
+	// 로딩 중에는 null 반환됨
+	if(!Proxy.Owner || !Proxy.Character || !Proxy.MovementComponent)
+	{
+		return;
+	}
 
 	UpdateTrajectory(DeltaSeconds);
 	UpdateEssentialValues();

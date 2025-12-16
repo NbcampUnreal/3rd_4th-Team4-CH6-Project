@@ -166,6 +166,8 @@ void AAO_PlayerCharacter::BeginPlay()
 			
 			BindAttributeDelegates();
 		}
+
+		BindSpeedAttributeDelegates();
 	}
 
 	if (IsLocallyControlled())
@@ -479,6 +481,19 @@ void AAO_PlayerCharacter::BindAttributeDelegates()
 	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
 }
 
+void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
+{
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	// 이동속도 변경 시 발생할 델리게이트 연결
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetWalkSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetRunSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetSprintSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+}
+
 void AAO_PlayerCharacter::HandlePlayerDeath()
 {
 	if (!HasAuthority())
@@ -505,6 +520,16 @@ void AAO_PlayerCharacter::HandlePlayerDeath()
 	}
 }
 
+void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	SetCurrentGait();
+	
+	if (!HasAuthority())
+	{
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -518,13 +543,13 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	switch (Gait)
 	{
 	case EGait::Walk:
-		GetCharacterMovement()->MaxWalkSpeed = 200.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetWalkSpeed();
 		break;
 	case EGait::Run:
-		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetRunSpeed();
 		break;
 	case EGait::Sprint:
-		GetCharacterMovement()->MaxWalkSpeed = 800.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetSprintSpeed();
 		break;
 	}
 }

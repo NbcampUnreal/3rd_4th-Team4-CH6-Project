@@ -37,9 +37,24 @@ public:
 	FGameplayAttributeData Stamina;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, Stamina)
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxStamina, Category = "Health")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxStamina, Category = "Stamina")
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, MaxStamina)
+
+	// 걷기 이동속도
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_WalkSpeed, Category = "Speed|Walk")
+	FGameplayAttributeData WalkSpeed;
+	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, WalkSpeed)
+	
+	// 뛰기(Run) 이동속도
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_RunSpeed, Category = "Speed|Run")
+	FGameplayAttributeData RunSpeed;
+	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, RunSpeed)
+	
+	// 스프린트(Sprint) 이동속도
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_SprintSpeed, Category = "Speed|Sprint")
+	FGameplayAttributeData SprintSpeed;
+	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, SprintSpeed)
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lockout")
 	float StaminaLockoutPercent = 0.25f;
@@ -55,6 +70,12 @@ protected:
 	void OnRep_Stamina(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_MaxStamina(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_WalkSpeed(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_RunSpeed(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_SprintSpeed(const FGameplayAttributeData& OldValue);
 
 private:
 	void HandleStaminaLockout(const struct FGameplayEffectModCallbackData& Data);

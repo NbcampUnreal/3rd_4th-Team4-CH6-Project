@@ -186,9 +186,13 @@ private:
 	void BindGameplayAbilities();
 	void BindGameplayEffects();
 	void BindAttributeDelegates();
+	void BindSpeedAttributeDelegates();
 
 	// Death
 	void HandlePlayerDeath();
+
+	// Speed
+	void OnSpeedChanged(const FOnAttributeChangeData& Data);
 	
 // JM : VOIPTalker Register to PS
 private:
