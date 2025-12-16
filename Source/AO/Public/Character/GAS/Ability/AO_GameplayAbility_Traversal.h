@@ -51,7 +51,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal|Debug")
 	float DrawDebugDuration = 5.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Traversal|Stamina")
-	TSubclassOf<UGameplayEffect> PostSprintNoRegenEffectClass;
+	TSubclassOf<UGameplayEffect> PostSprintNoChangeEffectClass;
 	
 private:
 	FTraversalCheckResult TraversalResult;

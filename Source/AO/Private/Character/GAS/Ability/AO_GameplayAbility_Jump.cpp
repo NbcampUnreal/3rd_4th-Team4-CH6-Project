@@ -74,11 +74,11 @@ void UAO_GameplayAbility_Jump::EndAbility(const FGameplayAbilitySpecHandle Handl
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	checkf(ASC, TEXT("Failed to get AbilitySystemComponent"));
 
-	checkf(PostSprintNoRegenEffectClass, TEXT("PostSprintNoRegenEffectClass is null"));
+	checkf(PostSprintNoChangeEffectClass, TEXT("PostSprintNoChangeEffectClass is null"));
 	if (ActorInfo->IsNetAuthority())
 	{
 		const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-		const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoRegenEffectClass, 1.f, Context);
+		const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoChangeEffectClass, 1.f, Context);
 
 		if (SpecHandle.IsValid())
 		{

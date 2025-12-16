@@ -37,7 +37,7 @@ protected:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Traversal|Stamina")
-	TSubclassOf<UGameplayEffect> PostSprintNoRegenEffectClass;
+	TSubclassOf<UGameplayEffect> PostSprintNoChangeEffectClass;
 
 	UFUNCTION()
 	void OnMovementModeChanged(EMovementMode NewMovementMode);
