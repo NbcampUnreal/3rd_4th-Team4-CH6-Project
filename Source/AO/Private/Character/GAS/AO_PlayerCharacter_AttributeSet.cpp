@@ -7,13 +7,6 @@
 
 UAO_PlayerCharacter_AttributeSet::UAO_PlayerCharacter_AttributeSet()
 {
-	InitHealth(100.f);
-	InitMaxHealth(100.f);
-	InitStamina(100.f);
-	InitMaxStamina(100.f);
-	InitWalkSpeed(200.f);
-	InitRunSpeed(500.f);
-	InitSprintSpeed(800.f);
 }
 
 void UAO_PlayerCharacter_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -42,17 +42,17 @@ public:
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, MaxStamina)
 
 	// 걷기 이동속도
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_WalkSpeed, Category = "Speed|Walk")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_WalkSpeed, Category = "Speed")
 	FGameplayAttributeData WalkSpeed;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, WalkSpeed)
 	
 	// 뛰기(Run) 이동속도
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_RunSpeed, Category = "Speed|Run")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_RunSpeed, Category = "Speed")
 	FGameplayAttributeData RunSpeed;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, RunSpeed)
 	
 	// 스프린트(Sprint) 이동속도
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_SprintSpeed, Category = "Speed|Sprint")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_SprintSpeed, Category = "Speed")
 	FGameplayAttributeData SprintSpeed;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_PlayerCharacter_AttributeSet, SprintSpeed)
 

@@ -472,8 +472,6 @@ bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<TObjectPtr<UObj
 	TraversalResult.StartTime = MotionMatchResult.SelectedTime;
 	TraversalResult.PlayRate = MotionMatchResult.WantedPlayRate;
 
-	AO_LOG(LogKH, Display, TEXT("Start Time : %f"), TraversalResult.StartTime);
-
 	return true;
 }
 

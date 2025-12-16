@@ -13,6 +13,7 @@
 #include "MotionWarpingComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
@@ -98,6 +99,26 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void AAO_PlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	checkf(AbilitySystemComponent, TEXT("AbilitySystemComponent is null"));
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	
+	if (HasAuthority())
+	{
+		InitializeAttributes();
+		
+		BindGameplayAbilities();
+		
+		BindGameplayEffects();
+		
+		BindAttributeDelegates();
+	}
+}
+
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
 	return DefaultFoleyAudioBank;
@@ -154,21 +175,7 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-		if (HasAuthority())
-		{
-			BindGameplayAbilities();
-
-			BindGameplayEffects();
-			
-			BindAttributeDelegates();
-		}
-
-		BindSpeedAttributeDelegates();
-	}
+	BindSpeedAttributeDelegates();
 
 	if (IsLocallyControlled())
 	{
@@ -232,11 +239,6 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		InventoryComp->SetupInputBinding(PlayerInputComponent);
 	}
-}
-
-void AAO_PlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -440,6 +442,27 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		FRotator::ZeroRotator,
 		VolumeMultiplier,
 		PitchMultiplier);
+}
+
+void AAO_PlayerCharacter::InitializeAttributes()
+{
+	checkf(AttributeDefaults, TEXT("AttributeDefaults is null"));
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AttributeSet->InitHealth(AttributeDefaults->Health);
+	AttributeSet->InitMaxHealth(AttributeDefaults->MaxHealth);
+
+	AttributeSet->InitStamina(AttributeDefaults->Stamina);
+	AttributeSet->InitMaxStamina(AttributeDefaults->MaxStamina);
+
+	AttributeSet->InitWalkSpeed(AttributeDefaults->WalkSpeed);
+	AttributeSet->InitRunSpeed(AttributeDefaults->RunSpeed);
+	AttributeSet->InitSprintSpeed(AttributeDefaults->SprintSpeed);
 }
 
 void AAO_PlayerCharacter::BindGameplayAbilities()
