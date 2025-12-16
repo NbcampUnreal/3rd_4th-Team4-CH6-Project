@@ -177,7 +177,7 @@ private:
 	/* Destroy 후 동작 제어 */
 	bool bPendingReturnToMenu = false; // 호스트: Destroy 완료 후 메인 메뉴 복귀
 
-public:
+/*public:
 	UPROPERTY(BlueprintReadWrite, Category="AO|VoiceChat")
-	bool bIsEnableVoiceChat = true;
+	bool bIsEnableVoiceChat = true;			// JM: 삭제 및 설정정보로 옮길 예정*/
 };

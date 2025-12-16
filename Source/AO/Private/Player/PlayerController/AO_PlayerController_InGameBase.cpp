@@ -46,7 +46,7 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 		AO_LOG(LogJM, Log, TEXT("Create"));
 		CreateSettingsWidgetInstance(20, ESlateVisibility::Hidden);
 		
-		Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
+		// Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }

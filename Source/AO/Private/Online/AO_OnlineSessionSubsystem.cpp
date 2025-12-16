@@ -1005,7 +1005,7 @@ void UAO_OnlineSessionSubsystem::StartVoiceChat()
 	}
 	VoiceInterface->RegisterLocalTalker(0);
 	VoiceInterface->StartNetworkedVoice(0);
-	bIsEnableVoiceChat = true;
+	// bIsEnableVoiceChat = true;
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -1020,12 +1020,12 @@ void UAO_OnlineSessionSubsystem::StopVoiceChat()
 		return;
 	}
 
-	VoiceInterface->ClearVoicePackets();			// 권장사항(추가됨)
 	VoiceInterface->StopNetworkedVoice(0);
+	VoiceInterface->ClearVoicePackets();			// 권장사항(추가됨)
+	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
 	VoiceInterface->RemoveAllRemoteTalkers();	// 이거 추가하니까 크래시 안남
 	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
-	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
-	bIsEnableVoiceChat = false;
+	// bIsEnableVoiceChat = false;
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
