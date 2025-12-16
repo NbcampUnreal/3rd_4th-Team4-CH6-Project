@@ -163,6 +163,10 @@ protected:
 	void OnRep_Gait();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_HandleDeathView();
+
+	// HSJ : InteractableComponent의 상호작용 성공 시 호출될 함수
+	UFUNCTION()
+	void HandleInteractableComponentSuccess(AActor* Interactor);
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;

@@ -174,6 +174,12 @@ void AAO_PlayerCharacter::BeginPlay()
 		}
 	}
 
+	// HSJ : InteractableComponent 델리게이트 바인딩
+	if (HasAuthority() && InteractableComponent)
+	{
+		InteractableComponent->OnInteractionSuccess.AddDynamic(this, &AAO_PlayerCharacter::HandleInteractableComponentSuccess);
+	}
+
 	if (IsLocallyControlled())
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -547,6 +553,20 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = 800.f;
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// HSJ : 상호작용 비활성화
+	if (InteractableComponent)
+	{
+		InteractableComponent->bInteractionEnabled = false;
 	}
 }
 
