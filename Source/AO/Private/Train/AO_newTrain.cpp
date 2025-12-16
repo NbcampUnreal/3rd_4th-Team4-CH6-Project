@@ -1,13 +1,16 @@
 #include "Train/AO_newTrain.h"
 #include "AbilitySystemComponent.h"
-#include "Game/GameMode/AO_GameMode_Stage.h"
+#include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
 #include "Item/invenroty/AO_InventoryComponent.h"
+#include "Train/AO_TrainWorldSubsystem.h"
 
 AAO_newTrain::AAO_newTrain()
 {
 	ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
 	ASC->SetIsReplicated(true);
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+
+	FuelAttributeSet = CreateDefaultSubobject<UAO_Fuel_AttributeSet>(TEXT("FuelAttributeSet"));
 }
 
 void AAO_newTrain::BeginPlay()
@@ -17,25 +20,28 @@ void AAO_newTrain::BeginPlay()
 	if (HasAuthority())
 	{
 		if (!ASC) return;
-
+		ASC->GetGameplayAttributeValueChangeDelegate(
+					UAO_Fuel_AttributeSet::GetFuelAttribute()
+				).AddUObject(this, &AAO_newTrain::OnFuelChange);
+		
 		ASC->InitAbilityActorInfo(this, this);
 
-		if (HasAuthority())
+		if (AddEnergyAbilityClass)
 		{
-			if (AddEnergyAbilityClass)
-			{
-				ASC->GiveAbility(FGameplayAbilitySpec(AddEnergyAbilityClass, 1, 0, this));
-			}
-			if (LeakEnergyAbilityClass)
-			{
-				ASC->GiveAbility(FGameplayAbilitySpec(LeakEnergyAbilityClass, 1, 0, this));
-			}
+			ASC->GiveAbility(FGameplayAbilitySpec(AddEnergyAbilityClass, 1, 0, this));
 		}
+		if (LeakEnergyAbilityClass)
+		{
+			ASC->GiveAbility(FGameplayAbilitySpec(LeakEnergyAbilityClass, 1, 0, this));
+		}
+
+		if (auto* TrainSubsystem = GetWorld()->GetSubsystem<UAO_TrainWorldSubsystem>())
+		{
+			TrainSubsystem->RegisterTrainASC(ASC);
+			UE_LOG(LogTemp, Warning, TEXT("TrainASC Registered"));
+		}
+
 	}
-	
-	ASC->GetGameplayAttributeValueChangeDelegate(
-			UAO_Fuel_AttributeSet::GetFuelAttribute()
-		).AddUObject(this, &AAO_newTrain::OnFuelChange);
 }
 
 UAbilitySystemComponent* AAO_newTrain::GetAbilitySystemComponent() const
@@ -68,8 +74,6 @@ void AAO_newTrain::FuelLeakSkillOut()
 void AAO_newTrain::OnInteractionSuccess(AActor* Interactor)
 {
 	Super::OnInteractionSuccess(Interactor);
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Interaction Success"));
 	
 	if (!HasAuthority() || !ASC) 
 	{
@@ -106,7 +110,7 @@ void AAO_newTrain::OnInteractionSuccess(AActor* Interactor)
 	   &EventData
 	);
 	
-	Inventory->ClearSlot();	
+	Inventory->ClearSlot();
 }
 
 void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
@@ -131,7 +135,6 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 			}
 		}
 	}
-
 	
 	if (Delta > 0.f)
 	{
@@ -141,7 +144,6 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
-	
 
 	OnFuelChangedDelegate.Broadcast(NewFuel);
 }

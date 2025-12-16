@@ -3,8 +3,6 @@
 #include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
-#include "Train/GAS/AO_AddFuel_GameplayAbility.h"
-#include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 
 AAO_Train::AAO_Train()
 {

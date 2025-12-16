@@ -1,4 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// 사용법
+// level에 스폰하고
+// 캐릭터가 선택한 인벤토리에 MasterItem을 가진 채로 상호작용시 연료를 채우고 소모됨.
+
+// 연료 소비 시작 함수 FuelLeakSkillOn()
+// 연료 소비 종료 함수 FuelLeakSkillOff()
 
 #pragma once
 
