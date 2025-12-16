@@ -13,7 +13,6 @@
 #include "MotionWarpingComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
-#include "Character/Traversal/AO_TraversalComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
@@ -101,8 +100,6 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
-	ensure(DefaultFoleyAudioBank);
-	
 	return DefaultFoleyAudioBank;
 }
 
@@ -394,7 +391,9 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleCrouch()
 {
-	if (!GetCharacterMovement() || GetCharacterMovement()->IsFalling())
+	checkf(GetCharacterMovement(), TEXT("CharacterMovement is null"));
+	
+	if (GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}
@@ -430,11 +429,7 @@ void AAO_PlayerCharacter::SetCurrentGait()
 void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier, float PitchMultiplier)
 {
 	TObjectPtr<UAO_FoleyAudioBank> FoleyAudioBank = Execute_GetFoleyAudioBank(this);
-	if (!FoleyAudioBank)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get FoleyAudioBank"));
-		return;
-	}
+	checkf(FoleyAudioBank, TEXT("FoleyAudioBank is null"));
 
 	UGameplayStatics::PlaySoundAtLocation(
 		this,
@@ -479,10 +474,7 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
-	if (!AttributeSet)
-	{
-		return;
-	}
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
 
 	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
 }

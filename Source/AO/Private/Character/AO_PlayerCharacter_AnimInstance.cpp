@@ -12,7 +12,7 @@ void FAOAnimInstanceProxy::InitializeObjects(UAnimInstance* InAnimInstance)
 {
 	FAnimInstanceProxy::InitializeObjects(InAnimInstance);
 
-	if (!InAnimInstance) return;
+	checkf(InAnimInstance, TEXT("InAnimInstance is null"));
 
 	// 프리뷰 월드 방지
 	if (!InAnimInstance->GetWorld() || InAnimInstance->GetWorld()->IsPreviewWorld()) return;
@@ -55,7 +55,7 @@ void UAO_PlayerCharacter_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UAO_PlayerCharacter_AnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
-	if (!Proxy.Owner || !Proxy.Character || !Proxy.MovementComponent) return;
+	ensure(Proxy.Owner && Proxy.Character && Proxy.MovementComponent);
 
 	UpdateTrajectory(DeltaSeconds);
 	UpdateEssentialValues();

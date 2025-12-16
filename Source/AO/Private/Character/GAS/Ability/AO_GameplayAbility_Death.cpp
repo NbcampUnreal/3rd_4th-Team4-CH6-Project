@@ -61,18 +61,5 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 
 	checkf(MontageTask, TEXT("Failed to create MontageTask"));
 
-	MontageTask->OnCompleted.AddDynamic(this, &UAO_GameplayAbility_Death::OnMontageCompleted);
-	MontageTask->OnBlendOut.AddDynamic(this, &UAO_GameplayAbility_Death::OnMontageCompleted);
-	MontageTask->OnCancelled.AddDynamic(this, &UAO_GameplayAbility_Death::OnMontageCancelled);
-	MontageTask->OnInterrupted.AddDynamic(this, &UAO_GameplayAbility_Death::OnMontageCancelled);
-
 	MontageTask->ReadyForActivation();
-}
-
-void UAO_GameplayAbility_Death::OnMontageCompleted()
-{
-}
-
-void UAO_GameplayAbility_Death::OnMontageCancelled()
-{
 }
