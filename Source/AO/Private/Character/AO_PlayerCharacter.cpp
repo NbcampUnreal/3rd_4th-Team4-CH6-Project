@@ -182,6 +182,12 @@ void AAO_PlayerCharacter::BeginPlay()
 			{
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
+
+			// HSJ : Inspection 모드 상태일 때 레벨 전환 시 카메라 움직이지 않는 문제 해결
+			PC->bShowMouseCursor = false;
+			// GameOnly 모드로 설정
+			FInputModeGameOnly InputMode;
+			PC->SetInputMode(InputMode);
 		}
 	}
 

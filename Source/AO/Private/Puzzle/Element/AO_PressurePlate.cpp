@@ -4,6 +4,7 @@
 #include "GameFramework/Pawn.h"
 #include "Item/AO_MasterItem.h"
 #include "Net/UnrealNetwork.h"
+#include "Physics/AO_CollisionChannels.h"
 #include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 
 AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer)
@@ -12,6 +13,8 @@ AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer
     // 압력판은 OneTime 타입 기반 (한번 활성화 후 유지되는 게 아니라 Overlap으로 제어)
     ElementType = EPuzzleElementType::OneTime;
 	AnimationSpeed = 5.0f;
+
+	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Ignore);
 
     OverlapTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapTrigger"));
     OverlapTrigger->SetupAttachment(RootComponent);
@@ -109,6 +112,11 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     	TargetMeshLocation = InitialMeshLocation - FVector(0, 0, PressDepth);
     	StartPlateAnimation();
     	StartProgressTimer();
+
+    	if (ActivateEffect.IsValid())
+    	{
+    		MulticastPlayInteractionEffect(ActivateEffect, GetActorTransform());
+    	}
     }
 }
 
@@ -130,6 +138,11 @@ void AAO_PressurePlate::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, A
     	TargetMeshLocation = InitialMeshLocation;
     	StartPlateAnimation();
     	StartProgressTimer();
+
+    	if (DeactivateEffect.IsValid())
+    	{
+    		MulticastPlayInteractionEffect(DeactivateEffect, GetActorTransform());
+    	}
     }
 }
 

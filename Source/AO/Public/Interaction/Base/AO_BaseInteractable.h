@@ -52,6 +52,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Interaction|State")
 	bool bInteractionEnabled = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects")
+	FAO_InteractionEffectSettings ActivateEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects",
+		meta=(EditCondition="bIsToggleable", EditConditionHides))
+	FAO_InteractionEffectSettings DeactivateEffect;
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
@@ -81,6 +88,9 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category="Interaction")
 	bool IsPlayerDisabled(AActor* Player) const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayInteractionEffect(const FAO_InteractionEffectSettings& EffectSettings, FTransform SpawnTransform);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -126,6 +136,12 @@ protected:
 	TArray<TObjectPtr<AActor>> DisabledPlayers;
 
 private:
+	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+	void SpawnSFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+
+	FTimerHandle VFXSpawnTimerHandle;
+	FTimerHandle SFXSpawnTimerHandle;
+	
 	UPROPERTY()
 	TObjectPtr<UMeshComponent> CachedInteractionMesh;
 };

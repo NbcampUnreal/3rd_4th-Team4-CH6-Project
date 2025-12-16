@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Interaction/Data/AO_InteractionEffectSettings.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
 #include "AO_InteractableComponent.generated.h"
 
@@ -65,9 +66,20 @@ public:
 	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
 	FName WarpTargetName = "InteractionPoint";
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects")
+	FAO_InteractionEffectSettings InteractionEffect;
+
 protected:
 	virtual void BeginPlay() override;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayInteractionEffect(const FAO_InteractionEffectSettings& EffectSettings, FVector Location, FRotator Rotation);
+
 private:
 	void SetupMeshCollisions();
+	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+	void SpawnSFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+
+	FTimerHandle VFXSpawnTimerHandle;
+	FTimerHandle SFXSpawnTimerHandle;
 };

@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Interaction/Actor/AO_WorldInteractable.h"
+#include "Interaction/Data/AO_InteractionEffectSettings.h"
 #include "Puzzle/Interface/AO_Interface_PuzzleElement.h"
 #include "AO_PuzzleElement.generated.h"
 
@@ -73,6 +74,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> InteractableMeshComponent;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects")
+	FAO_InteractionEffectSettings ActivateEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects",
+		meta=(EditCondition="ElementType == EPuzzleElementType::Toggle || ElementType == EPuzzleElementType::HoldToggle", 
+		EditConditionHides))
+	FAO_InteractionEffectSettings DeactivateEffect;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -87,6 +96,9 @@ protected:
 	{ 
 		return InteractableMeshComponent; 
 	}
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayInteractionEffect(const FAO_InteractionEffectSettings& EffectSettings, FTransform SpawnTransform);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction|Puzzle")
 	EPuzzleElementType ElementType = EPuzzleElementType::OneTime;
@@ -131,4 +143,11 @@ protected:
     
 	UPROPERTY(EditAnywhere, Category="Interaction|MotionWarping")
 	FName WarpTargetName = "InteractionPoint";
+
+private:
+	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+	void SpawnSFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+    
+	FTimerHandle VFXSpawnTimerHandle;
+	FTimerHandle SFXSpawnTimerHandle;
 };

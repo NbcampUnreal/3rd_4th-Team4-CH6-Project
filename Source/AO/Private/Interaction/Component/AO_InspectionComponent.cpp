@@ -555,13 +555,11 @@ void UAO_InspectionComponent::OnSpacebarPressed()
 {
 	if (!bIsInspecting)
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Not inspecting, ignoring"));
 		return;
 	}
 
 	if (!CurrentInspectedActor)
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] No inspected actor, ignoring"));
 		return;
 	}
 
