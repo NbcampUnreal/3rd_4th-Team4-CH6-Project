@@ -11,6 +11,9 @@
 
 UAO_CustomizingComponent::UAO_CustomizingComponent()
 {
+	CurrentOptionData.ParameterName = TEXT("");
+	CurrentOptionData.OptionName = TEXT("");
+	CurrentOptionData.OptionIndex = 0;
 }
 
 void UAO_CustomizingComponent::ServerRPC_ChangeCharacter_Implementation(ECharacterMesh MeshType)
@@ -35,22 +38,13 @@ void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 	PrintCustomizableObjectInstanceMap();
 }
 
-void UAO_CustomizingComponent::OnRep_ChangeOption()
+void UAO_CustomizingComponent::ServerRPC_ChangeCustomizingOption_Implementation(FOptionNameAndIndex NewOptionData)
 {
-	if (TObjectPtr<UCustomizableObjectInstance>* InstancePtr = CustomizableObjectInstanceMap.Find(CurrentMeshType))
-	{
-		if (TObjectPtr<UCustomizableObject> CustomizableObject = (*InstancePtr)->GetCustomizableObject())
-		{
-			int ParameterIndex = CustomizableObject->FindParameter(CurrentOptionData.ParameterName);
-			FString SelectedOptionName = CustomizableObject->GetIntParameterAvailableOption(ParameterIndex, CurrentOptionData.OptionIndex);
-			(*InstancePtr)->SetIntParameterSelectedOption(CurrentOptionData.ParameterName, SelectedOptionName, CurrentOptionData.OptionIndex);
-			(*InstancePtr)->UpdateSkeletalMeshAsync();
-			AO_LOG(LogKSH, Log, TEXT("ChangeMesh : %s"), *InstancePtr->Get()->GetName());
-		}
-	}
+	CurrentOptionData = NewOptionData;
+	OnRep_ChangeOption();
 }
 
-UCustomizableObjectInstance* UAO_CustomizingComponent::GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType)
+UCustomizableObjectInstance* UAO_CustomizingComponent::GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const
 {
 	return CustomizableObjectInstanceMap[MeshType];
 }
@@ -58,12 +52,6 @@ UCustomizableObjectInstance* UAO_CustomizingComponent::GetCustomizableObjectInst
 ECharacterMesh UAO_CustomizingComponent::GetCurrentMeshType() const
 {
 	return CurrentMeshType;
-}
-
-void UAO_CustomizingComponent::ServerRPC_ChangeCustomizingOption_Implementation(FOptionNameAndIndex NewOptionData)
-{
-	CurrentOptionData = NewOptionData;
-	OnRep_ChangeOption();
 }
 
 void UAO_CustomizingComponent::PrintCustomizableObjectInstanceMap()
@@ -78,10 +66,10 @@ void UAO_CustomizingComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(GetOwner()))
-	{
-		PlayerCharacter = Character;
-	}
+	AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(GetOwner());
+	checkf(Character, TEXT("Character is invalid"));
+
+	PlayerCharacter = Character;
 
 	for (const TPair<ECharacterMesh, TObjectPtr<UCustomizableObject>>& Pair : CustomizableObjectMap)
 	{
@@ -101,19 +89,36 @@ void UAO_CustomizingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 void UAO_CustomizingComponent::OnRep_MeshType()
 {
-	if (TObjectPtr<UCustomizableObjectInstance>* InstancePtr = CustomizableObjectInstanceMap.Find(CurrentMeshType))
+	TObjectPtr<UCustomizableObjectInstance>* InstancePtr = CustomizableObjectInstanceMap.Find(CurrentMeshType);
+	checkf(InstancePtr, TEXT("InstancePtr is invalid"));
+
+	if (PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance() != *InstancePtr)
 	{
-		if (PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance() != *InstancePtr)
-		{
-			AO_LOG(LogKSH, Log, TEXT("MeshType: %d"), CurrentMeshType);
-			ChangeCharacterMesh(*InstancePtr);
-			AO_LOG(LogKSH, Log, TEXT("Change Character Mesh Success"));
-			AO_LOG(LogKSH, Log, TEXT("CustomizableObjectInstance : %s"), *InstancePtr->Get()->GetName());
-		}
-		else
-		{
-			AO_LOG(LogKSH, Log, TEXT("Already this Character Mesh - "
-							"CurrentMesh : %s, ChangeMesh : %s"), *PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance()->GetName(), *InstancePtr->Get()->GetName());
-		}
+		AO_LOG(LogKSH, Log, TEXT("MeshType: %d"), CurrentMeshType);
+		ChangeCharacterMesh(*InstancePtr);
+		AO_LOG(LogKSH, Log, TEXT("Change Character Mesh Success"));
+		AO_LOG(LogKSH, Log, TEXT("CustomizableObjectInstance : %s"), *InstancePtr->Get()->GetName());
+	}
+	else
+	{
+		AO_LOG(LogKSH, Log, TEXT("Already this Character Mesh - "
+			       "CurrentMesh : %s, ChangeMesh : %s"),
+		       *PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance()->GetName(),
+		       *InstancePtr->Get()->GetName());
+	}
+}
+
+void UAO_CustomizingComponent::OnRep_ChangeOption()
+{
+	TObjectPtr<UCustomizableObjectInstance>* InstancePtr = CustomizableObjectInstanceMap.Find(CurrentMeshType);
+	checkf(InstancePtr, TEXT("InstancePtr is invalid"));
+
+	if (TObjectPtr<UCustomizableObject> CustomizableObject = (*InstancePtr)->GetCustomizableObject())
+	{
+		int ParameterIndex = CustomizableObject->FindParameter(CurrentOptionData.ParameterName);
+		FString SelectedOptionName = CustomizableObject->GetIntParameterAvailableOption(ParameterIndex, CurrentOptionData.OptionIndex);
+		(*InstancePtr)->SetIntParameterSelectedOption(CurrentOptionData.ParameterName, SelectedOptionName, CurrentOptionData.OptionIndex);
+		(*InstancePtr)->UpdateSkeletalMeshAsync();
+		AO_LOG(LogKSH, Log, TEXT("ChangeMesh : %s"), *InstancePtr->Get()->GetName());
 	}
 }

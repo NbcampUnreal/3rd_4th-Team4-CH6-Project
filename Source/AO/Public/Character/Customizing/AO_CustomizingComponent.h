@@ -40,14 +40,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
 	void ServerRPC_ChangeCharacter(ECharacterMesh MeshType);
-	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	UCustomizableObjectInstance* GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType);
-	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	ECharacterMesh GetCurrentMeshType() const;
-
+	
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
 	void ServerRPC_ChangeCustomizingOption(FOptionNameAndIndex NewOptionData);
-
+	
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	UCustomizableObjectInstance* GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	ECharacterMesh GetCurrentMeshType() const;
+	
 	void PrintCustomizableObjectInstanceMap();
 	
 protected:
@@ -62,6 +64,7 @@ private:
 	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter;
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
+	
 	UPROPERTY(ReplicatedUsing = OnRep_MeshType)
 	ECharacterMesh CurrentMeshType = ECharacterMesh::Elsa;
 	UPROPERTY(ReplicatedUsing = OnRep_ChangeOption)
