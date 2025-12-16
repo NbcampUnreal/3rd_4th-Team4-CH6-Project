@@ -10,6 +10,7 @@
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 {
@@ -215,14 +216,6 @@ bool AAO_GameMode_Lobby::IsEveryoneReadyExceptHost() const
 		return false;
 	}
 
-	const int32 TotalPlayers = GameState->PlayerArray.Num();
-
-	// 최소 2명 이상 있어야 시작 가능
-	if (TotalPlayers <= 1)
-	{
-		return false;
-	}
-
 	AController* Host = GetHostController();
 	if (!Host)
 	{
@@ -280,6 +273,21 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 	// 근데 자꾸 크래쉬 발생해서 넣긴 했음...
 	StopVoiceChatForAllClients();
 
+	if (UWorld* World = GetWorld())
+	{
+		if (UGameInstance* GI = World->GetGameInstance())
+		{
+			if (UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
+			{
+				Sub->SetSessionInGame(true);
+			}
+			else
+			{
+				AO_LOG(LogJSH, Warning, TEXT("Lobby: OnlineSessionSubsystem is null"));
+			}
+		}
+	}
+	
 	AO_LOG(LogJSH, Log, TEXT("Lobby: All players ready, starting stage"));
 	TravelToStage();
 }
