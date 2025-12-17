@@ -178,6 +178,11 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority() && AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
+
 	BindSpeedAttributeDelegates();
 
 	// HSJ : InteractableComponent 델리게이트 바인딩
