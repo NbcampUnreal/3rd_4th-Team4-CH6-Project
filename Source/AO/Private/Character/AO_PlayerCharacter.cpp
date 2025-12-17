@@ -23,7 +23,10 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
+#include "Settings/AO_GameSettingsManager.h"
+#include "Settings/AO_GameUserSettings.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -50,8 +53,9 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
 	// JM : VOIP Talker
-	VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
-	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh();
+	// JM : 크래쉬 이슈로 생성 위치 변경
+	/*VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
+	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh(); */
 	
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
@@ -243,7 +247,15 @@ void AAO_PlayerCharacter::Tick(float DeltaTime)
 void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearAllTimersForObject(this);
-	
+
+	// JM : voice crash 해결을 위함
+	if (VOIPTalker)
+	{
+		VOIPTalker->UnregisterComponent();
+		VOIPTalker->OnComponentDestroyed(true);
+		VOIPTalker->DestroyComponent();
+		VOIPTalker = nullptr;
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -574,23 +586,48 @@ void AAO_PlayerCharacter::TryRegisterVoiceTalker()
 void AAO_PlayerCharacter::RegisterVoiceTalker()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	if (VOIPTalker)
+
+	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(GetPlayerState());
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
 	{
-		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(GetPlayerState()))
-		{
-			VOIPTalker->RegisterWithPlayerState(AO_PS);
-			AO_LOG(LogJM, Log, TEXT("RegisterWithPlayerState Called"));
-		}
-		else
-		{
-			AO_LOG(LogJM, Warning, TEXT("Cast Failed to AO_PS"));			
-		}
+		return;
 	}
-	else
+
+	VOIPTalker = UVOIPTalker::CreateTalkerForPlayer(AO_PS);
+	if (!AO_ENSURE(VOIPTalker, TEXT("VOIPTalker Create Failed")))
 	{
-		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
+		return;
 	}
+
+	VOIPTalker->Settings.ComponentToAttachTo = GetMesh();
+	VOIPTalker->Settings.AttenuationSettings = SA_VoiceChat;
+
+	if (IsLocallyControlled())
+	{
+		InitVoiceChat();
+	}
+	
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerCharacter::InitVoiceChat()
+{
+	UAO_GameUserSettings* GameUserSettings = GetGameInstance()->GetSubsystem<UAO_GameSettingsManager>()->GetGameUserSettings();
+	if (!AO_ENSURE(GameUserSettings, TEXT("Can't Get GameUserSettings")))
+	{
+		return;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("Can't Get OSS")))
+	{
+		return;
+	}
+
+	if (GameUserSettings->bIsEnableVoiceChat)
+	{
+		OSS->StartVoiceChat();
+	}
 }
 
 TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
