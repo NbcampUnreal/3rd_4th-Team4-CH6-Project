@@ -136,14 +136,22 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 
 void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
 {
-	if (Camera)
+	if (IsLocallyControlled())
 	{
-		Camera->GetCameraView(DeltaTime, OutResult);
+		if (Camera)
+		{
+			Camera->GetCameraView(DeltaTime, OutResult);
+		}
+		else
+		{
+			Super::CalcCamera(DeltaTime, OutResult);
+		}
+		return;
 	}
-	else
-	{
-		Super::CalcCamera(DeltaTime, OutResult);
-	}
+
+	OutResult.Location = RepCameraView.Location;
+	OutResult.Rotation = RepCameraView.Rotation;
+	OutResult.FOV	   = RepCameraView.FOV;
 }
 
 bool AAO_PlayerCharacter::IsInspecting() const
@@ -186,6 +194,13 @@ void AAO_PlayerCharacter::BeginPlay()
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
 		}
+
+		GetWorldTimerManager().SetTimer(
+			TimerHandle_CameraViewSync,
+			this,
+			&AAO_PlayerCharacter::SendCameraViewToServer,
+			0.05f,
+			true);
 	}
 
 	// JM : VOIPTalker PS 에 연결될 때까지 연결 시도
@@ -255,6 +270,7 @@ void AAO_PlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 	DOREPLIFETIME(AAO_PlayerCharacter, Gait);
 	DOREPLIFETIME(AAO_PlayerCharacter, LandVelocity);
 	DOREPLIFETIME(AAO_PlayerCharacter, bJustLanded);
+	DOREPLIFETIME(AAO_PlayerCharacter, RepCameraView);
 }
 
 void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
@@ -553,6 +569,27 @@ void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 	}
 }
 
+void AAO_PlayerCharacter::SendCameraViewToServer()
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->PlayerCameraManager)
+		{
+			FRepCameraView V;
+			V.Location = PC->PlayerCameraManager->GetCameraLocation();
+			V.Rotation = PC->PlayerCameraManager->GetCameraRotation();
+			V.FOV = PC->PlayerCameraManager->GetFOVAngle();
+
+			ServerRPC_UpdateCameraView(V);
+		}
+	}
+}
+
 void AAO_PlayerCharacter::ServerRPC_SetInputState_Implementation(bool bWantsToSprint, bool bWantsToWalk)
 {
 	CharacterInputState.bWantsToSprint = bWantsToSprint;
@@ -575,6 +612,11 @@ void AAO_PlayerCharacter::OnRep_Gait()
 		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetSprintSpeed();
 		break;
 	}
+}
+
+void AAO_PlayerCharacter::ServerRPC_UpdateCameraView_Implementation(const FRepCameraView& NewView)
+{
+	RepCameraView = NewView;
 }
 
 void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()

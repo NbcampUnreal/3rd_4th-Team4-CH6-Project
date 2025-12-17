@@ -45,6 +45,21 @@ public:
 	bool bWantsToWalk = false;
 };
 
+USTRUCT()
+struct FRepCameraView
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVector_NetQuantize10 Location = FVector::ZeroVector;
+
+	UPROPERTY()
+	FRotator Rotation = FRotator::ZeroRotator;
+
+	UPROPERTY()
+	float FOV = 90.f;
+};
+
 UCLASS()
 class AO_API AAO_PlayerCharacter : public ACharacter, public IAbilitySystemInterface, public IAO_FoleyAudioBankInterface
 {
@@ -155,6 +170,8 @@ public:
 	bool bJustLanded = false;
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacter|Movement")
 	float DeathCameraArmOffset = 300.f;
+	UPROPERTY(Replicated)
+	FRepCameraView RepCameraView;
 
 protected:
 	UFUNCTION(Server, Reliable)
@@ -163,10 +180,13 @@ protected:
 	void OnRep_Gait();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_HandleDeathView();
+	UFUNCTION(Server, Unreliable)
+	void ServerRPC_UpdateCameraView(const FRepCameraView& NewView);
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
 	FTimerHandle VOIPRegisterToPSTimerHandle;	// JM : VOIPTalker
+	FTimerHandle TimerHandle_CameraViewSync;
 	
 private:
 	// Input Actions
@@ -197,6 +217,9 @@ private:
 
 	// Speed
 	void OnSpeedChanged(const FOnAttributeChangeData& Data);
+
+	// Camera
+	void SendCameraViewToServer();
 	
 // JM : VOIPTalker Register to PS
 private:
