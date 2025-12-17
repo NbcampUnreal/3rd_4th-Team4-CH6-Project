@@ -14,6 +14,9 @@ namespace AO_SessionKeys
 	static const FName KEY_SERVER_NAME(TEXT("SERVER_NAME"));
 	static const FName KEY_HAS_PASSWORD(TEXT("HAS_PASSWORD"));
 	static const FName KEY_PASSWORD_MD5(TEXT("PASSWORD_MD5"));
+	
+	// 스테이지 진행 여부 (중간 입장 차단용)
+	static const FName KEY_IN_GAME(TEXT("IN_GAME"));
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAO_OnFindSessionsComplete, bool, bSuccessful);
@@ -64,6 +67,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="AO|Online")
 	FString GetServerNameByIndex(int32 Index) const;
+	
+	UFUNCTION(BlueprintPure, Category="AO|Online")
+	bool IsInGameByIndex(int32 Index) const;
 
 	UFUNCTION(BlueprintPure, Category="AO|Online")
 	bool IsPasswordRequiredByIndex(int32 Index) const;
@@ -116,6 +122,9 @@ public:
 	
 	/* 호스트/클라이언트 분기용 */
 	bool IsLocalHost() const;
+	
+	/* 세션 내부 상태 제어 */
+	void SetSessionInGame(bool bInGame);
 	
 private:
 	/* 검색 결과 캐시 */

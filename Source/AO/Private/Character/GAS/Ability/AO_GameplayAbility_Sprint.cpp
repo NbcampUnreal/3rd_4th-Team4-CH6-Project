@@ -14,6 +14,9 @@ UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 	SetAssetTags(SprintTag);
 
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Lockout.Stamina")));
 }
 
 void UAO_GameplayAbility_Sprint::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo,
@@ -47,6 +50,15 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
 		return false;
 	}
 
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSetChecked<UAO_PlayerCharacter_AttributeSet>();
+	const float CurrentStamina = AttributeSet->GetStamina();
+	const float MaxStamina = AttributeSet->GetMaxStamina();
+
+	if (CurrentStamina < MaxStamina * AttributeSet->StaminaLockoutPercent)
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -59,29 +71,8 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	const UAO_PlayerCharacter_AttributeSet* AttributeSet = Character->GetAbilitySystemComponent()->GetSet<UAO_PlayerCharacter_AttributeSet>();
-	checkf(AttributeSet, TEXT("Failed to get AttributeSet"));
-	
-	const float CurrentStamina = AttributeSet->GetStamina();
-	const float MaxStamina = AttributeSet->GetMaxStamina();
-
-	if (bIsStaminaLockOut && CurrentStamina < MaxStamina * RequiredStaminaPercent)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	if (bIsStaminaLockOut && CurrentStamina >= MaxStamina * RequiredStaminaPercent)
-	{
-		bIsStaminaLockOut = false;
-	}
 	
 	Character->StartSprint_GAS(true);
-
-	Character->GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStaminaAttribute())
-		.AddUObject(this, &UAO_GameplayAbility_Sprint::OnStaminaChanged);
-	
 }
 
 void UAO_GameplayAbility_Sprint::InputPressed(const FGameplayAbilitySpecHandle Handle,
@@ -113,26 +104,25 @@ void UAO_GameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle Han
 	if (Character)
 	{
 		Character->StartSprint_GAS(false);
+	}
 
-		if (const UAO_PlayerCharacter_AttributeSet* AttributeSet = Character->GetAbilitySystemComponent()->GetSet<UAO_PlayerCharacter_AttributeSet>())
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	checkf(ASC, TEXT("Failed to get AbilitySystemComponent"));
+	
+	const FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
+	ASC->RemoveActiveEffectsWithTags(SprintCostTag);
+
+	checkf(PostSprintNoRegenEffectClass, TEXT("PostSprintNoRegenEffectClass is null"));
+	if (ActorInfo->IsNetAuthority())
+	{
+		const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+		const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoRegenEffectClass, 1.f, Context);
+
+		if (SpecHandle.IsValid())
 		{
-			Character->GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStaminaAttribute())
-				.RemoveAll(this);
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 		}
 	}
-
-	const FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
-	ActorInfo->AbilitySystemComponent->RemoveActiveEffectsWithTags(SprintCostTag);
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UAO_GameplayAbility_Sprint::OnStaminaChanged(const FOnAttributeChangeData& Data)
-{
-	if (Data.NewValue <= 0.f)
-	{
-		bIsStaminaLockOut = true;
-		
-		K2_EndAbility();
-	}
 }

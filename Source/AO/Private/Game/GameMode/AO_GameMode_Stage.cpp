@@ -6,6 +6,7 @@
 #include "AO_Log.h"
 
 #include "Train/AO_Train.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "EngineUtils.h"
@@ -84,6 +85,12 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	{
 		return;
 	}
+	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -138,6 +145,7 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 		// 다음 판은 다시 처음부터
 		AO_GI->ResetRun();
+		RollbackSessionInGameFlag();
 	}
 	else
 	{
@@ -188,6 +196,7 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 
 	// 다음 판은 항상 처음부터
 	AO_GI->ResetRun();
+	RollbackSessionInGameFlag();
 
 	const FName LobbyMapName = AO_GI->GetLobbyMap();
 	if(LobbyMapName.IsNone())
@@ -382,5 +391,25 @@ void AAO_GameMode_Stage::EvaluateTeamWipe()
 		// 모두 죽었지만 부활 횟수는 남아 있음 -> 일단 대기 (부활 Ability 등이 처리)
 		AO_LOG(LogJSH, Log, TEXT("EvaluateTeamWipe: No alive players but revive left (%d) -> Wait"),
 			AO_GI->GetSharedReviveCount());
+	}
+}
+
+void AAO_GameMode_Stage::RollbackSessionInGameFlag()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	UGameInstance* GI = World->GetGameInstance();
+	if (!GI)
+	{
+		return;
+	}
+
+	if (UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		Sub->SetSessionInGame(false);
 	}
 }
