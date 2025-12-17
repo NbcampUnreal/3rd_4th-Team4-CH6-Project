@@ -12,6 +12,7 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_PlayerCharacter_AttributeDefaults;
 class UAO_CustomizingComponent;
 class UCustomizableObjectInstance;
 class UAO_PlayerCharacter_AttributeSet;
@@ -56,9 +57,9 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 protected:
+	virtual void PossessedBy(AController* NewController) override;
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -106,6 +107,8 @@ protected:
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TObjectPtr<UAO_PlayerCharacter_AttributeSet> AttributeSet;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TObjectPtr<UAO_PlayerCharacter_AttributeDefaults> AttributeDefaults;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
@@ -190,12 +193,17 @@ private:
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
 	// Bind GAS
+	void InitializeAttributes();
 	void BindGameplayAbilities();
 	void BindGameplayEffects();
 	void BindAttributeDelegates();
+	void BindSpeedAttributeDelegates();
 
 	// Death
 	void HandlePlayerDeath();
+
+	// Speed
+	void OnSpeedChanged(const FOnAttributeChangeData& Data);
 	
 // JM : VOIPTalker Register to PS
 private:
