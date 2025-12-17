@@ -34,13 +34,13 @@ void UAO_DeathSpectateComponent::BeginPlay()
 
 	if (OwnerCharacter->IsLocallyControlled() && bStreamEnabled)
 	{
-		StartCameraSyncTimer_Local();
+		StartCameraSyncTimer();
 	}
 }
 
 void UAO_DeathSpectateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	StopCameraSyncTimer_Local();
+	StopCameraSyncTimer();
 
 	if (UWorld* World = GetWorld())
 	{
@@ -84,7 +84,7 @@ bool UAO_DeathSpectateComponent::IsAlive_Server() const
 	return PS->GetIsAlive();
 }
 
-void UAO_DeathSpectateComponent::AddSpectator_Server(APlayerController* SpectatorPC)
+void UAO_DeathSpectateComponent::AddSpectator(APlayerController* SpectatorPC)
 {
 	if (!ensure(SpectatorPC))
 	{
@@ -113,7 +113,7 @@ void UAO_DeathSpectateComponent::AddSpectator_Server(APlayerController* Spectato
 	}
 }
 
-void UAO_DeathSpectateComponent::RemoveSpectator_Server(APlayerController* SpectatorPC)
+void UAO_DeathSpectateComponent::RemoveSpectator(APlayerController* SpectatorPC)
 {
 	if (!ensure(SpectatorPC))
 	{
@@ -147,6 +147,38 @@ bool UAO_DeathSpectateComponent::GetRepCameraView(FRepCameraView& OutView) const
 	return true;
 }
 
+void UAO_DeathSpectateComponent::NotifySpectators_TargetInvalidated()
+{
+	check(OwnerCharacter);
+
+	if (!OwnerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	// 스냅샷 (순회 중에 Set에서 제거되어서 변경될 수 있기 때문)
+	TArray<TWeakObjectPtr<APlayerController>> Spectators;
+	Spectators.Reserve(SpectatorSet.Num());
+	for (const TWeakObjectPtr<APlayerController>& PC : SpectatorSet)
+	{
+		if (PC.IsValid())
+		{
+			Spectators.Add(PC);
+		}
+	}
+
+	for (const TWeakObjectPtr<APlayerController>& PC : SpectatorSet)
+	{
+		AAO_PlayerController_Stage* SpectatorPC = Cast<AAO_PlayerController_Stage>(PC.Get());
+		if (!SpectatorPC)
+		{
+			continue;
+		}
+
+		SpectatorPC->ForceReselectSpectateTarget(OwnerCharacter);
+	}
+}
+
 void UAO_DeathSpectateComponent::OnOwnerDied()
 {
 	if (!OwnerCharacter || !OwnerCharacter->HasAuthority())
@@ -175,6 +207,8 @@ void UAO_DeathSpectateComponent::OnOwnerDied()
 		InteractableComponent->bInteractionEnabled = true;
 	}
 
+	NotifySpectators_TargetInvalidated();
+
 	if (Cast<APlayerController>(OwnerCharacter->GetController()))
 	{
 		ClientRPC_HandleDeathView();
@@ -188,6 +222,7 @@ void UAO_DeathSpectateComponent::ClientRPC_HandleDeathView_Implementation()
 	if (USpringArmComponent* Arm = OwnerCharacter->GetSpringArm())
 	{
 		Arm->TargetArmLength += OwnerCharacter->DeathCameraArmOffset;
+		Arm->SocketOffset = FVector::ZeroVector;
 	}
 
 	if (AAO_PlayerController_Stage* PC = Cast<AAO_PlayerController_Stage>(OwnerCharacter->GetController()))
@@ -201,7 +236,7 @@ void UAO_DeathSpectateComponent::ServerRPC_UpdateCameraView_Implementation(const
 	RepCameraView = NewView;
 }
 
-void UAO_DeathSpectateComponent::StartCameraSyncTimer_Local()
+void UAO_DeathSpectateComponent::StartCameraSyncTimer()
 {
 	check(OwnerCharacter);
 
@@ -221,24 +256,20 @@ void UAO_DeathSpectateComponent::StartCameraSyncTimer_Local()
 	World->GetTimerManager().SetTimer(
 		TimerHandle_CameraSync,
 		this,
-		&UAO_DeathSpectateComponent::SendCameraViewToServer_Local,
+		&UAO_DeathSpectateComponent::SendCameraViewToServer,
 		0.05f,
 		true);
-
-	AO_LOG(LogKH, Display, TEXT("Camera sync timer started"));
 }
 
-void UAO_DeathSpectateComponent::StopCameraSyncTimer_Local()
+void UAO_DeathSpectateComponent::StopCameraSyncTimer()
 {
 	UWorld* World = GetWorld();
 	checkf(World, TEXT("Failed to get World"));
 
 	World->GetTimerManager().ClearTimer(TimerHandle_CameraSync);
-
-	AO_LOG(LogKH, Display, TEXT("Camera sync timer stopped"));
 }
 
-void UAO_DeathSpectateComponent::SendCameraViewToServer_Local()
+void UAO_DeathSpectateComponent::SendCameraViewToServer()
 {
 	check(OwnerCharacter);
 
@@ -277,10 +308,10 @@ void UAO_DeathSpectateComponent::OnRep_StreamEnabled()
 
 	if (bStreamEnabled)
 	{
-		StartCameraSyncTimer_Local();
+		StartCameraSyncTimer();
 	}
 	else
 	{
-		StopCameraSyncTimer_Local();
+		StopCameraSyncTimer();
 	}
 }

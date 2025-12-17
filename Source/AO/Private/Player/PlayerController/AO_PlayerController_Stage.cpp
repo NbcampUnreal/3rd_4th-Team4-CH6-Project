@@ -125,6 +125,38 @@ void AAO_PlayerController_Stage::RequestSpectateNext(bool bForward)
 	}
 }
 
+void AAO_PlayerController_Stage::ForceReselectSpectateTarget(APawn* InvalidTarget)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (CurrentSpectateTarget != InvalidTarget)
+	{
+		return;
+	}
+
+	int32 NewIndex = INDEX_NONE;
+	TObjectPtr<APawn> NewTarget = FindNextSpectateTarget(true, NewIndex);
+
+	if (!NewTarget)
+	{
+		ServerRPC_SetSpectateTarget(nullptr);
+
+		CurrentSpectateTarget = nullptr;
+		CurrentSpectatePlayerIndex = INDEX_NONE;
+		return;
+	}
+
+	ServerRPC_SetSpectateTarget(NewTarget);
+	
+	CurrentSpectateTarget = NewTarget;
+	CurrentSpectatePlayerIndex = NewIndex;
+	
+	ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
+}
+
 void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APawn* NewTarget)
 {
 	if (!HasAuthority())
@@ -138,7 +170,7 @@ void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APaw
 		{
 			if (UAO_DeathSpectateComponent* Comp = OldChar->FindComponentByClass<UAO_DeathSpectateComponent>())
 			{
-				Comp->RemoveSpectator_Server(this);
+				Comp->RemoveSpectator(this);
 			}
 		}
 	}
@@ -151,7 +183,7 @@ void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APaw
 		{
 			if (UAO_DeathSpectateComponent* Comp = NewChar->FindComponentByClass<UAO_DeathSpectateComponent>())
 			{
-				Comp->AddSpectator_Server(this);
+				Comp->AddSpectator(this);
 			}
 		}
 	}
@@ -208,15 +240,21 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 	int32 NewIndex = INDEX_NONE;
 	TObjectPtr<APawn> NewTarget = FindNextSpectateTarget(bForward, NewIndex);
 
-	if (NewTarget && NewIndex != INDEX_NONE)
+	if (!NewTarget)
 	{
-		ServerRPC_SetSpectateTarget(NewTarget);
-		
-		CurrentSpectateTarget = NewTarget;
-		CurrentSpectatePlayerIndex = NewIndex;
-		
-		ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
+		ServerRPC_SetSpectateTarget(nullptr);
+
+		CurrentSpectateTarget = nullptr;
+		CurrentSpectatePlayerIndex = INDEX_NONE;
+		return;
 	}
+
+	ServerRPC_SetSpectateTarget(NewTarget);
+	
+	CurrentSpectateTarget = NewTarget;
+	CurrentSpectatePlayerIndex = NewIndex;
+	
+	ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
 }
 
 void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APawn* NewTarget, int32 NewPlayerIndex)

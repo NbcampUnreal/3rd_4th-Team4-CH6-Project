@@ -42,10 +42,12 @@ public:
 	bool IsAlive_Server() const;
 
 	// 누군가 관전 시작/종료했다고 등록
-	void AddSpectator_Server(APlayerController* SpectatorPC);
-	void RemoveSpectator_Server(APlayerController* SpectatorPC);
+	void AddSpectator(APlayerController* SpectatorPC);
+	void RemoveSpectator(APlayerController* SpectatorPC);
 
 	bool GetRepCameraView(FRepCameraView& OutView) const;
+
+	void NotifySpectators_TargetInvalidated();
 
 private:
 	UFUNCTION()
@@ -55,9 +57,9 @@ private:
 	UFUNCTION(Server, Unreliable)
 	void ServerRPC_UpdateCameraView(const FRepCameraView& NewView);
 
-	void StartCameraSyncTimer_Local();
-	void StopCameraSyncTimer_Local();
-	void SendCameraViewToServer_Local();
+	void StartCameraSyncTimer();
+	void StopCameraSyncTimer();
+	void SendCameraViewToServer();
 
 	UPROPERTY(ReplicatedUsing=OnRep_StreamEnabled)
 	bool bStreamEnabled = false;

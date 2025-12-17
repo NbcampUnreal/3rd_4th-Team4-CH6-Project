@@ -54,6 +54,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|UI")
 	void RequestSpectateNext(bool bForward);
 
+	UFUNCTION()
+	void ForceReselectSpectateTarget(APawn* InvalidTarget);
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RequestSpectate();
