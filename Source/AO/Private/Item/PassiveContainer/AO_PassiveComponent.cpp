@@ -26,7 +26,7 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 {
 	//UE_LOG(LogTemp, Warning, TEXT("OnGameplayEventReceived() Triggered"));
 
-	if (!Payload || !PassiveEffectClass)
+	if (!Payload)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Payload NULL or PassiveEffectClass NOT set"));
 		return;
@@ -40,13 +40,20 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 	}
 
 	static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.PassiveAmount"));
-
-	//UE_LOG(LogTemp, Warning, TEXT("Passive Event Received: EventMagnitude = %f"), Payload->EventMagnitude);
-	//UE_LOG(LogTemp, Warning, TEXT("Using GE Class: %s"), *PassiveEffectClass->GetName());
-
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PassiveEffectClass, 1.f, Context);
+	
+	TSubclassOf<UGameplayEffect> SelectedPassive = MaxHpPassive;
+	if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.Stamina")
+	{
+		SelectedPassive = MaxStaminaPassive;
+	}
+	else if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.MoveSpeed")
+	{
+		SelectedPassive = MaxHpPassive;
+	}
 
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(SelectedPassive, 1.f, Context);
+	
 	if (SpecHandle.IsValid())
 	{
 		SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, Payload->EventMagnitude);
