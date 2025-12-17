@@ -112,9 +112,11 @@ bool AAO_InspectionPuzzle::CanInteraction(const FAO_InteractionQuery& Interactio
 
 void AAO_InspectionPuzzle::GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const
 {
-	// 액터의 모든 메시 컴포넌트 수집 (재귀)
+	// 액터의 모든 메시 컴포넌트 수집
 	TArray<UMeshComponent*> AllMeshComponents;
 	GetComponents<UMeshComponent>(AllMeshComponents, true);
+    
+	OutMeshComponents.Reserve(OutMeshComponents.Num() + AllMeshComponents.Num());
     
 	for (TObjectPtr<UMeshComponent> MeshComp : AllMeshComponents)
 	{
