@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
@@ -24,7 +25,6 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
-#include "Player/PlayerController/AO_PlayerController_Stage.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -71,7 +71,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InteractableComponent = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
 	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
-	//ms: inventory component
+	DeathSpectateComponent = CreateDefaultSubobject<UAO_DeathSpectateComponent>(TEXT("DeathSpectateComponent"));
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
@@ -152,9 +152,15 @@ void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& O
 		return;
 	}
 
-	OutResult.Location = RepCameraView.Location;
-	OutResult.Rotation = RepCameraView.Rotation;
-	OutResult.FOV	   = RepCameraView.FOV;
+	if (DeathSpectateComponent)
+	{
+		FRepCameraView V;
+		DeathSpectateComponent->GetRepCameraView(V);
+		OutResult.Location = V.Location;
+		OutResult.Rotation = V.Rotation;
+		OutResult.FOV	   = V.FOV;
+		return;
+	}
 }
 
 bool AAO_PlayerCharacter::IsInspecting() const
@@ -214,13 +220,6 @@ void AAO_PlayerCharacter::BeginPlay()
 			FInputModeGameOnly InputMode;
 			PC->SetInputMode(InputMode);
 		}
-
-		GetWorldTimerManager().SetTimer(
-			TimerHandle_CameraViewSync,
-			this,
-			&AAO_PlayerCharacter::SendCameraViewToServer,
-			0.05f,
-			true);
 	}
 
 	// JM : VOIPTalker PS 에 연결될 때까지 연결 시도
@@ -290,7 +289,6 @@ void AAO_PlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 	DOREPLIFETIME(AAO_PlayerCharacter, Gait);
 	DOREPLIFETIME(AAO_PlayerCharacter, LandVelocity);
 	DOREPLIFETIME(AAO_PlayerCharacter, bJustLanded);
-	DOREPLIFETIME(AAO_PlayerCharacter, RepCameraView);
 }
 
 void AAO_PlayerCharacter::Landed(const FHitResult& Hit)
@@ -536,8 +534,6 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
 	checkf(AttributeSet, TEXT("AttributeSet is null"));
-
-	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
 }
 
 void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
@@ -553,37 +549,6 @@ void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
 		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
 }
 
-void AAO_PlayerCharacter::HandlePlayerDeath()
-{
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
-	checkf(PS, TEXT("PlayerState is null"));
-
-	if (!PS->GetIsAlive())
-	{
-		return;
-	}
-
-	PS->SetIsAlive(false);
-
-	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
-	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
-
-	if (InteractableComponent)
-	{
-		InteractableComponent->bInteractionEnabled = true;
-	}
-
-	if (Cast<APlayerController>(GetController()))
-	{
-		ClientRPC_HandleDeathView();
-	}
-}
-
 void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	SetCurrentGait();
@@ -591,27 +556,6 @@ void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 	if (!HasAuthority())
 	{
 		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
-	}
-}
-
-void AAO_PlayerCharacter::SendCameraViewToServer()
-{
-	if (!IsLocallyControlled())
-	{
-		return;
-	}
-
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	{
-		if (PC->PlayerCameraManager)
-		{
-			FRepCameraView V;
-			V.Location = PC->PlayerCameraManager->GetCameraLocation();
-			V.Rotation = PC->PlayerCameraManager->GetCameraRotation();
-			V.FOV = PC->PlayerCameraManager->GetFOVAngle();
-
-			ServerRPC_UpdateCameraView(V);
-		}
 	}
 }
 
@@ -639,11 +583,6 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	}
 }
 
-void AAO_PlayerCharacter::ServerRPC_UpdateCameraView_Implementation(const FRepCameraView& NewView)
-{
-	RepCameraView = NewView;
-}
-
 void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 {
 	if (!HasAuthority())
@@ -655,19 +594,6 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 	if (InteractableComponent)
 	{
 		InteractableComponent->bInteractionEnabled = false;
-	}
-}
-
-void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
-{
-	if (SpringArm)
-	{
-		SpringArm->TargetArmLength += DeathCameraArmOffset;
-	}
-
-	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
-	{
-		PC->ShowDeathUI();
 	}
 }
 

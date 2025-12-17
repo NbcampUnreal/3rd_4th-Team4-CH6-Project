@@ -15,6 +15,8 @@
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 #include "EngineUtils.h"
+#include "Character/AO_PlayerCharacter.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 /*-----------------------------------*/
 
@@ -123,6 +125,38 @@ void AAO_PlayerController_Stage::RequestSpectateNext(bool bForward)
 	}
 }
 
+void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APawn* NewTarget)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (PrevSpectateTarget)
+	{
+		if (AAO_PlayerCharacter* OldChar = Cast<AAO_PlayerCharacter>(PrevSpectateTarget))
+		{
+			if (UAO_DeathSpectateComponent* Comp = OldChar->FindComponentByClass<UAO_DeathSpectateComponent>())
+			{
+				Comp->RemoveSpectator_Server(this);
+			}
+		}
+	}
+
+	PrevSpectateTarget = NewTarget;
+
+	if (PrevSpectateTarget)
+	{
+		if (AAO_PlayerCharacter* NewChar = Cast<AAO_PlayerCharacter>(PrevSpectateTarget))
+		{
+			if (UAO_DeathSpectateComponent* Comp = NewChar->FindComponentByClass<UAO_DeathSpectateComponent>())
+			{
+				Comp->AddSpectator_Server(this);
+			}
+		}
+	}
+}
+
 void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 {
 	TObjectPtr<APawn> NewTarget = nullptr;
@@ -160,6 +194,8 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 
 	if (NewTarget)
 	{
+		ServerRPC_SetSpectateTarget(NewTarget);
+		
 		CurrentSpectateTarget = NewTarget;
 		CurrentSpectatePlayerIndex = NewIndex;
 		
@@ -174,6 +210,8 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 
 	if (NewTarget && NewIndex != INDEX_NONE)
 	{
+		ServerRPC_SetSpectateTarget(NewTarget);
+		
 		CurrentSpectateTarget = NewTarget;
 		CurrentSpectatePlayerIndex = NewIndex;
 		
@@ -418,6 +456,12 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 	{
 		SpectateWidget->RemoveFromParent();
 		SpectateWidget = nullptr;
+	}
+
+	// 5) 관전 중이었다면 관전 끝 알려주기
+	if (IsLocalController())
+	{
+		ServerRPC_SetSpectateTarget(nullptr);
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());
