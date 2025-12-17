@@ -29,6 +29,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
+class UAO_InteractableComponent;
 class UAO_FoleyAudioBank;
 class UCustomizableSkeletalComponent;
 
@@ -94,6 +95,8 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InteractableComponent> InteractableComponent;
 	//ms: inventory component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
@@ -163,6 +166,10 @@ protected:
 	void OnRep_Gait();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_HandleDeathView();
+
+	// HSJ : InteractableComponent의 상호작용 성공 시 호출될 함수
+	UFUNCTION()
+	void HandleInteractableComponentSuccess(AActor* Interactor);
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;

@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interaction/Data/AO_InteractionEffectSettings.h"
 #include "Interaction/Interface/AO_Interface_Interactable.h"
 #include "AO_WorldInteractable.generated.h"
 
@@ -67,10 +68,6 @@ protected:
 
 	virtual UStaticMeshComponent* GetInteractableMesh() const { return nullptr; }
 
-	// 사운드 재생
-	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, Category="Interaction")
-	void MulticastPlayInteractionSound();
-
 	UPROPERTY(EditDefaultsOnly, Category="Interaction")
 	bool bShouldConsume = false; // true면 한 번만 상호작용 가능
 
@@ -103,16 +100,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation",
 		meta=(EditCondition="bUseTransformAnimation", ClampMin="0.1"))
 	float AnimationSpeed = 2.0f;
-
-	// 사운드
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Audio")
-	TObjectPtr<USoundBase> InteractionSound;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Audio")
-	float SoundVolumeMultiplier = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Audio")
-	float SoundPitchMultiplier = 1.0f;
 
 	FTimerHandle TransformAnimationTimerHandle;
 	FVector InitialInteractableLocation;

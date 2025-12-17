@@ -356,7 +356,12 @@ void AAO_DecayHoldElement::PlayStartMontage()
 void AAO_DecayHoldElement::MulticastLeverAction_Implementation(bool bActivate)
 {
     StartInteractionAnimation(bActivate);
-    MulticastPlayInteractionSound();
+	
+	const FAO_InteractionEffectSettings& EffectToPlay = bActivate ? ActivateEffect : DeactivateEffect;
+	if (EffectToPlay.IsValid())
+	{
+		MulticastPlayInteractionEffect(EffectToPlay, GetInteractionTransform());
+	}
 }
 
 void AAO_DecayHoldElement::MulticastMontageControl_Implementation(AActor* TargetActor, bool bPlay, float PlayRate)
