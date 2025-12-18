@@ -26,6 +26,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")

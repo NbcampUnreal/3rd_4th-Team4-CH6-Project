@@ -593,34 +593,43 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
-{
-	return BodyComponent;
-}
-
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetHeadComponent() const
-{
-	return HeadComponent;
-}
-
-void AAO_PlayerCharacter::ChangeCharacterMesh_Implementation(UCustomizableObjectInstance* ChangeMesh)
-{
-	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
-	*GetName(), HasAuthority(), IsLocallyControlled());
-	
-	if (IsValid(ChangeMesh))
-	{
-		BodyComponent->SetCustomizableObjectInstance(ChangeMesh);
-		HeadComponent->SetCustomizableObjectInstance(ChangeMesh);
-		BodyComponent->UpdateSkeletalMeshAsync();
-		HeadComponent->UpdateSkeletalMeshAsync();
-	
-		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *ChangeMesh->GetName());
-		
-	}
-	else
-	{
-		AO_LOG(LogKSH, Error, TEXT("ChangeCharacterMesh: ChangeMesh is invalid"));
-	}
-	CustomizingComponent->PrintCustomizableObjectInstanceMap();
-}
+ // void AAO_PlayerCharacter::OnRep_PlayerState()
+ // {
+ // 	Super::OnRep_PlayerState();
+ // 	
+ // 	AO_LOG(LogKSH, Log, TEXT("OnRep_PlayerState Called"));
+ // 	// if (!IsPlayerControlled())
+ // 	// {
+ // 	// 	return;
+ // 	// }
+ //
+ // 	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AAO_PlayerCharacter::LoadCharacterCustomizingData);
+ // 	
+ // }
+ //
+ // void AAO_PlayerCharacter::PossessedBy(AController* NewController)
+ // {
+ // 	Super::PossessedBy(NewController);
+ //
+ // 	AO_LOG(LogKSH, Log, TEXT("PossessedBy Called"));
+ //
+ // 	LoadCharacterCustomizingData();
+ // }
+ //
+ // void AAO_PlayerCharacter::LoadCharacterCustomizingData()
+ // {
+ // 	if (!CustomizingComponent)
+ // 	{
+ // 		AO_LOG(LogKSH, Warning, TEXT("No CustomizingComponent"));
+ // 		return;
+ // 	}
+ //
+ // 	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
+ // 	if (!PS)
+ // 	{
+ // 		AO_LOG(LogKSH, Warning, TEXT("No PlayerState"));
+ // 		return;
+ // 	}
+ // 	
+ // 	CustomizingComponent->LoadCustomizingDataFromPlayerState(PS);
+ //}

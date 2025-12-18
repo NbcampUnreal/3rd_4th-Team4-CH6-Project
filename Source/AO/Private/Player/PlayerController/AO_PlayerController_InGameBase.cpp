@@ -9,6 +9,7 @@
 #include "Engine/GameInstance.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_InGameBase.h"
 #include "GameFramework/GameStateBase.h"
@@ -66,6 +67,17 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
 		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);
 	}
+}
+
+void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL, ETravelType TravelType,
+	bool bIsSeamlessTravel)
+{
+	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+	checkf(PlayerCharacter, TEXT("Character is invalid"));
+
+	PlayerCharacter->GetCustomizingComponent()->SaveCustomizingDataToPlayerState();
+	
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 }
 
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()

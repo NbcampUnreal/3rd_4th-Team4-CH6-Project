@@ -6,12 +6,13 @@
 #include "Components/ActorComponent.h"
 #include "AO_CustomizingComponent.generated.h"
 
+class AAO_PlayerState;
 class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
 
 USTRUCT(BlueprintType)
-struct FOptionNameAndIndex
+struct FParameterOptionName
 {
 	GENERATED_BODY()
 
@@ -19,8 +20,6 @@ struct FOptionNameAndIndex
 	FString ParameterName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString OptionName;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 OptionIndex;
 };
 
 UENUM(BlueprintType)
@@ -28,6 +27,19 @@ enum class ECharacterMesh : uint8
 {
 	Elsa UMETA(DisplayName = "Elsa"),
 	Anka UMETA(DisplayName = "Anka"),
+};
+
+USTRUCT(BlueprintType)
+struct FCustomizingData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ECharacterMesh CharacterMeshType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FParameterOptionName HairOptionData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FParameterOptionName ClothOptionData;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -42,15 +54,20 @@ public:
 	void ServerRPC_ChangeCharacter(ECharacterMesh MeshType);
 	
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
-	void ServerRPC_ChangeCustomizingOption(FOptionNameAndIndex NewOptionData);
+	void ServerRPC_ChangeCustomizingOption(FParameterOptionName NewOptionData);
 	
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
 	UCustomizableObjectInstance* GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
 	ECharacterMesh GetCurrentMeshType() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	void SaveCustomizingDataToPlayerState();
+	void LoadCustomizingDataFromPlayerState();
 	
 	void PrintCustomizableObjectInstanceMap();
+	void PrintPSCustomizingData();
 	
 protected:
 	virtual void BeginPlay() override;
@@ -65,17 +82,21 @@ private:
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_MeshType)
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentMeshType)
 	ECharacterMesh CurrentMeshType = ECharacterMesh::Elsa;
-	UPROPERTY(ReplicatedUsing = OnRep_ChangeOption)
-	FOptionNameAndIndex CurrentOptionData;
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentOptionData)
+	FParameterOptionName CurrentOptionData;
+
+	FCustomizingData CustomizingData;
 
 	UFUNCTION()
-	void OnRep_MeshType();
+	void OnRep_CurrentMeshType();
 	UFUNCTION()
-	void ChangeCharacterMesh(UCustomizableObjectInstance* Instance);
-	UFUNCTION()
-	void OnRep_ChangeOption();
-
-		
+	void OnRep_CurrentOptionData();
+	
+	void ChangeCharacterMesh();
+	void ChangeOption();
+	
+	void ApplyCustomizingData();
+	
 };

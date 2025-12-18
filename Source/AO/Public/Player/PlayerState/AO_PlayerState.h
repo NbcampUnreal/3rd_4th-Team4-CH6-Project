@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/Customizing/AO_CustomizingComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "AO_PlayerState.generated.h"
 
@@ -88,4 +89,8 @@ public:
 
 	FORCEINLINE bool GetIsAlive() const { return bIsAlive; };
 	void SetIsAlive(bool bInIsAlive);
+
+	// 캐릭터 커스터마이징 옵션 데이터 (작성자: 김세훈)
+	FCustomizingData CharacterCustomizingData;
+	virtual void CopyProperties(APlayerState* PlayerState) override;
 };
