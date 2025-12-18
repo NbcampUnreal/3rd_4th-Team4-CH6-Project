@@ -14,6 +14,7 @@
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "AO/AO_Log.h"
+#include "Game/GameState/AO_GameState.h"
 #include "Interfaces/VoiceInterface.h"	// JM : VoiceInterface
 #include "Player/PlayerState/AO_PlayerState.h"
 
@@ -214,6 +215,8 @@ void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
 	AO_LOG(LogJSH, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
 		static_cast<int32>(FailureType), *ErrorString);
 
+	// JM : 뮤트 방식 써보기
+	// MuteAllRemoteTalker();
 	// JM : 연결 끊어지면 보이스 채팅 중지
 	StopVoiceChat();
 
@@ -681,6 +684,8 @@ void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
 		return;
 	}
 
+	// JM : 뮤트 테스트 (근데 여기선 해제 해줘야 하지 않을까?)
+	// MuteAllRemoteTalker();
 	// JM : 세션 이탈시 보이스 채팅 나가기
 	StopVoiceChat();
 
@@ -1020,12 +1025,27 @@ void UAO_OnlineSessionSubsystem::StopVoiceChat()
 		return;
 	}
 
+	// JM : 크래시방지 노력
+	// MuteAllRemoteTalker();
+
 	VoiceInterface->StopNetworkedVoice(0);
 	VoiceInterface->ClearVoicePackets();			// 권장사항(추가됨)
-	VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
+	// VoiceInterface->UnregisterLocalTalker(0);	// 위의 과정 하고오니까 크래시 안남. 만약 크래시 나면 아래 타이머 다시 살리기
+
 	VoiceInterface->RemoveAllRemoteTalkers();	// 이거 추가하니까 크래시 안남
+	
+	for (int32 i = 0; i < MAX_LOCAL_PLAYERS; ++i)	// 콘솔 게임의 경우 4명의 플레이어까지 입력 가능
+	{
+		VoiceInterface->UnregisterLocalTalker(i);
+	}
+
+	/*for (const auto& RemotePS : RemotePlayerStates)
+	{
+		MuteRemoteTalker(0, RemotePS.Value, true);
+	}*/
+	
+	
 	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
-	// bIsEnableVoiceChat = false;
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -1034,11 +1054,18 @@ void UAO_OnlineSessionSubsystem::MuteRemoteTalker(const uint8 LocalUserNum, AAO_
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
+	// TODO : ensure로 코드 리펙토링
 	if (!TargetPS)
 	{
 		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
 		return;
 	}
+
+	// TODO: 자기 자신은 생략하도록 코드 추가 (빨간 로그가 보기 싫네)
+	/*if (TargetPS->GetPlayerController()->IsLocalController())	// 자기 자신은 생략
+	{
+		return;
+	}*/
 	
 	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
 	if (!TargetPSId.IsValid())
@@ -1062,14 +1089,21 @@ void UAO_OnlineSessionSubsystem::MuteRemoteTalker(const uint8 LocalUserNum, AAO_
 	{
 		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Mute 시도)
 		AO_LOG(LogJM, Warning, TEXT("Mute Failed. Try RegisterRemoteTalker & Mute Again"));
-		VoiceInterface->RegisterRemoteTalker(*TargetPSId);
-		if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
 		{
-			AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Muted Successfully"), *TargetPS->GetPlayerName());
+			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+			if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+			{
+				AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Muted Successfully"), *TargetPS->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Mute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+			}
 		}
 		else
 		{
-			AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Mute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+			AO_LOG(LogJM, Error, TEXT("PS(%s), Register Remote Talker Failed"), *TargetPS->GetPlayerName());
 		}
 	}
 	
@@ -1086,6 +1120,12 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 		// AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
 		return;
 	}
+
+	// TODO: 자기 자신은 생략하도록 코드 추가 (빨간 로그가 보기 싫네)
+	/*if (TargetPS->GetPlayerController()->IsLocalController())	// 자기 자신은 생략
+	{
+		return;
+	}*/
 	
 	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
 	if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
@@ -1115,6 +1155,14 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
 		{
 			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+			if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+			{
+				AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Unmuted Successfully"), *TargetPS->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Unmute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+			}
 		}
 		else
 		{
@@ -1122,5 +1170,96 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 		}
 	}
 	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::MuteAllRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("World is Null")))
+	{
+		return;
+	}
+
+	APlayerController* LocalPC = World->GetFirstPlayerController();
+	if (!AO_ENSURE(LocalPC, TEXT("LocalPC is Null")))
+	{
+		return;
+	}
+
+	AGameStateBase* GS_Base = World->GetGameState();
+	if (!AO_ENSURE(GS_Base, TEXT("GameState is Null")))
+	{
+		return;
+	}
+
+	for (APlayerState* PS : GS_Base->PlayerArray)
+	{
+		if (!AO_ENSURE(PS, TEXT("PS is Null")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
+		if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		// 그냥 if 문 밖으로 빼보자, 어차피 나 자신은 실패하고 끝나니까
+		MuteRemoteTalker(0, AO_PS, false);
+
+		// 이게 비교가 뭔가 이상한듯..?
+		/*if (PS->GetPlayerController() != LocalPC)
+		{
+			MuteRemoteTalker(0, AO_PS, true);
+		}*/
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::UnmuteAllRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("World is Null")))
+	{
+		return;
+	}
+
+	APlayerController* LocalPC = World->GetFirstPlayerController();
+	if (!AO_ENSURE(LocalPC, TEXT("LocalPC is Null")))
+	{
+		return;
+	}
+
+	AGameStateBase* GS_Base = World->GetGameState();
+	if (!AO_ENSURE(GS_Base, TEXT("GameState is Null")))
+	{
+		return;
+	}
+
+	for (APlayerState* PS : GS_Base->PlayerArray)
+	{
+		if (!AO_ENSURE(PS, TEXT("PS is Null")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
+		if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		UnmuteRemoteTalker(0, AO_PS, false);
+
+		// 얘도 수상한데 그러면..?
+		/*if (PS->GetPlayerController() != LocalPC)
+		{
+			UnmuteRemoteTalker(0, AO_PS, true);
+		}*/
+	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }

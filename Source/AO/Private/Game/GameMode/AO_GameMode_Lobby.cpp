@@ -271,7 +271,8 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 
 	// JM : 레벨 이동 전에 보이스 채팅 비활성화 (Crash 발생 방지) - 이게 UX 안좋을것 같은데... 달리 방법이...
 	// 근데 자꾸 크래쉬 발생해서 넣긴 했음...
-	StopVoiceChatForAllClients();
+	// JM : PC::ClientTravel 쪽에서 한 번에 관리하기, (매 레벨 이동마다 넣으면 의존성이 강해짐)
+	// StopVoiceChatForAllClients();
 
 	if (UWorld* World = GetWorld())
 	{

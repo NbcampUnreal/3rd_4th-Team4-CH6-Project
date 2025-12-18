@@ -627,6 +627,7 @@ void AAO_PlayerCharacter::InitVoiceChat()
 	if (GameUserSettings->bIsEnableVoiceChat)
 	{
 		OSS->StartVoiceChat();
+		OSS->UnmuteAllRemoteTalker();
 	}
 }
 

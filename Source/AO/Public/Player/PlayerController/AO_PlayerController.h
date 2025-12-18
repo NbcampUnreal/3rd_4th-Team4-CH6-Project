@@ -7,6 +7,12 @@
 #include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController.generated.h"
 
+struct FPendingTravelInfo {
+	FString URL;
+	ETravelType Type;
+	bool bSeamless;
+};
+
 /**
  * 
  */
@@ -20,6 +26,9 @@ public:
 
 public:
 	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
+
+private:
+	void ExecutePreClientTravel();
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AO|Widget")
@@ -29,4 +38,5 @@ private:
 	UPROPERTY()
 	TObjectPtr<UAO_UserWidget> SettingsWidgetInstance = nullptr;
 
+	FPendingTravelInfo PendingTravelInfo;
 };
