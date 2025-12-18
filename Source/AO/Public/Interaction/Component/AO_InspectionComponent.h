@@ -135,6 +135,7 @@ private:
 	void RegisterCancelTags();
 	void UnregisterCancelTags();
 	void OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount);
+	bool IsSpacebarMode() const;
 
 	FTimerHandle HoverTraceTimerHandle;
 	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;

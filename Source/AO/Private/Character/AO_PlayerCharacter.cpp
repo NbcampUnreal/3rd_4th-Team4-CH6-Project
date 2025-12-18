@@ -16,6 +16,7 @@
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -67,6 +68,8 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
+	InteractableComponent = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
+	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	//ms: inventory component
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
@@ -175,7 +178,18 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority() && AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
+
 	BindSpeedAttributeDelegates();
+
+	// HSJ : InteractableComponent 델리게이트 바인딩
+	if (HasAuthority() && InteractableComponent)
+	{
+		InteractableComponent->OnInteractionSuccess.AddDynamic(this, &AAO_PlayerCharacter::HandleInteractableComponentSuccess);
+	}
 
 	if (IsLocallyControlled())
 	{
@@ -185,6 +199,12 @@ void AAO_PlayerCharacter::BeginPlay()
 			{
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
+
+			// HSJ : Inspection 모드 상태일 때 레벨 전환 시 카메라 움직이지 않는 문제 해결
+			PC->bShowMouseCursor = false;
+			// GameOnly 모드로 설정
+			FInputModeGameOnly InputMode;
+			PC->SetInputMode(InputMode);
 		}
 	}
 
@@ -537,6 +557,11 @@ void AAO_PlayerCharacter::HandlePlayerDeath()
 	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 
+	if (InteractableComponent)
+	{
+		InteractableComponent->bInteractionEnabled = true;
+	}
+
 	if (Cast<APlayerController>(GetController()))
 	{
 		ClientRPC_HandleDeathView();
@@ -574,6 +599,20 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	case EGait::Sprint:
 		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetSprintSpeed();
 		break;
+	}
+}
+
+void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// HSJ : 상호작용 비활성화
+	if (InteractableComponent)
+	{
+		InteractableComponent->bInteractionEnabled = false;
 	}
 }
 

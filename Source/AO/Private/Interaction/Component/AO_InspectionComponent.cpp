@@ -375,7 +375,10 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
     PC->SetInputMode(InputMode);
 
 	// Hover trace 시작
-	StartHoverTrace();
+	if (!IsSpacebarMode())
+	{
+		StartHoverTrace();
+	}
 }
 
 // Inspection 나가기 처리 (카메라 복원, UI 설정)
@@ -552,13 +555,11 @@ void UAO_InspectionComponent::OnSpacebarPressed()
 {
 	if (!bIsInspecting)
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Not inspecting, ignoring"));
 		return;
 	}
 
 	if (!CurrentInspectedActor)
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] No inspected actor, ignoring"));
 		return;
 	}
 
@@ -584,12 +585,10 @@ void UAO_InspectionComponent::OnSpacebarPressed()
 
 	if (!Owner->HasAuthority())
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Client calling ServerRPC"));
 		ServerNotifySpacebarPressed();
 	}
 	else
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Server calling ActiveAllLinkedElements directly"));
 		OverwatchPuzzle->ActiveAllLinkedElements();
 	}
 }
@@ -955,4 +954,19 @@ void UAO_InspectionComponent::OnCancelTagChanged(const FGameplayTag Tag, int32 N
 	{
 		ExitInspectionMode();
 	}
+}
+
+bool UAO_InspectionComponent::IsSpacebarMode() const
+{
+	if (!CurrentInspectedActor)
+	{
+		return false;
+	}
+
+	if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor))
+	{
+		return OverwatchPuzzle->bUseSpacebar;
+	}
+
+	return false;
 }
