@@ -9,40 +9,43 @@ AAO_newTrain::AAO_newTrain()
 	ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
 	ASC->SetIsReplicated(true);
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-
-	FuelAttributeSet = CreateDefaultSubobject<UAO_Fuel_AttributeSet>(TEXT("FuelAttributeSet"));
 }
 
 void AAO_newTrain::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	check(ASC);
+	ASC->InitAbilityActorInfo(this, this);
+	
+	FuelAttributeSet = ASC->GetSet<UAO_Fuel_AttributeSet>();
+	check(FuelAttributeSet);
+		
+	ASC->GetGameplayAttributeValueChangeDelegate(
+		UAO_Fuel_AttributeSet::GetFuelAttribute()
+	).AddUObject(this, &AAO_newTrain::OnFuelChange);
 
 	if (HasAuthority())
 	{
-		if (!ASC) return;
-		ASC->GetGameplayAttributeValueChangeDelegate(
-					UAO_Fuel_AttributeSet::GetFuelAttribute()
-				).AddUObject(this, &AAO_newTrain::OnFuelChange);
-		
-		ASC->InitAbilityActorInfo(this, this);
-
+		const_cast<UAO_Fuel_AttributeSet*>(FuelAttributeSet)->InitFromGameInstance();
+	
 		if (AddEnergyAbilityClass)
 		{
-			ASC->GiveAbility(FGameplayAbilitySpec(AddEnergyAbilityClass, 1, 0, this));
+			ASC->GiveAbility(FGameplayAbilitySpec(AddEnergyAbilityClass, 1, 0));
 		}
 		if (LeakEnergyAbilityClass)
 		{
-			ASC->GiveAbility(FGameplayAbilitySpec(LeakEnergyAbilityClass, 1, 0, this));
+			ASC->GiveAbility(FGameplayAbilitySpec(LeakEnergyAbilityClass, 1, 0));
 		}
-
+	
 		if (auto* TrainSubsystem = GetWorld()->GetSubsystem<UAO_TrainWorldSubsystem>())
 		{
 			TrainSubsystem->RegisterTrainASC(ASC);
-			UE_LOG(LogTemp, Warning, TEXT("TrainASC Registered"));
+			//UE_LOG(LogTemp, Warning, TEXT("TrainASC Registered"));
 		}
-
 	}
 }
+
 
 UAbilitySystemComponent* AAO_newTrain::GetAbilitySystemComponent() const
 {
@@ -118,9 +121,7 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 	const float OldFuel = Data.OldValue;
 	const float NewFuel = Data.NewValue;
 	const float Delta = NewFuel - OldFuel;
-
-	TotalFuelGained += Delta;
-
+	
 	if (HasAuthority())
 	{
 		// 연료가 0 이상이었다가 0 미만으로 떨어지는 순간에만 실패 트리거
@@ -135,7 +136,12 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 			}
 		}
 	}
+
+	OnFuelChangedDelegate.Broadcast(NewFuel);
 	
+	//해당 로그에는 GI의 초기값은 적용되지 않음
+	/*
+	TotalFuelGained += Delta;
 	if (Delta > 0.f)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
@@ -144,7 +150,7 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
-
-	OnFuelChangedDelegate.Broadcast(NewFuel);
+	*/
+	
 }
 

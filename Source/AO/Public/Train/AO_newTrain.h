@@ -38,7 +38,7 @@ protected:
 	TObjectPtr<UAbilitySystemComponent> ASC;
 	
 	UPROPERTY()
-	UAO_Fuel_AttributeSet* FuelAttributeSet;
+	const UAO_Fuel_AttributeSet* FuelAttributeSet;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayAbility> AddEnergyAbilityClass;
