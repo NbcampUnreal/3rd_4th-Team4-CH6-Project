@@ -15,6 +15,7 @@ public:
     AAO_PushableRockElement(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
+	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void ResetToInitialState() override;
 
     UFUNCTION(BlueprintCallable, Category="Rock")

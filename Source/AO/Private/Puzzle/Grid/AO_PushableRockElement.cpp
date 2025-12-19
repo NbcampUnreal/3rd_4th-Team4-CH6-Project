@@ -188,15 +188,39 @@ bool AAO_PushableRockElement::TryPush(EGridDirection Direction)
 
 void AAO_PushableRockElement::OnInteractionSuccess(AActor* Interactor)
 {
-    Super::OnInteractionSuccess(Interactor);
+	if (!Interactor || !HasAuthority())
+	{
+		return;
+	}
 
-    if (!HasAuthority() || !Interactor)
-    {
-        return;
-    }
+	EGridDirection PushDirection = GetPushDirectionFromInteractor(Interactor);
+    
+	// 실패하면 중단
+	if (!TryPush(PushDirection))
+	{
+		return;
+	}
+    
+	if (ActivateEffect.IsValid())
+	{
+		FTransform SpawnTransform = GetInteractionTransform();
+		MulticastPlayInteractionEffect(ActivateEffect, SpawnTransform);
+	}
+}
 
-    EGridDirection PushDirection = GetPushDirectionFromInteractor(Interactor);
-    TryPush(PushDirection);
+bool AAO_PushableRockElement::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
+{
+	if (!Super::CanInteraction(InteractionQuery))
+	{
+		return false;
+	}
+    
+	if (bIsMoving)
+	{
+		return false;
+	}
+    
+	return true;
 }
 
 void AAO_PushableRockElement::ResetToInitialState()
@@ -405,10 +429,16 @@ void AAO_PushableRockElement::UpdateMoveAnimation()
 		}
         
 		// 정답 셀인지 아닌지 체크
-		if (HasAuthority() && GoalCells.Num() > 0)
+		if (HasAuthority())
 		{
-			bool bIsAtGoal = IsAtGoalCell();
-			SetActivationState(bIsAtGoal);  // 정답이면 Checker에 태그 추가, 정답이 아니면 태그 제거
+			// Toggle이 매번 작동하도록 상태 리셋
+			bIsActivated = false;  // 다음에 밀 수 있게 리셋
+            
+			if (GoalCells.Num() > 0)
+			{
+				bool bIsAtGoal = IsAtGoalCell();
+				SetActivationState(bIsAtGoal);
+			}
 		}
 	}
 }

@@ -19,6 +19,7 @@ enum class EInspectionMovementType : uint8
 {
 	None        UMETA(DisplayName = "None"),
 	Planar      UMETA(DisplayName = "Planar"),
+	Rotation    UMETA(DisplayName = "Rotation"),
 	Orbital     UMETA(DisplayName = "Orbital"),
 };
 
@@ -47,6 +48,9 @@ struct FAO_InspectionCameraSettings
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bHideCharacter = true;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bUseActionButton = false;
 };
 
 UINTERFACE(MinimalAPI, BlueprintType)
@@ -62,4 +66,8 @@ class AO_API IAO_Interface_InspectionCameraProvider
 public:
 	virtual FAO_InspectionCameraSettings GetInspectionCameraSettings() const = 0;
 	virtual bool IsValidClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const { return false; }
+
+	virtual void OnInspectionInput(const FVector2D& InputValue, float DeltaTime) {}
+	virtual void OnInspectionInputLocal(const FVector2D& InputValue, float DeltaTime) {}
+	virtual void OnInspectionAction() {}
 };
