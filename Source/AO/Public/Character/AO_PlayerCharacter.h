@@ -219,8 +219,4 @@ public:
 	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
 	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }
-
-	// virtual void OnRep_PlayerState() override;
-	// virtual void PossessedBy(AController* NewController) override;
-	// void LoadCharacterCustomizingData();
 };

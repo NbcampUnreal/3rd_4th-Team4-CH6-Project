@@ -91,6 +91,11 @@ public:
 	void SetIsAlive(bool bInIsAlive);
 
 	// 캐릭터 커스터마이징 옵션 데이터 (작성자: 김세훈)
+	UPROPERTY(Replicated)
 	FCustomizingData CharacterCustomizingData;
+	
 	virtual void CopyProperties(APlayerState* PlayerState) override;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetCharacterCustomizingData(const FCustomizingData& CustomizingData);
 };

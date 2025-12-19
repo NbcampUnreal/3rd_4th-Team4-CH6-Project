@@ -35,7 +35,7 @@ struct FCustomizingData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ECharacterMesh CharacterMeshType;
+	ECharacterMesh CharacterMeshType = ECharacterMesh::Elsa;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FParameterOptionName HairOptionData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

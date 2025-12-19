@@ -33,6 +33,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, LobbyJoinOrder);
 	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
 	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
+	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -146,6 +147,11 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		PS->CharacterCustomizingData = this->CharacterCustomizingData;
 	}
+}
+
+void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
+{
+	CharacterCustomizingData = CustomizingData;
 }
 
 /* ==================== 이름 복제 ==================== */

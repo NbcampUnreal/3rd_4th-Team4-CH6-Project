@@ -59,6 +59,7 @@ void UAO_CustomizingComponent::SaveCustomizingDataToPlayerState()
 	checkf(PlayerState, TEXT("PlayerState is invalid"));
 	
 	PlayerState->CharacterCustomizingData = CustomizingData;
+	PlayerState->ServerRPC_SetCharacterCustomizingData(CustomizingData);
 	PrintPSCustomizingData();
 }
 
