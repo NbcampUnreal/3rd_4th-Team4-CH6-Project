@@ -208,11 +208,6 @@ private:
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
-	
-//ms: inventory component input
-	void SelectInventorySlot(const FInputActionValue& Value);
-	void UseInvenrotyItem();
-	void DropInvenrotyItem();
 
 //세훈: Customizable Object Instance
 public:
