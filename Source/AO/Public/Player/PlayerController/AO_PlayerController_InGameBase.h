@@ -14,7 +14,7 @@ class UAO_PauseMenuWidget;
 class UAO_OnlineSessionSubsystem;
 
 /**
- * 
+ *
  */
 UCLASS()
 class AO_API AAO_PlayerController_InGameBase : public AAO_PlayerController
@@ -32,6 +32,9 @@ protected:
 	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 protected:
+	UPROPERTY(Transient)
+	TObjectPtr<UAO_PauseMenuWidget> PauseMenuWidgetInstance = nullptr;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UAO_CameraManagerComponent> CameraManagerComponent;
 	
@@ -41,8 +44,10 @@ protected:
 	UPROPERTY()
 	UAO_PauseMenuWidget* PauseMenu;
 
-	UPROPERTY()
-	bool bPauseMenuVisible;
+public:
+	TSubclassOf<UAO_PauseMenuWidget> GetPauseMenuWidgetClass() const { return PauseMenuClass; }
+	
+	UAO_PauseMenuWidget* GetOrCreatePauseMenuWidget();
 
 // JM : Voice Chat
 public:
@@ -71,7 +76,7 @@ public:
 	void Test_Alive();
 
 protected:
-	void TogglePauseMenu();
+	void HandleUIOpen();
 
 	// 위젯 델리게이트 콜백
 	UFUNCTION()
@@ -85,10 +90,6 @@ protected:
 
 	UFUNCTION()
 	void OnPauseMenu_RequestResume();
-
-	// 내부 헬퍼
-	void ShowPauseMenu();
-	void HidePauseMenu();
 
 	UAO_OnlineSessionSubsystem* GetOnlineSessionSub() const;
 
