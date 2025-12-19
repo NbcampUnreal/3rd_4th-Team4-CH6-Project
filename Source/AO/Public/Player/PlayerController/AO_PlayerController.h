@@ -20,7 +20,11 @@ public:
 
 public:
 	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
-	
+
+private:
+	void CleanupAudioResource();
+	void UpdateLoadingMapName(const FString& PendingURL) const;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AO|Widget")
 	TSubclassOf<UAO_UserWidget> SettingsWidgetClass;
@@ -28,5 +32,5 @@ protected:
 private:
 	UPROPERTY()
 	TObjectPtr<UAO_UserWidget> SettingsWidgetInstance = nullptr;
-
+	
 };

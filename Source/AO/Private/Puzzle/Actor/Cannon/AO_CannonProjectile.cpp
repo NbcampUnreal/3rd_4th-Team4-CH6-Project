@@ -35,7 +35,7 @@ AAO_CannonProjectile::AAO_CannonProjectile()
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->ProjectileGravityScale = 0.5f;
 
-    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));
+    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));     // TODO: 성준님꺼 PR 받아서 태그 확인해봐야 함(JM 작성)
 }
 
 void AAO_CannonProjectile::BeginPlay()

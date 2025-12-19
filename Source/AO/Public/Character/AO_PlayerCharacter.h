@@ -211,6 +211,17 @@ private:
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
+	void InitVoiceChat();
+	
+public:
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "AO|VoiceChat")
+	TObjectPtr<USoundAttenuation> SA_VoiceChat = nullptr;
+
+private:
+//ms: inventory component input
+	void SelectInventorySlot(const FInputActionValue& Value);
+	void UseInvenrotyItem();
+	void DropInvenrotyItem();
 
 //세훈: Customizable Object Instance
 public:
