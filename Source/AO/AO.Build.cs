@@ -56,6 +56,9 @@ public class AO : ModuleRules
 			
 			// Mutable
 			"CustomizableObject",
+			
+			// VFX
+			"Niagara",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

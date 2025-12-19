@@ -7,6 +7,7 @@
 
 class UBoxComponent;
 class AAO_PuzzleReactionActor;
+class AAO_MasterItem;
 
 /**
  * Overlap 기반 압력판

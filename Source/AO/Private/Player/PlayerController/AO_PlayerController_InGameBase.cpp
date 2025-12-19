@@ -16,10 +16,13 @@
 #include "Interfaces/VoiceInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Player/Camera/AO_CameraManagerComponent.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
+	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
+	
 	bPauseMenuVisible = false;
 
 	static ConstructorHelpers::FClassFinder<UAO_PauseMenuWidget> PauseMenuBPClass(
@@ -35,6 +38,30 @@ AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 	}
 
 	// TODO: Hard Load 말고 UPROPERTY를 활용한 로드로 전환 (WBP_Settings는 완료)
+}
+
+void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	InitCameraManager();
+}
+
+void AAO_PlayerController_InGameBase::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()
@@ -450,4 +477,20 @@ UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 {
 	HidePauseMenu();
+}
+
+void AAO_PlayerController_InGameBase::InitCameraManager()
+{
+	checkf(CameraManagerComponent, TEXT("CameraManagerComponent not found"));
+	
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(GetPawn());
+	checkf(PlayerCharacter, TEXT("Character not found"));
+
+	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
+	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
+
+	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
+	{
+		CameraManagerComponent->BindToASC(ASC);
+	}
 }

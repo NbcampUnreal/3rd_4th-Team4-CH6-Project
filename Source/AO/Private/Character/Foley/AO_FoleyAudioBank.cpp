@@ -7,11 +7,7 @@
 USoundBase* UAO_FoleyAudioBank::GetSoundFromFoleyEvent(const FGameplayTag& Event)
 {
 	TObjectPtr<USoundBase> FoleySound = Assets.FindRef(Event);
-	if (!FoleySound)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to find FoleySound for Event: %s"), *Event.ToString());
-		return nullptr;
-	}
+	checkf(FoleySound, TEXT("FoleySound is null"));
 	
 	return FoleySound;
 }
