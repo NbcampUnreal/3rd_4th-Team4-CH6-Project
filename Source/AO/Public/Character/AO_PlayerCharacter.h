@@ -211,8 +211,7 @@ private:
 
 //세훈: Customizable Object Instance
 public:
-	UFUNCTION(NetMulticast, Reliable)
-	void ChangeCharacterMesh(UCustomizableObjectInstance* ChangeMesh);
-	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const;
-	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const;
+	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
+	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
+	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }
 };

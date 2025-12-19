@@ -29,6 +29,7 @@ protected:
 	virtual void OnRep_Pawn() override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

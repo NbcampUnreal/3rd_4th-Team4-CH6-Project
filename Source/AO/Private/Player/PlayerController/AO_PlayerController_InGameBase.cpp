@@ -96,6 +96,17 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 	}
 }
 
+void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL, ETravelType TravelType,
+	bool bIsSeamlessTravel)
+{
+	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+	checkf(PlayerCharacter, TEXT("Character is invalid"));
+
+	PlayerCharacter->GetCustomizingComponent()->SaveCustomizingDataToPlayerState();
+	
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+}
+
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));

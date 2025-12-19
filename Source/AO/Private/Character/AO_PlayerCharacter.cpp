@@ -652,35 +652,3 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
-
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
-{
-	return BodyComponent;
-}
-
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetHeadComponent() const
-{
-	return HeadComponent;
-}
-
-void AAO_PlayerCharacter::ChangeCharacterMesh_Implementation(UCustomizableObjectInstance* ChangeMesh)
-{
-	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
-	*GetName(), HasAuthority(), IsLocallyControlled());
-	
-	if (IsValid(ChangeMesh))
-	{
-		BodyComponent->SetCustomizableObjectInstance(ChangeMesh);
-		HeadComponent->SetCustomizableObjectInstance(ChangeMesh);
-		BodyComponent->UpdateSkeletalMeshAsync();
-		HeadComponent->UpdateSkeletalMeshAsync();
-	
-		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *ChangeMesh->GetName());
-		
-	}
-	else
-	{
-		AO_LOG(LogKSH, Error, TEXT("ChangeCharacterMesh: ChangeMesh is invalid"));
-	}
-	CustomizingComponent->PrintCustomizableObjectInstanceMap();
-}
