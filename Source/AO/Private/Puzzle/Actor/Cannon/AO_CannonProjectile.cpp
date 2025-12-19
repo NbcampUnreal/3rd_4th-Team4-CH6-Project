@@ -8,7 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
-#include "AI/Character/AO_EnemyBase.h"
+#include "AI/Base/AO_AICharacterBase.h"
 #include "Puzzle/Actor/Cannon/AO_CannonProjectilePool.h"
 
 AAO_CannonProjectile::AAO_CannonProjectile()
@@ -134,7 +134,7 @@ void AAO_CannonProjectile::Explode(const FVector& Location)
         }
 
         // Enemy에게만 Stun 게임플레이 이벤트
-    	TObjectPtr<AAO_EnemyBase> Enemy = Cast<AAO_EnemyBase>(HitActor);
+    	TObjectPtr<AAO_AICharacterBase> Enemy = Cast<AAO_AICharacterBase>(HitActor);
         if (!Enemy)
         {
             continue;
