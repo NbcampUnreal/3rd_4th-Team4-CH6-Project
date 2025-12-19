@@ -63,94 +63,69 @@ void AAO_PushableRockElement::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 
 bool AAO_PushableRockElement::CheckWallsAtTarget(const FVector& InTargetLocation)
 {
-    if (!GridManager || !GetWorld())
-    {
-        return false;
-    }
+	if (!GridManager || !GetWorld())
+	{
+		return false;
+	}
 
-    // 이동 방향
-    MoveDirection = (InTargetLocation - GetActorLocation()).GetSafeNormal();
+	MoveDirection = (InTargetLocation - GetActorLocation()).GetSafeNormal();
+	FIntPoint TargetCoord = GridManager->WorldToGrid(InTargetLocation);
 
-    FVector Forward = MoveDirection;
-    FVector Right = FVector::CrossProduct(FVector::UpVector, Forward);
-    FVector TargetCenter = InTargetLocation;
+	// 목표 셀 기준 전방/왼쪽/오른쪽 방향 계산
+	EGridDirection ForwardDir = AAO_GridManager::GetDirectionFromVector(MoveDirection);
+	FVector RightVec = FVector::CrossProduct(FVector::UpVector, MoveDirection);
+	EGridDirection LeftDir = AAO_GridManager::GetDirectionFromVector(-RightVec);
+	EGridDirection RightDir = AAO_GridManager::GetDirectionFromVector(RightVec);
     
-    float TraceDistance = GridManager->CellSize;
+	// 각 방향 좌표
+	FIntPoint ForwardCoord = TargetCoord + AAO_GridManager::GetDirectionVector(ForwardDir);
+	FIntPoint LeftCoord = TargetCoord + AAO_GridManager::GetDirectionVector(LeftDir);
+	FIntPoint RightCoord = TargetCoord + AAO_GridManager::GetDirectionVector(RightDir);
+	
+	// 벽 체크
+	bool bHasWallForward = GridManager->HasWallBetween(TargetCoord, ForwardCoord);
+	bool bHasWallLeft = GridManager->HasWallBetween(TargetCoord, LeftCoord);
+	bool bHasWallRight = GridManager->HasWallBetween(TargetCoord, RightCoord);
     
-    TArray<FHitResult> HitsForward, HitsLeft, HitsRight;
-    FCollisionQueryParams TraceParams;
-    TraceParams.AddIgnoredActor(this);
+	// 바위 체크
+	bool bHasRockForward = GridManager->IsRockAt(ForwardCoord);
+	bool bHasRockLeft = GridManager->IsRockAt(LeftCoord);
+	bool bHasRockRight = GridManager->IsRockAt(RightCoord);
 
-	FCollisionObjectQueryParams ObjectParams;
-	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	//AO_LOG(LogHSJ, Warning, TEXT("Forward - Wall:%d Rock:%d"), bHasWallForward, bHasRockForward);
+	//AO_LOG(LogHSJ, Warning, TEXT("Left - Wall:%d Rock:%d"), bHasWallLeft, bHasRockLeft);
+	//AO_LOG(LogHSJ, Warning, TEXT("Right - Wall:%d Rock:%d"), bHasWallRight, bHasRockRight);
     
-    if (GetWorld())
-    {
-        GetWorld()->LineTraceMultiByObjectType(
-            HitsForward, TargetCenter, TargetCenter + Forward * TraceDistance,
-            ObjectParams, TraceParams);
+	// 벽 또는 바위가 있는지
+	bWallForward = bHasWallForward || bHasRockForward;
+	bWallLeft = bHasWallLeft || bHasRockLeft;
+	bWallRight = bHasWallRight || bHasRockRight;
+
+	/*
+	AO_LOG(LogHSJ, Warning, TEXT("Result - Forward:%d, Left:%d, Right:%d"),
+		bWallForward, bWallLeft, bWallRight);
+	*/
+
+	// 3면 막혔고 캐릭터 있으면 이동 불가
+	if (bWallForward && bWallLeft && bWallRight)
+	{
+		TArray<FOverlapResult> Overlaps;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
         
-        GetWorld()->LineTraceMultiByObjectType(
-            HitsLeft, TargetCenter, TargetCenter - Right * TraceDistance,
-            ObjectParams, TraceParams);
+		GetWorld()->OverlapMultiByChannel(Overlaps, InTargetLocation, FQuat::Identity, ECC_Pawn,
+			FCollisionShape::MakeSphere(GridManager->CellSize * 0.4f), QueryParams);
         
-        GetWorld()->LineTraceMultiByObjectType(
-            HitsRight, TargetCenter, TargetCenter + Right * TraceDistance,
-            ObjectParams, TraceParams);
-        
-        auto HasObstacle = [](const TArray<FHitResult>& Hits) -> bool
-        {
-            for (const FHitResult& Hit : Hits)
-            {
-                if (AActor* HitActor = Hit.GetActor())
-                {
-                    if (HitActor->IsA<AAO_GridWall>() || HitActor->IsA<AAO_PushableRockElement>())
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
-        
-        bWallForward = HasObstacle(HitsForward);
-        bWallLeft = HasObstacle(HitsLeft);
-        bWallRight = HasObstacle(HitsRight);
-        
-        bool bThreeSidesBlocked = bWallForward && bWallLeft && bWallRight;
-        
-        if (bThreeSidesBlocked)
-        {
-            TArray<FOverlapResult> Overlaps;
-            FCollisionQueryParams QueryParams;
-            QueryParams.AddIgnoredActor(this);
-            
-            if (MeshComponent)
-            {
-                GetWorld()->OverlapMultiByChannel(
-                    Overlaps,
-                    TargetCenter,
-                    FQuat::Identity,
-                    ECC_Pawn,
-                    FCollisionShape::MakeSphere(GridManager->CellSize * 0.4f),
-                    QueryParams
-                );
-                
-                for (const FOverlapResult& Overlap : Overlaps)
-                {
-                    if (AActor* OverlappedActor = Overlap.GetActor())
-                    {
-                        if (OverlappedActor->IsA(APawn::StaticClass()))
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-    }
+		for (const FOverlapResult& Overlap : Overlaps)
+		{
+			if (Overlap.GetActor() && Overlap.GetActor()->IsA(APawn::StaticClass()))
+			{
+				return false;
+			}
+		}
+	}
     
-    return true;
+	return true;
 }
 
 bool AAO_PushableRockElement::TryPush(EGridDirection Direction)
@@ -329,6 +304,22 @@ void AAO_PushableRockElement::UpdateMoveAnimation()
 	FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetWorldLocation, 0.016f, MoveSpeed);
     
 	SetActorLocation(NewLocation, false);
+
+	// 진행도 계산 (0.0 = 시작, 1.0 = 완료)
+	float TotalDistance = FVector::Dist(CurrentLocation, TargetWorldLocation);
+	float StartDistance = FVector::Dist(GetActorLocation(), TargetWorldLocation);
+	float Progress = 1.0f - (TotalDistance / FMath::Max(StartDistance, 1.0f));
+
+	// 80% 이상 도달 시 오버랩 범위/가하는 힘 감소 시작
+	float OverlapMultiplier = 1.0f;
+	float ForceMultiplier = 1.0f;
+
+	if (Progress > 0.8f)
+	{
+		float DecayProgress = (Progress - 0.8f) / 0.2f;
+		OverlapMultiplier = FMath::Lerp(1.0f, 0.3f, DecayProgress);
+		ForceMultiplier = FMath::Lerp(1.0f, 0.2f, DecayProgress);
+	}
     
 	// 캐릭터 감지
     TArray<FOverlapResult> Overlaps;
@@ -337,12 +328,14 @@ void AAO_PushableRockElement::UpdateMoveAnimation()
     
     if (MeshComponent && GetWorld())
     {
+    	float OverlapRadius = MeshComponent->Bounds.SphereRadius * 1.2f * OverlapMultiplier;
+        
         GetWorld()->OverlapMultiByChannel(
             Overlaps,
             NewLocation,
             FQuat::Identity,
             ECC_Pawn,
-            FCollisionShape::MakeSphere(MeshComponent->Bounds.SphereRadius * 1.2f),
+            FCollisionShape::MakeSphere(OverlapRadius),
             QueryParams
         );
         
@@ -399,15 +392,10 @@ void AAO_PushableRockElement::UpdateMoveAnimation()
                                         EscapeDirection = (Forward + Right * SignValue * 2.0f).GetSafeNormal();
                                     }
                                 }
-                                else
-                                {
-                                    // 양쪽 다 막혔으면 뒤로
-                                    EscapeDirection = -Forward;
-                                }
                             }
                             
                             EscapeDirection.Z = 0;
-                            float PushStrength = MoveSpeed * 500.0f;
+                        	float PushStrength = MoveSpeed * 500.0f * ForceMultiplier;
                             
                             MovementComp->AddImpulse(EscapeDirection * PushStrength, true);
                         }

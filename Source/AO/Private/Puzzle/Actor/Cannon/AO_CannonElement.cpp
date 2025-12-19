@@ -496,17 +496,27 @@ void AAO_CannonElement::MulticastPlayFireEffect_Implementation()
     FVector MuzzleLocation = MuzzlePoint->GetComponentLocation();
     FRotator MuzzleRotation = MuzzlePoint->GetComponentRotation();
 
+	FRotator FinalRotation = MuzzleRotation + MuzzleFlashRotationOffset;
+
     if (MuzzleFlashVFX)
     {
-        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-            this, MuzzleFlashVFX, MuzzleLocation, MuzzleRotation
-        );
+    	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this, 
+			MuzzleFlashVFX, 
+			MuzzleLocation, 
+			FinalRotation,
+			MuzzleFlashScale
+		);
     }
     else if (MuzzleFlashCascade)
     {
-        UGameplayStatics::SpawnEmitterAtLocation(
-            this, MuzzleFlashCascade, MuzzleLocation, MuzzleRotation
-        );
+    	UGameplayStatics::SpawnEmitterAtLocation(
+			this, 
+			MuzzleFlashCascade, 
+			MuzzleLocation, 
+			FinalRotation,
+			MuzzleFlashScale
+		);
     }
 
     if (FireSFX)

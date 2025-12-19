@@ -27,8 +27,8 @@ FIntPoint AAO_GridManager::WorldToGrid(const FVector& WorldLocation) const
 	FVector LocalPos = WorldLocation - GridOrigin;
     
 	// 셀 중심 기준으로 변환
-	int32 X = FMath::FloorToInt((LocalPos.X + CellSize * 0.5f) / CellSize);
-	int32 Y = FMath::FloorToInt((LocalPos.Y + CellSize * 0.5f) / CellSize);
+	int32 X = FMath::FloorToInt(LocalPos.X / CellSize);
+	int32 Y = FMath::FloorToInt(LocalPos.Y / CellSize);
     
 	return FIntPoint(X, Y);
 }

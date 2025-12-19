@@ -56,6 +56,8 @@ public:
     UFUNCTION(BlueprintPure, Category="Grid")
     static EGridDirection GetDirectionFromVector(const FVector& WorldDirection);
 
+	bool HasWallBetween(const FIntPoint& From, const FIntPoint& To) const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grid", meta=(ClampMin="10.0"))
 	float CellSize = 200.0f;
 
@@ -76,7 +78,6 @@ protected:
 #endif
 
 private:
-	bool HasWallBetween(const FIntPoint& From, const FIntPoint& To) const;
 	void DrawDebugGrid();
 	
     UPROPERTY()

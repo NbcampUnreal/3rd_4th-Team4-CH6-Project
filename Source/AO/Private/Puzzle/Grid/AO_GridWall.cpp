@@ -12,6 +12,10 @@ AAO_GridWall::AAO_GridWall()
 
     WallMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WallMesh"));
     RootComponent = WallMesh;
+
+	WallMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	WallMesh->SetCollisionObjectType(ECC_WorldDynamic);
+	WallMesh->SetCollisionResponseToAllChannels(ECR_Block);
 }
 
 void AAO_GridWall::BeginPlay()

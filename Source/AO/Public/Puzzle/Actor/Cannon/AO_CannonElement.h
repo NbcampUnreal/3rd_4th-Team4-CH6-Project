@@ -89,6 +89,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon|Fire")
     TObjectPtr<USoundBase> FireSFX;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon|Fire")
+	FVector MuzzleFlashScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon|Fire")
+	FRotator MuzzleFlashRotationOffset = FRotator::ZeroRotator;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon|Rotation")
 	float RotationInterpSpeed = 15.0f;
 
