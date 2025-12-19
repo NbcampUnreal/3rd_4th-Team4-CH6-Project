@@ -8,7 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
-#include "AI/Character/AO_EnemyBase.h"
+#include "AI/Base/AO_AICharacterBase.h"
 #include "Puzzle/Actor/Cannon/AO_CannonProjectilePool.h"
 
 AAO_CannonProjectile::AAO_CannonProjectile()
@@ -35,7 +35,7 @@ AAO_CannonProjectile::AAO_CannonProjectile()
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->ProjectileGravityScale = 0.5f;
 
-    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));
+    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));     // TODO: 성준님꺼 PR 받아서 태그 확인해봐야 함(JM 작성)
 }
 
 void AAO_CannonProjectile::BeginPlay()
@@ -134,7 +134,7 @@ void AAO_CannonProjectile::Explode(const FVector& Location)
         }
 
         // Enemy에게만 Stun 게임플레이 이벤트
-    	TObjectPtr<AAO_EnemyBase> Enemy = Cast<AAO_EnemyBase>(HitActor);
+    	TObjectPtr<AAO_AICharacterBase> Enemy = Cast<AAO_AICharacterBase>(HitActor);
         if (!Enemy)
         {
             continue;

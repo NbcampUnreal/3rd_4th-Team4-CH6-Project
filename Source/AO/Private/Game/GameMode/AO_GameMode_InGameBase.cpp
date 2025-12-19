@@ -19,7 +19,7 @@ void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::HandleSeamlessTravelPlayer(C);
 
-	LetStartVoiceChat(C);		// 레벨 이동시 VoiceChat이 종료되어서 다시 실행시킴
+	// LetStartVoiceChat(C);	// 강제로 실행할 필요 없음. 그냥 사용자 설정에 맞게 반영	// 레벨 이동시 VoiceChat이 종료되어서 다시 실행시킴
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
