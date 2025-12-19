@@ -19,7 +19,13 @@ protected:
 	virtual void BeginPlay() override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
-	TSubclassOf<UGameplayEffect> PassiveEffectClass;
+	TSubclassOf<UGameplayEffect> MaxHpPassive;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
+	TSubclassOf<UGameplayEffect> MaxStaminaPassive;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
+	TSubclassOf<UGameplayEffect> MovementPassive;
 	
 	void OnGameplayEventReceived(const FGameplayEventData* Payload);
 };

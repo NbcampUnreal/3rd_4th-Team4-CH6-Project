@@ -590,6 +590,18 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 		return;
 	}
 
+	if (!Interactor) return;
+
+	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
+	if (!Inventory) return;
+
+	FInventorySlot ItemToAdd;
+	ItemToAdd.ItemID = "chip";
+	ItemToAdd.Quantity = 1;
+	ItemToAdd.ItemType = EItemType::Consumable;
+		
+	Inventory->PickupItem(ItemToAdd, this);
+	
 	// HSJ : 상호작용 비활성화
 	if (InteractableComponent)
 	{

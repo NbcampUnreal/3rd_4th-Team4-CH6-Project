@@ -106,6 +106,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> InspectionClickInputAction;
 
+	UPROPERTY()
+	TObjectPtr<ACameraActor> InspectionCameraActor;
+
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> CameraMoveAction;
 
@@ -137,6 +140,11 @@ private:
 	void OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount);
 	bool IsSpacebarMode() const;
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyInspectionAction();
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyInspectionInput(FVector2D InputValue, float DeltaTime);
+
 	FTimerHandle HoverTraceTimerHandle;
 	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;
     
@@ -151,9 +159,6 @@ private:
 
     UPROPERTY(Replicated)
     bool bIsInspecting = false;
-
-    UPROPERTY()
-    TObjectPtr<ACameraActor> InspectionCameraActor;
 
     UPROPERTY()
     TObjectPtr<AActor> OriginalViewTarget;

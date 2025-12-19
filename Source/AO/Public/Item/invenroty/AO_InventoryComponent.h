@@ -94,7 +94,6 @@ protected:
 	
 	UFUNCTION()
 	void OnRep_Slots();
-
 	UFUNCTION()
 	void OnRep_SelectedIndex();
 	
