@@ -2,6 +2,7 @@
 
 #include "Net/UnrealNetwork.h"
 #include "AO_Log.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_GameState::AAO_GameState()
 {
@@ -15,6 +16,54 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
 }
 
+void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::AddPlayerState(PlayerState);
+
+	// JM : 내부 데이터가 완전히 복제될 때까지의 시간이 필요 (여기서 바로 실행하면 null 가능성 있음) - 테스트 결과 null 임
+	// TODO : Event(Delegate) 방식으로 전환 필요
+	if (GetWorldTimerManager().IsTimerActive(UnmuteVoiceTimerHandle))	// 중복바인딩 방지
+	{
+		GetWorldTimerManager().ClearTimer(UnmuteVoiceTimerHandle);
+	}
+	FTimerDelegate UnmuteDelegate;
+	UnmuteDelegate.BindUFunction(this, FName("UnmuteVoiceOnAddPlayerState"), PlayerState);
+	GetWorldTimerManager().SetTimer(
+		UnmuteVoiceTimerHandle,
+		UnmuteDelegate,
+		0.1f,
+		false
+	);
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::UnmuteVoiceOnAddPlayerState(APlayerState* PlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	if (!AO_ENSURE(PlayerState, TEXT("InValid PlayerState")))
+	{
+		return;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("Can't Get OSS")))
+	{
+		return;
+	}
+
+	AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+	{
+		return;
+	}
+
+	OSS->UnmuteRemoteTalker(0, AO_PS, false);
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
 void AAO_GameState::OnRep_SharedReviveCount()
 {
 	AO_LOG(LogJSH, Log, TEXT("AO_GameState::OnRep_SharedReviveCount -> %d"), SharedReviveCount);

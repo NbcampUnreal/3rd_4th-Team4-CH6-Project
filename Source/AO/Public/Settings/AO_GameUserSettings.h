@@ -82,7 +82,9 @@ public:
 
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|BuiltIn")
 	float BuiltInResolutionScale = 100.0f;
-	
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Voice")
+	bool bIsEnableVoiceChat = false;
 
 	// TODO: 추가 옵셜 설정하기
 	// 마우스 민감도 (float)

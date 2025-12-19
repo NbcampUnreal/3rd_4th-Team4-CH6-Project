@@ -107,6 +107,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
 	void UnmuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide);
 
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void MuteAllRemoteTalker();
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void UnmuteAllRemoteTalker();
+	
+
 protected:
 	IOnlineSessionPtr GetSessionInterface() const;
 
@@ -176,8 +183,4 @@ private:
 
 	/* Destroy 후 동작 제어 */
 	bool bPendingReturnToMenu = false; // 호스트: Destroy 완료 후 메인 메뉴 복귀
-
-public:
-	UPROPERTY(BlueprintReadWrite, Category="AO|VoiceChat")
-	bool bIsEnableVoiceChat = true;
 };
