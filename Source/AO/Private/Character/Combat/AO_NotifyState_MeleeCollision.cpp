@@ -53,6 +53,10 @@ void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp,
 
 	if (!MeshComp || !OwningActor.IsValid() || !DamageEffectClass)
 	{
+		AO_LOG(LogKSJ, Warning, TEXT("NotifyState_MeleeCollision: Invalid Data - Mesh: %s, Owner: %s, DamageClass: %s"), 
+			MeshComp ? *MeshComp->GetName() : TEXT("Null"),
+			OwningActor.IsValid() ? *OwningActor->GetName() : TEXT("Null"),
+			DamageEffectClass ? *DamageEffectClass->GetName() : TEXT("Null"));
 		return;
 	}
 	
@@ -86,6 +90,9 @@ void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp,
 	EventData.Instigator = Owner;
 	EventData.OptionalObject = Payload;
 	EventData.EventMagnitude = DamageAmount;
+
+	AO_LOG(LogKSJ, Log, TEXT("NotifyState_MeleeCollision: Sending Event %s from %s (Start: %s, End: %s)"), 
+		*HitConfirmEventTag.ToString(), *Owner->GetName(), *StartLocation.ToString(), *EndLocation.ToString());
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, HitConfirmEventTag, EventData);
 }

@@ -39,7 +39,7 @@ protected:
 
 	// Perception 이벤트
 	UFUNCTION()
-	void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+	virtual void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
 	// 자식 클래스에서 오버라이드 가능한 이벤트
 	virtual void OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location);

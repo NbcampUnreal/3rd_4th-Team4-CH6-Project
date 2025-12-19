@@ -24,6 +24,9 @@
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Hearing.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -92,6 +95,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	CustomizingComponent = CreateDefaultSubobject<UAO_CustomizingComponent>(TEXT("CustomizingComponent"));
 	CustomizingComponent->SetIsReplicated(true);
+
+	// Perception Stimuli Source
+	AIPerceptionStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("AIPerceptionStimuliSource"));
+	AIPerceptionStimuliSource->bAutoRegister = true;
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -156,6 +163,14 @@ void AAO_PlayerCharacter::StartSprint_GAS(bool bShouldSprint)
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Register as source for Sight and Hearing
+	if (AIPerceptionStimuliSource)
+	{
+		AIPerceptionStimuliSource->RegisterForSense(TSubclassOf<UAISense>(UAISense_Sight::StaticClass()));
+		AIPerceptionStimuliSource->RegisterForSense(TSubclassOf<UAISense>(UAISense_Hearing::StaticClass()));
+		AIPerceptionStimuliSource->RegisterWithPerceptionSystem();
+	}
 
 	if (AbilitySystemComponent)
 	{

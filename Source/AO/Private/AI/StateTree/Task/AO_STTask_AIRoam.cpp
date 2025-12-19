@@ -2,12 +2,14 @@
 
 #include "AI/StateTree/Task/AO_STTask_AIRoam.h"
 #include "AI/Character/AO_Crab.h"
+#include "AI/Character/AO_Stalker.h"
 #include "AI/Component/AO_ItemCarryComponent.h"
 #include "AIController.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "StateTreeExecutionContext.h"
 #include "AO_Log.h"
+#include "AI/Component/AO_CeilingMoveComponent.h"
 
 EStateTreeRunStatus FAO_STTask_AIRoam::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -52,6 +54,7 @@ EStateTreeRunStatus FAO_STTask_AIRoam::Tick(FStateTreeExecutionContext& Context,
 	}
 
 	// Crab인 경우 아이템 발견 체크 (아이템 발견 시 PickupItem State로 전환되도록 실패 반환)
+	// Stalker인 경우 천장 감지 및 자동 전환
 	if (APawn* Pawn = AIController->GetPawn())
 	{
 		if (AAO_Crab* Crab = Cast<AAO_Crab>(Pawn))
@@ -63,6 +66,18 @@ EStateTreeRunStatus FAO_STTask_AIRoam::Tick(FStateTreeExecutionContext& Context,
 				if (NearbyItem)
 				{
 					return EStateTreeRunStatus::Failed;
+				}
+			}
+		}
+		else if (AAO_Stalker* Stalker = Cast<AAO_Stalker>(Pawn))
+		{
+			// Stalker: 천장이 있으면 자동으로 천장 모드로 전환
+			if (UAO_CeilingMoveComponent* CeilingComp = Stalker->GetCeilingMoveComponent())
+			{
+				if (!CeilingComp->IsInCeilingMode() && CeilingComp->CheckCeilingAvailability())
+				{
+					Stalker->SetCeilingMode(true);
+					AO_LOG(LogKSJ, Log, TEXT("Stalker: Auto-enabled ceiling mode during Roam"));
 				}
 			}
 		}

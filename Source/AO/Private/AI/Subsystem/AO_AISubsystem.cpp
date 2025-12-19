@@ -198,15 +198,33 @@ bool UAO_AISubsystem::TryReservePlayerForKidnap(AAO_PlayerCharacter* Player, AAc
 	// 이미 납치 중인지 확인 - 다른 AI가 납치 중이면 실패
 	if (IsPlayerBeingKidnapped(Player))
 	{
+		// 이미 예약된 Kidnapper 확인
+		const TWeakObjectPtr<AActor>* ExistingKidnapper = KidnappedPlayers.Find(Player);
+		if (ExistingKidnapper && ExistingKidnapper->IsValid())
+		{
+			AO_LOG(LogKSJ, Log, TEXT("TryReservePlayerForKidnap: Player %s already reserved by %s (requested by %s)"), 
+				*Player->GetName(), 
+				ExistingKidnapper->IsValid() ? *ExistingKidnapper->Get()->GetName() : TEXT("Invalid"),
+				*Kidnapper->GetName());
+		}
 		return false;
 	}
 
 	// 최근 납치된 플레이어인지 확인 - 쿨다운 중이면 실패
 	if (IsPlayerRecentlyKidnapped(Player))
 	{
+		AO_LOG(LogKSJ, Log, TEXT("TryReservePlayerForKidnap: Player %s is on cooldown"), *Player->GetName());
 		return false;
 	}
 
+	// Race condition 방지: Add 전에 다시 한 번 체크 (double-check)
+	if (IsPlayerBeingKidnapped(Player))
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("TryReservePlayerForKidnap: Player %s was reserved by another Insect between checks (race condition detected)"), *Player->GetName());
+		return false;
+	}
+
+	// 예약 추가
 	KidnappedPlayers.Add(Player, Kidnapper);
 
 	AO_LOG(LogKSJ, Log, TEXT("Player Reserved for Kidnap: %s by %s"), 

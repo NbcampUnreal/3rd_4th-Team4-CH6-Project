@@ -30,6 +30,7 @@ class UAO_InteractionComponent;
 class UAO_InspectionComponent;
 class UAO_FoleyAudioBank;
 class UCustomizableSkeletalComponent;
+class UAIPerceptionStimuliSourceComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -123,6 +124,8 @@ protected:
 	TObjectPtr<UCustomizableSkeletalComponent> HeadComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_CustomizingComponent> CustomizingComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAIPerceptionStimuliSourceComponent> AIPerceptionStimuliSource;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;

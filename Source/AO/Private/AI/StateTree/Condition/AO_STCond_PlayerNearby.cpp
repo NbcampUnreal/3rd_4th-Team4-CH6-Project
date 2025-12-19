@@ -2,6 +2,7 @@
 
 #include "AI/StateTree/Condition/AO_STCond_PlayerNearby.h"
 #include "AI/Controller/AO_AIControllerBase.h"
+#include "AI/Controller/AO_AggressiveAICtrl.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "AI/Base/AO_AICharacterBase.h"
 #include "StateTreeExecutionContext.h"
@@ -19,12 +20,22 @@ bool FAO_STCond_PlayerNearby::TestCondition(FStateTreeExecutionContext& Context)
 
 	bool bPlayerNearby = false;
 
+	// AggressiveAICtrl인 경우 ChaseTarget이 설정되어 있으면 플레이어가 근처에 있는 것으로 간주
+	// (OnPlayerDetected에서 StartChase가 호출되어 ChaseTarget이 설정됨)
+	if (AAO_AggressiveAICtrl* AggressiveCtrl = Cast<AAO_AggressiveAICtrl>(AIController))
+	{
+		if (AggressiveCtrl->GetChaseTarget())
+		{
+			bPlayerNearby = true;
+		}
+	}
+
 	// 시야 내 플레이어 확인
-	if (AIController->HasPlayerInSight())
+	if (!bPlayerNearby && AIController->HasPlayerInSight())
 	{
 		bPlayerNearby = true;
 	}
-	else if (!InstanceData.bOnlySightCheck)
+	else if (!bPlayerNearby && !InstanceData.bOnlySightCheck)
 	{
 		// 소리로 감지된 위치 확인 - 시야 외에도 청각으로 플레이어 감지
 		AAO_AICharacterBase* AIChar = Cast<AAO_AICharacterBase>(AIController->GetPawn());
