@@ -11,11 +11,13 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
-#include "Character/Traversal/AO_TraversalComponent.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -70,8 +72,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 
 	InteractionComponent = CreateDefaultSubobject<UAO_InteractionComponent>(TEXT("InteractionComponent"));
 	InspectionComponent = CreateDefaultSubobject<UAO_InspectionComponent>(TEXT("InspectionComponent"));
+	InteractableComponent = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
+	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
-	//ms: inventory component
+	DeathSpectateComponent = CreateDefaultSubobject<UAO_DeathSpectateComponent>(TEXT("DeathSpectateComponent"));
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
@@ -106,10 +110,28 @@ UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void AAO_PlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	checkf(AbilitySystemComponent, TEXT("AbilitySystemComponent is null"));
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	
+	if (HasAuthority())
+	{
+		InitializeAttributes();
+		
+		BindGameplayAbilities();
+		
+		BindGameplayEffects();
+		
+		BindAttributeDelegates();
+	}
+}
+
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
 {
-	ensure(DefaultFoleyAudioBank);
-	
 	return DefaultFoleyAudioBank;
 }
 
@@ -125,13 +147,27 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 
 void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
 {
-	if (Camera)
+	if (IsLocallyControlled())
 	{
-		Camera->GetCameraView(DeltaTime, OutResult);
+		if (Camera)
+		{
+			Camera->GetCameraView(DeltaTime, OutResult);
+		}
+		else
+		{
+			Super::CalcCamera(DeltaTime, OutResult);
+		}
+		return;
 	}
-	else
+
+	if (DeathSpectateComponent)
 	{
-		Super::CalcCamera(DeltaTime, OutResult);
+		FRepCameraView V;
+		DeathSpectateComponent->GetRepCameraView(V);
+		OutResult.Location = V.Location;
+		OutResult.Rotation = V.Rotation;
+		OutResult.FOV	   = V.FOV;
+		return;
 	}
 }
 
@@ -164,6 +200,7 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority() && AbilitySystemComponent)
 	// Register as source for Sight and Hearing
 	if (AIPerceptionStimuliSource)
 	{
@@ -175,15 +212,14 @@ void AAO_PlayerCharacter::BeginPlay()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 
-		if (HasAuthority())
-		{
-			BindGameplayAbilities();
+	BindSpeedAttributeDelegates();
 
-			BindGameplayEffects();
-			
-			BindAttributeDelegates();
-		}
+	// HSJ : InteractableComponent 델리게이트 바인딩
+	if (HasAuthority() && InteractableComponent)
+	{
+		InteractableComponent->OnInteractionSuccess.AddDynamic(this, &AAO_PlayerCharacter::HandleInteractableComponentSuccess);
 	}
 
 	if (IsLocallyControlled())
@@ -194,6 +230,12 @@ void AAO_PlayerCharacter::BeginPlay()
 			{
 				Subsystem->AddMappingContext(IMC_Player, 0);
 			}
+
+			// HSJ : Inspection 모드 상태일 때 레벨 전환 시 카메라 움직이지 않는 문제 해결
+			PC->bShowMouseCursor = false;
+			// GameOnly 모드로 설정
+			FInputModeGameOnly InputMode;
+			PC->SetInputMode(InputMode);
 		}
 	}
 
@@ -248,11 +290,6 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	{
 		InventoryComp->SetupInputBinding(PlayerInputComponent);
 	}
-}
-
-void AAO_PlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -369,7 +406,8 @@ void AAO_PlayerCharacter::StartJump()
 		return;
 	}
 
-	Jump();
+	AbilitySystemComponent->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Jump"))));
 }
 
 void AAO_PlayerCharacter::TriggerJump()
@@ -408,7 +446,9 @@ void AAO_PlayerCharacter::HandleGameplayAbilityInputReleased(int32 InInputID)
 
 void AAO_PlayerCharacter::HandleCrouch()
 {
-	if (!GetCharacterMovement() || GetCharacterMovement()->IsFalling())
+	checkf(GetCharacterMovement(), TEXT("CharacterMovement is null"));
+	
+	if (GetCharacterMovement()->IsFalling())
 	{
 		return;
 	}
@@ -444,11 +484,7 @@ void AAO_PlayerCharacter::SetCurrentGait()
 void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier, float PitchMultiplier)
 {
 	TObjectPtr<UAO_FoleyAudioBank> FoleyAudioBank = Execute_GetFoleyAudioBank(this);
-	if (!FoleyAudioBank)
-	{
-		AO_LOG(LogKH, Warning, TEXT("Failed to get FoleyAudioBank"));
-		return;
-	}
+	checkf(FoleyAudioBank, TEXT("FoleyAudioBank is null"));
 
 	UGameplayStatics::PlaySoundAtLocation(
 		this,
@@ -457,6 +493,27 @@ void AAO_PlayerCharacter::PlayAudioEvent(FGameplayTag Value, float VolumeMultipl
 		FRotator::ZeroRotator,
 		VolumeMultiplier,
 		PitchMultiplier);
+}
+
+void AAO_PlayerCharacter::InitializeAttributes()
+{
+	checkf(AttributeDefaults, TEXT("AttributeDefaults is null"));
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AttributeSet->InitHealth(AttributeDefaults->Health);
+	AttributeSet->InitMaxHealth(AttributeDefaults->MaxHealth);
+
+	AttributeSet->InitStamina(AttributeDefaults->Stamina);
+	AttributeSet->InitMaxStamina(AttributeDefaults->MaxStamina);
+
+	AttributeSet->InitWalkSpeed(AttributeDefaults->WalkSpeed);
+	AttributeSet->InitRunSpeed(AttributeDefaults->RunSpeed);
+	AttributeSet->InitSprintSpeed(AttributeDefaults->SprintSpeed);
 }
 
 void AAO_PlayerCharacter::BindGameplayAbilities()
@@ -493,37 +550,29 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
-	if (!AttributeSet)
-	{
-		return;
-	}
-
-	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
 }
 
-void AAO_PlayerCharacter::HandlePlayerDeath()
+void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
 {
+	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	
+	// 이동속도 변경 시 발생할 델리게이트 연결
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetWalkSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetRunSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetSprintSpeedAttribute())
+		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
+}
+
+void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	SetCurrentGait();
+	
 	if (!HasAuthority())
 	{
-		return;
-	}
-
-	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
-	checkf(PS, TEXT("PlayerState is null"));
-
-	if (!PS->GetIsAlive())
-	{
-		return;
-	}
-
-	PS->SetIsAlive(false);
-
-	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
-	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
-
-	if (Cast<APlayerController>(GetController()))
-	{
-		ClientRPC_HandleDeathView();
+		ServerRPC_SetInputState(CharacterInputState.bWantsToSprint, CharacterInputState.bWantsToWalk);
 	}
 }
 
@@ -540,27 +589,40 @@ void AAO_PlayerCharacter::OnRep_Gait()
 	switch (Gait)
 	{
 	case EGait::Walk:
-		GetCharacterMovement()->MaxWalkSpeed = 200.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetWalkSpeed();
 		break;
 	case EGait::Run:
-		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetRunSpeed();
 		break;
 	case EGait::Sprint:
-		GetCharacterMovement()->MaxWalkSpeed = 800.f;
+		GetCharacterMovement()->MaxWalkSpeed = AttributeSet->GetSprintSpeed();
 		break;
 	}
 }
 
-void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
+void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 {
-	if (SpringArm)
+	if (!HasAuthority())
 	{
-		SpringArm->TargetArmLength += DeathCameraArmOffset;
+		return;
 	}
 
-	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
+	if (!Interactor) return;
+
+	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
+	if (!Inventory) return;
+
+	FInventorySlot ItemToAdd;
+	ItemToAdd.ItemID = "chip";
+	ItemToAdd.Quantity = 1;
+	ItemToAdd.ItemType = EItemType::Consumable;
+		
+	Inventory->PickupItem(ItemToAdd, this);
+	
+	// HSJ : 상호작용 비활성화
+	if (InteractableComponent)
 	{
-		PC->ShowDeathUI();
+		InteractableComponent->bInteractionEnabled = false;
 	}
 }
 
@@ -606,36 +668,4 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		AO_LOG(LogJM, Warning, TEXT("No VOIPTalker"));
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
-}
-
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetBodyComponent() const
-{
-	return BodyComponent;
-}
-
-TObjectPtr<UCustomizableSkeletalComponent> AAO_PlayerCharacter::GetHeadComponent() const
-{
-	return HeadComponent;
-}
-
-void AAO_PlayerCharacter::ChangeCharacterMesh_Implementation(UCustomizableObjectInstance* ChangeMesh)
-{
-	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
-	*GetName(), HasAuthority(), IsLocallyControlled());
-	
-	if (IsValid(ChangeMesh))
-	{
-		BodyComponent->SetCustomizableObjectInstance(ChangeMesh);
-		HeadComponent->SetCustomizableObjectInstance(ChangeMesh);
-		BodyComponent->UpdateSkeletalMeshAsync();
-		HeadComponent->UpdateSkeletalMeshAsync();
-	
-		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *ChangeMesh->GetName());
-		
-	}
-	else
-	{
-		AO_LOG(LogKSH, Error, TEXT("ChangeCharacterMesh: ChangeMesh is invalid"));
-	}
-	CustomizingComponent->PrintCustomizableObjectInstanceMap();
 }

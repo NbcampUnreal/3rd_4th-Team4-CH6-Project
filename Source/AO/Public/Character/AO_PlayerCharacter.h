@@ -12,6 +12,8 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_DeathSpectateComponent;
+class UAO_PlayerCharacter_AttributeDefaults;
 class UAO_CustomizingComponent;
 class UCustomizableObjectInstance;
 class UAO_PlayerCharacter_AttributeSet;
@@ -28,6 +30,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UAO_InteractionComponent;
 class UAO_InspectionComponent;
+class UAO_InteractableComponent;
 class UAO_FoleyAudioBank;
 class UCustomizableSkeletalComponent;
 class UAIPerceptionStimuliSourceComponent;
@@ -56,9 +59,9 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 protected:
+	virtual void PossessedBy(AController* NewController) override;
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -73,7 +76,9 @@ protected:
 public:
 	FORCEINLINE TObjectPtr<USpringArmComponent> GetSpringArm() const {	return SpringArm; }
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
-
+	FORCEINLINE TObjectPtr<UAO_PlayerCharacter_AttributeSet> GetAttributeSet() const { return AttributeSet; }
+	FORCEINLINE TObjectPtr<UAO_InteractableComponent> GetInteractableComponent() const { return InteractableComponent; }
+	
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
 	bool IsInspecting() const;
@@ -94,7 +99,10 @@ protected:
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_InspectionComponent> InspectionComponent;
-	//ms: inventory component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_InteractableComponent> InteractableComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_DeathSpectateComponent> DeathSpectateComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
@@ -104,6 +112,8 @@ protected:
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TObjectPtr<UAO_PlayerCharacter_AttributeSet> AttributeSet;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
+	TObjectPtr<UAO_PlayerCharacter_AttributeDefaults> AttributeDefaults;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|GAS")
@@ -161,8 +171,10 @@ protected:
 	void ServerRPC_SetInputState(bool bWantsToSprint, bool bWantsToWalk);
 	UFUNCTION()
 	void OnRep_Gait();
-	UFUNCTION(Client, Reliable)
-	void ClientRPC_HandleDeathView();
+
+	// HSJ : InteractableComponent의 상호작용 성공 시 호출될 함수
+	UFUNCTION()
+	void HandleInteractableComponentSuccess(AActor* Interactor);
 	
 private:
 	FTimerHandle TimerHandle_JustLanded;
@@ -186,27 +198,23 @@ private:
 	void PlayAudioEvent(FGameplayTag Value, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
 	// Bind GAS
+	void InitializeAttributes();
 	void BindGameplayAbilities();
 	void BindGameplayEffects();
 	void BindAttributeDelegates();
+	void BindSpeedAttributeDelegates();
 
-	// Death
-	void HandlePlayerDeath();
+	// Speed
+	void OnSpeedChanged(const FOnAttributeChangeData& Data);
 	
 // JM : VOIPTalker Register to PS
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
-	
-//ms: inventory component input
-	void SelectInventorySlot(const FInputActionValue& Value);
-	void UseInvenrotyItem();
-	void DropInvenrotyItem();
 
 //세훈: Customizable Object Instance
 public:
-	UFUNCTION(NetMulticast, Reliable)
-	void ChangeCharacterMesh(UCustomizableObjectInstance* ChangeMesh);
-	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const;
-	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const;
+	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
+	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
+	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }
 };

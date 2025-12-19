@@ -9,6 +9,7 @@
 #include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController_InGameBase.generated.h"
 
+class UAO_CameraManagerComponent;
 class UAO_PauseMenuWidget;
 class UAO_OnlineSessionSubsystem;
 
@@ -24,10 +25,16 @@ public:
 	AAO_PlayerController_InGameBase();
 
 protected:
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnRep_Pawn() override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAO_CameraManagerComponent> CameraManagerComponent;
+	
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_PauseMenuWidget> PauseMenuClass;
 
@@ -84,4 +91,8 @@ protected:
 	void HidePauseMenu();
 
 	UAO_OnlineSessionSubsystem* GetOnlineSessionSub() const;
+
+private:
+	// 카메라 관리자 초기화
+	void InitCameraManager();
 };
