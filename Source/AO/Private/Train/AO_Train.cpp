@@ -3,8 +3,6 @@
 #include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
-#include "Train/GAS/AO_AddFuel_GameplayAbility.h"
-#include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 
 AAO_Train::AAO_Train()
 {
@@ -83,7 +81,7 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 		}
 	}
 
-	/*
+	
 	if (Delta > 0.f)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
@@ -92,7 +90,7 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
-	*/
+	
 
 	OnFuelChangedDelegate.Broadcast(NewFuel);
 }

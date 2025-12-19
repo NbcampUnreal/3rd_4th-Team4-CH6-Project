@@ -42,6 +42,7 @@ FAO_InspectionCameraSettings AAO_OverwatchInspectionPuzzle::GetInspectionCameraS
     Settings.MovementBoundsExtent = MovementBoundsExtent;
     Settings.MovementType = bEnableCameraMovement ? EInspectionMovementType::Planar : EInspectionMovementType::None;
 	Settings.bHideCharacter = bHideCharacter;
+	Settings.bUseActionButton = bUseSpacebar;
 
     if (CameraMode == EInspectionCameraMode::WorldAbsolute)
     {
@@ -80,6 +81,16 @@ bool AAO_OverwatchInspectionPuzzle::IsValidClickTarget(AActor* HitActor, UPrimit
 	}
 
     return false;
+}
+
+void AAO_OverwatchInspectionPuzzle::OnInspectionAction()
+{
+	Super::OnInspectionAction();
+
+	if (bUseSpacebar)
+	{
+		ActiveAllLinkedElements();
+	}
 }
 
 void AAO_OverwatchInspectionPuzzle::ActiveAllLinkedElements()

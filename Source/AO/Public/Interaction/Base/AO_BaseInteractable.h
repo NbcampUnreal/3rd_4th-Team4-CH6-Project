@@ -52,8 +52,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Interaction|State")
 	bool bInteractionEnabled = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
-	bool bLocalInteractionEnabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects")
+	FAO_InteractionEffectSettings ActivateEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Effects",
+		meta=(EditCondition="bIsToggleable", EditConditionHides))
+	FAO_InteractionEffectSettings DeactivateEffect;
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -75,6 +79,18 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Interaction|Reaction")
 	void TriggerLinkedReactions(bool bActivate);
+
+	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Disable Player Interaction"))
+	void AddDisabledPlayer(AActor* Player);
+
+	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Enable Player Interaction"))
+	void RemoveDisabledPlayer(AActor* Player);
+
+	UFUNCTION(BlueprintPure, Category="Interaction")
+	bool IsPlayerDisabled(AActor* Player) const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayInteractionEffect(const FAO_InteractionEffectSettings& EffectSettings, FTransform SpawnTransform);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -116,7 +132,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Reaction")
 	TArray<TObjectPtr<AAO_PuzzleReactionActor>> LinkedReactionActors;
 
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
+	TArray<TObjectPtr<AActor>> DisabledPlayers;
+
 private:
+	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+	void SpawnSFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);
+
+	FTimerHandle VFXSpawnTimerHandle;
+	FTimerHandle SFXSpawnTimerHandle;
+	
 	UPROPERTY()
 	TObjectPtr<UMeshComponent> CachedInteractionMesh;
 };

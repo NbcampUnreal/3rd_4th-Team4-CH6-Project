@@ -8,7 +8,7 @@
 
 UAO_GameInstance::UAO_GameInstance()
 {
-	SharedTrainFuel = 0.0f;
+	SharedTrainFuel = 40.0f;
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
 
@@ -20,7 +20,7 @@ UAO_GameInstance::UAO_GameInstance()
 void UAO_GameInstance::ResetRun()
 {
 	CurrentStageIndex = 0;
-	SharedTrainFuel = 0.0f;
+	SharedTrainFuel = 40.0f;
 	SharedReviveCount = InitialSharedReviveCount;
 }
 

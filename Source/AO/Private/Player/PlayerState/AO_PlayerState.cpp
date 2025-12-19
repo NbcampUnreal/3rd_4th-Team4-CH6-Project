@@ -15,6 +15,14 @@ AAO_PlayerState::AAO_PlayerState()
 	bLobbyIsReady = false;
 	LobbyJoinOrder = -1;
 	bIsLobbyHost = false;
+
+	CharacterCustomizingData.CharacterMeshType = ECharacterMesh::Elsa;
+
+	CharacterCustomizingData.HairOptionData.ParameterName = TEXT("HairStyle");
+	CharacterCustomizingData.HairOptionData.OptionName = TEXT("Hair01");
+
+	CharacterCustomizingData.ClothOptionData.ParameterName = TEXT("ClothType");
+	CharacterCustomizingData.ClothOptionData.OptionName = TEXT("Glacier");
 }
 
 void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -25,6 +33,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, LobbyJoinOrder);
 	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
 	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
+	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -126,6 +135,23 @@ void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
 			}
 		}
 	}
+}
+
+void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	TObjectPtr<AAO_PlayerState> PS = Cast<AAO_PlayerState>(PlayerState);
+
+	if (PS)
+	{
+		PS->CharacterCustomizingData = this->CharacterCustomizingData;
+	}
+}
+
+void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
+{
+	CharacterCustomizingData = CustomizingData;
 }
 
 /* ==================== 이름 복제 ==================== */

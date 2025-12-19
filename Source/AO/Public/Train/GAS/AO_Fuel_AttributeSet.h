@@ -12,7 +12,8 @@ class AO_API UAO_Fuel_AttributeSet : public UAttributeSet
 
 public:
 	UAO_Fuel_AttributeSet();
-	
+	void InitFromGameInstance();
+
 	UPROPERTY(BlueprintReadOnly, Category="Fuel", ReplicatedUsing=OnRep_Fuel)
 	FGameplayAttributeData Fuel;
 	ATTRIBUTE_ACCESSORS_BASIC(UAO_Fuel_AttributeSet, Fuel)
