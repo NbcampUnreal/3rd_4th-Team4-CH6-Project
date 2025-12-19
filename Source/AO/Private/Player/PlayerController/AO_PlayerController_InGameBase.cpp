@@ -37,7 +37,7 @@ void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
 		return;
 	}
 
-	InitCameraManager();
+	//InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::OnRep_Pawn()
@@ -49,7 +49,7 @@ void AAO_PlayerController_InGameBase::OnRep_Pawn()
 		return;
 	}
 
-	InitCameraManager();
+	//InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()

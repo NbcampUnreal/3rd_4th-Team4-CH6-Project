@@ -86,17 +86,21 @@ void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
 	}
 	
-	TObjectPtr<AActor> Owner = GetOwner();
-	checkf(Owner, TEXT("Owner is null in ClientEnterInspection"));
-
-	TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
-	
-	if (UGameInstance* GI = PC->GetGameInstance())
+	UWorld* World = GetWorld();
+	if (World == nullptr)
 	{
-		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
-		{
-			UIStack->UnlockPauseMenu();
-		}
+		return;
+	}
+
+	UGameInstance* GI = World->GetGameInstance();
+	if (GI == nullptr)
+	{
+		return;
+	}
+
+	if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+	{
+		UIStack->UnlockPauseMenu();
 	}
     
 	// 하이라이트 해제
