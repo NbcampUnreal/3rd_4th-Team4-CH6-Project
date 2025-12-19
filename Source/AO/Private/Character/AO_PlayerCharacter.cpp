@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
@@ -24,7 +25,6 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
-#include "Player/PlayerController/AO_PlayerController_Stage.h"
 
 AAO_PlayerCharacter::AAO_PlayerCharacter()
 {
@@ -71,7 +71,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InteractableComponent = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
 	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
-	//ms: inventory component
+	DeathSpectateComponent = CreateDefaultSubobject<UAO_DeathSpectateComponent>(TEXT("DeathSpectateComponent"));
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
@@ -139,13 +139,27 @@ bool AAO_PlayerCharacter::CanPlayFootstepSounds_Implementation() const
 
 void AAO_PlayerCharacter::CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult)
 {
-	if (Camera)
+	if (IsLocallyControlled())
 	{
-		Camera->GetCameraView(DeltaTime, OutResult);
+		if (Camera)
+		{
+			Camera->GetCameraView(DeltaTime, OutResult);
+		}
+		else
+		{
+			Super::CalcCamera(DeltaTime, OutResult);
+		}
+		return;
 	}
-	else
+
+	if (DeathSpectateComponent)
 	{
-		Super::CalcCamera(DeltaTime, OutResult);
+		FRepCameraView V;
+		DeathSpectateComponent->GetRepCameraView(V);
+		OutResult.Location = V.Location;
+		OutResult.Rotation = V.Rotation;
+		OutResult.FOV	   = V.FOV;
+		return;
 	}
 }
 
@@ -520,8 +534,6 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
 	checkf(AttributeSet, TEXT("AttributeSet is null"));
-
-	AttributeSet->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
 }
 
 void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
@@ -535,37 +547,6 @@ void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
 		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetSprintSpeedAttribute())
 		.AddUObject(this, &AAO_PlayerCharacter::OnSpeedChanged);
-}
-
-void AAO_PlayerCharacter::HandlePlayerDeath()
-{
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
-	checkf(PS, TEXT("PlayerState is null"));
-
-	if (!PS->GetIsAlive())
-	{
-		return;
-	}
-
-	PS->SetIsAlive(false);
-
-	FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
-	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
-
-	if (InteractableComponent)
-	{
-		InteractableComponent->bInteractionEnabled = true;
-	}
-
-	if (Cast<APlayerController>(GetController()))
-	{
-		ClientRPC_HandleDeathView();
-	}
 }
 
 void AAO_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
@@ -613,19 +594,6 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 	if (InteractableComponent)
 	{
 		InteractableComponent->bInteractionEnabled = false;
-	}
-}
-
-void AAO_PlayerCharacter::ClientRPC_HandleDeathView_Implementation()
-{
-	if (SpringArm)
-	{
-		SpringArm->TargetArmLength += DeathCameraArmOffset;
-	}
-
-	if (TObjectPtr<AAO_PlayerController_Stage> PC = Cast<AAO_PlayerController_Stage>(GetController()))
-	{
-		PC->ShowDeathUI();
 	}
 }
 
