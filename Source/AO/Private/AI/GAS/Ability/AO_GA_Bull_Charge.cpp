@@ -6,6 +6,9 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
+#include "GameplayTagContainer.h"
 #include "AO_Log.h"
 
 UAO_GA_Bull_Charge::UAO_GA_Bull_Charge()
@@ -112,25 +115,90 @@ void UAO_GA_Bull_Charge::OnHitConfirmEvent(FGameplayEventData Payload)
         {
             if (AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(Hit.GetActor()))
             {
-                // 1. 넉백 적용
-                if (UCharacterMovementComponent* MoveComp = Player->GetCharacterMovement())
-                {
-                    MoveComp->SetMovementMode(MOVE_Falling);
-                }
-                
-                FVector KnockbackDir = Bull->GetActorForwardVector();
-                KnockbackDir.Z = 0.1f; // 살짝만 위로 (넉백이 바닥에 박히지 않도록)
-                KnockbackDir.Normalize();
-                
-                Player->LaunchCharacter(KnockbackDir * KnockbackStrength, true, true);
-
-                // 2. 넉다운 이벤트 전송
-                SendKnockdownEvent(Player, Bull);
-                
-                AO_LOG(LogKSJ, Log, TEXT("Bull Charge Hit! Knockdown Applied to %s"), *Player->GetName());
+                // 데미지 및 넉백 적용
+                ApplyDamageAndKnockback(Player, Bull);
             }
         }
     }
+}
+
+void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* InstigatorActor)
+{
+	if (!TargetActor || !DamageEffectClass)
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Invalid Target or DamageEffectClass (Target: %s, DamageClass: %s)"), 
+			TargetActor ? *TargetActor->GetName() : TEXT("Null"), 
+			DamageEffectClass ? *DamageEffectClass->GetName() : TEXT("Null"));
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+
+	if (!SourceASC || !TargetASC)
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Missing ASC (Source: %s, Target: %s)"), 
+			SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
+			TargetASC ? *TargetASC->GetName() : TEXT("Null"));
+		return;
+	}
+
+	// 무적 상태 확인
+	const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
+	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
+	{
+		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Target is Invulnerable"));
+		return;
+	}
+
+	// 데미지 적용
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddInstigator(GetOwningActorFromActorInfo(), GetAvatarActorFromActorInfo());
+
+	FGameplayEffectSpecHandle DamageSpec = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
+	if (DamageSpec.IsValid())
+	{
+		const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
+		DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, ChargeDamage);
+		FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
+		
+		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Applied GE_Damage. Spec Valid: True. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
+	}
+	else
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: DamageSpec is Invalid!"));
+	}
+
+	// 넉백 적용
+	ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor);
+	if (TargetCharacter)
+	{
+		AAO_Bull* Bull = Cast<AAO_Bull>(InstigatorActor);
+		if (Bull)
+		{
+			// 넉백 방향 계산 (Bull에서 타겟 방향)
+			FVector KnockbackDirection = (TargetActor->GetActorLocation() - Bull->GetActorLocation()).GetSafeNormal();
+			KnockbackDirection.Z = 0.1f;  // 살짝만 위로
+			KnockbackDirection.Normalize();
+
+			// 넉백 확실한 적용을 위해 Falling 상태로 강제 전환
+			if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
+			{
+				MoveComp->SetMovementMode(MOVE_Falling);
+			}
+
+			// 캐릭터 런치
+			TargetCharacter->LaunchCharacter(KnockbackDirection * KnockbackStrength, true, true);
+			AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: LaunchCharacter executed"));
+		}
+	}
+
+	// 넉다운 HitReact 이벤트 발송
+	SendKnockdownEvent(TargetActor, InstigatorActor);
+	AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Sent Knockdown Event"));
+
+	AO_LOG(LogKSJ, Log, TEXT("Applied damage %.1f and knockback %.1f to %s"),
+		ChargeDamage, KnockbackStrength, *TargetActor->GetName());
 }
 
 void UAO_GA_Bull_Charge::SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor)

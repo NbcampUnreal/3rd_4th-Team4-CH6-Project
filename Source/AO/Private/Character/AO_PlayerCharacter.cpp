@@ -100,7 +100,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	CustomizingComponent = CreateDefaultSubobject<UAO_CustomizingComponent>(TEXT("CustomizingComponent"));
 	CustomizingComponent->SetIsReplicated(true);
 
-	// Perception Stimuli Source
+	// KSJ : Perception Stimuli Source
 	AIPerceptionStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("AIPerceptionStimuliSource"));
 	AIPerceptionStimuliSource->bAutoRegister = true;
 }

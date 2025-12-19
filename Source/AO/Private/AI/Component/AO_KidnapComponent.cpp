@@ -11,6 +11,7 @@
 #include "NavigationSystem.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "Interaction/Component/AO_InspectionComponent.h"
 #include "AO_Log.h"
 
 UAO_KidnapComponent::UAO_KidnapComponent()
@@ -438,6 +439,19 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 		{
 			AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Player is dead, skipping"));
 			return;
+		}
+	}
+
+	// 납치 시 Inspection 모드 강제 종료 (퍼즐 상호작용 중단)
+	if (bRestrict)
+	{
+		if (TObjectPtr<UAO_InspectionComponent> InspectionComp = Player->FindComponentByClass<UAO_InspectionComponent>())
+		{
+			if (InspectionComp->IsInspecting())
+			{
+				AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Forcing exit from Inspection mode due to kidnap"));
+				InspectionComp->ExitInspectionMode();
+			}
 		}
 	}
 

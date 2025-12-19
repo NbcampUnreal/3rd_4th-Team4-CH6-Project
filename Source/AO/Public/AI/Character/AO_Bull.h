@@ -63,5 +63,9 @@ protected:
 	// 돌진 속도
 	UPROPERTY(EditDefaultsOnly, Category = "AO|AI|Bull|Movement")
 	float ChargeSpeed = 900.f;
+
+	// 데미지 Effect 클래스 (OnChargeOverlap에서 사용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Bull|Combat")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };
 

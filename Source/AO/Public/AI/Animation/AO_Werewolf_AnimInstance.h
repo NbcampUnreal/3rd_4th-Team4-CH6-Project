@@ -21,5 +21,12 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character")
 	TObjectPtr<AAO_Werewolf> WerewolfCharacter;
+
+	// === Locomotion 변수 (블루프린트용) ===
+	UPROPERTY(BlueprintReadOnly, Category = "AO|Animation|Werewolf|Locomotion")
+	float Speed = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "AO|Animation|Werewolf|Locomotion")
+	bool bIsMoving = false;
 };
 

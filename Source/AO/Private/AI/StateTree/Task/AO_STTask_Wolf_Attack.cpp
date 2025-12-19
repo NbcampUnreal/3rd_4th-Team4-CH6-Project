@@ -6,6 +6,9 @@
 #include "AI/Controller/AO_AggressiveAICtrl.h"
 #include "StateTreeExecutionContext.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Wolf_Attack::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -62,9 +65,21 @@ EStateTreeRunStatus FAO_STTask_Wolf_Attack::Tick(FStateTreeExecutionContext& Con
 	{
 		Controller->StopMovement();
 		
-		// TODO: Activate Ability (Attack)
-		// UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(AI, Tag_Attack, Payload);
-		// 여기서는 간단히 로그로 대체. 실제 공격은 GA에서 몽타주 재생 및 Hit Check 수행.
+		// Ability 활성화
+		UAbilitySystemComponent* ASC = AI->GetAbilitySystemComponent();
+		if (ASC)
+		{
+			FGameplayTagContainer TagContainer;
+			TagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Combat.Attack")));
+			if (ASC->TryActivateAbilitiesByTag(TagContainer, true))
+			{
+				AO_LOG(LogKSJ, Log, TEXT("Werewolf attack ability activated"));
+			}
+			else
+			{
+				AO_LOG(LogKSJ, Warning, TEXT("Werewolf attack ability activation failed"));
+			}
+		}
 	}
 	else
 	{

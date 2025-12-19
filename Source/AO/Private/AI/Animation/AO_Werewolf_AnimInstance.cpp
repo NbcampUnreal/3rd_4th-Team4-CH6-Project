@@ -10,6 +10,9 @@ void UAO_Werewolf_AnimInstance::NativeInitializeAnimation()
 void UAO_Werewolf_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	// 추가적인 Werewolf 전용 상태 업데이트가 필요하면 여기에 작성
+
+	// 부모 클래스에서 GroundSpeed와 bShouldMove를 업데이트했으므로, 이를 블루프린트용 변수로 매핑
+	Speed = GroundSpeed;
+	bIsMoving = bShouldMove;
 }
 

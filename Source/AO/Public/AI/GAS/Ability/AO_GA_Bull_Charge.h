@@ -36,6 +36,9 @@ protected:
     UFUNCTION()
     void OnHitConfirmEvent(FGameplayEventData Payload);
 
+    // [Troll 참조] 데미지 및 넉백 적용
+    void ApplyDamageAndKnockback(AActor* TargetActor, AActor* InstigatorActor);
+
     // [Troll 참조] 넉다운 이벤트 발송
     void SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor);
 
@@ -61,4 +64,8 @@ protected:
     // 넉다운 HitReact 태그
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
     FGameplayTag KnockdownHitReactTag;
+
+    // 데미지 Effect 클래스
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+    TSubclassOf<UGameplayEffect> DamageEffectClass;
 };

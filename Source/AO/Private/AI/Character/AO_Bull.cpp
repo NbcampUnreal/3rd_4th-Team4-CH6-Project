@@ -6,6 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
 #include "GameplayTagContainer.h"
 #include "AO_Log.h"
 
@@ -69,35 +71,76 @@ void AAO_Bull::OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* Othe
 
 	// 플레이어만 타격
 	AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(OtherActor);
-	if (Player)
+	if (!Player) return;
+
+	AO_LOG(LogKSJ, Log, TEXT("Bull Hit Player: %s"), *Player->GetName());
+
+	// 1. 데미지 적용
+	if (DamageEffectClass)
 	{
-		// GAS 이벤트 전송 (데미지 및 넉백 처리를 위해)
-		// 직접 처리해도 되지만, 통일성을 위해 Ability나 Helper 함수 활용 가능
-		// 여기서는 간단히 넉백/넉다운 태그 이벤트 전송 및 물리 처리 직접 수행 (프로토타입)
-		// 실제로는 GA_Bull_Charge 내부에서 WaitOverlap 등으로 처리하거나 여기서 Event 전송
+		UAbilitySystemComponent* SourceASC = GetAbilitySystemComponent();
+		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Player);
 
-		AO_LOG(LogKSJ, Log, TEXT("Bull Hit Player: %s"), *Player->GetName());
+		if (SourceASC && TargetASC)
+		{
+			// 무적 상태 확인
+			const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
+			if (!TargetASC->HasMatchingGameplayTag(InvulnerableTag))
+			{
+				// 데미지 적용
+				FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+				Context.AddInstigator(this, this);
 
-		// 1. 넉다운 태그 이벤트 전송 (Player가 HitReact하도록)
-		FGameplayTag KnockdownTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Knockdown"));
-		FGameplayEventData EventData;
-		EventData.Instigator = this;
-		EventData.Target = Player;
-		EventData.EventMagnitude = ChargeDamage;
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Player, KnockdownTag, EventData);
-
-		// 2. 물리 넉백 (Launch)
-		FVector KnockbackDir = GetActorForwardVector();
-		KnockbackDir.Z = 0.1f; // 살짝만 위로 (넉백이 바닥에 박히지 않도록)
-		KnockbackDir.Normalize();
-		Player->LaunchCharacter(KnockbackDir * KnockbackStrength, true, true);
-
-		// 충돌했으므로 돌진 멈춤 (선택사항, 계속 뚫고 갈지 멈출지)
-		// 여기서는 잠깐 멈추거나 상태를 리셋할 수 있음
-		SetIsCharging(false); 
-		
-		// TODO: Bull 자체도 충돌 애니메이션이나 잠시 멈칫하는 로직 필요
+				FGameplayEffectSpecHandle DamageSpec = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
+				if (DamageSpec.IsValid())
+				{
+					const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
+					DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, ChargeDamage);
+					FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
+					
+					AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Applied GE_Damage. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
+				}
+				else
+				{
+					AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageSpec is Invalid!"));
+				}
+			}
+			else
+			{
+				AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Target is Invulnerable"));
+			}
+		}
+		else
+		{
+			AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: Missing ASC (Source: %s, Target: %s)"), 
+				SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
+				TargetASC ? *TargetASC->GetName() : TEXT("Null"));
+		}
 	}
+	else
+	{
+		AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageEffectClass is not set!"));
+	}
+
+	// 2. 넉다운 태그 이벤트 전송 (Player가 HitReact하도록)
+	FGameplayTag KnockdownTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Knockdown"));
+	FGameplayEventData EventData;
+	EventData.Instigator = this;
+	EventData.Target = Player;
+	EventData.EventMagnitude = ChargeDamage;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Player, KnockdownTag, EventData);
+
+	// 3. 물리 넉백 (Launch)
+	FVector KnockbackDir = GetActorForwardVector();
+	KnockbackDir.Z = 0.1f; // 살짝만 위로 (넉백이 바닥에 박히지 않도록)
+	KnockbackDir.Normalize();
+	Player->LaunchCharacter(KnockbackDir * KnockbackStrength, true, true);
+
+	// 충돌했으므로 돌진 멈춤 (선택사항, 계속 뚫고 갈지 멈출지)
+	// 여기서는 잠깐 멈추거나 상태를 리셋할 수 있음
+	SetIsCharging(false); 
+	
+	// TODO: Bull 자체도 충돌 애니메이션이나 잠시 멈칫하는 로직 필요
 }
 
 void AAO_Bull::HandleStunBegin()
