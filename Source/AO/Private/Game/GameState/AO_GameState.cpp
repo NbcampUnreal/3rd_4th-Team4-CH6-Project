@@ -21,7 +21,8 @@ void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::AddPlayerState(PlayerState);
 
-	// JM : 내부 데이터가 완전히 복제될 때까지의 시간이 필요 (여기서 바로 실행하면 null 가능성 있음)
+	// JM : 내부 데이터가 완전히 복제될 때까지의 시간이 필요 (여기서 바로 실행하면 null 가능성 있음) - 테스트 결과 null 임
+	// TODO : Event(Delegate) 방식으로 전환 필요
 	if (GetWorldTimerManager().IsTimerActive(UnmuteVoiceTimerHandle))	// 중복바인딩 방지
 	{
 		GetWorldTimerManager().ClearTimer(UnmuteVoiceTimerHandle);

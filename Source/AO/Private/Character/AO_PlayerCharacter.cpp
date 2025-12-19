@@ -52,11 +52,6 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	Camera->bUsePawnControlRotation = false;
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
-	// JM : VOIP Talker
-	// JM : 크래쉬 이슈로 생성 위치 변경
-	/*VOIPTalker = CreateDefaultSubobject<UVOIPTalker>(TEXT("VOIPTalker"));
-	VOIPTalker->Settings.ComponentToAttachTo =  GetMesh(); */
-	
 	// For Crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
