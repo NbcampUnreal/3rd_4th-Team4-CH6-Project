@@ -2,7 +2,9 @@
 #include "Puzzle/Element/AO_PressurePlate.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Item/AO_MasterItem.h"
 #include "Net/UnrealNetwork.h"
+#include "Physics/AO_CollisionChannels.h"
 #include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 
 AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer)
@@ -12,11 +14,14 @@ AAO_PressurePlate::AAO_PressurePlate(const FObjectInitializer& ObjectInitializer
     ElementType = EPuzzleElementType::OneTime;
 	AnimationSpeed = 5.0f;
 
+	MeshComponent->SetCollisionResponseToChannel(AO_TraceChannel_Interaction, ECR_Ignore);
+
     OverlapTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapTrigger"));
     OverlapTrigger->SetupAttachment(RootComponent);
     OverlapTrigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     OverlapTrigger->SetCollisionResponseToAllChannels(ECR_Ignore);
     OverlapTrigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	OverlapTrigger->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
     OverlapTrigger->SetGenerateOverlapEvents(true);
 }
 
@@ -89,8 +94,8 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     if (!HasAuthority()) return;
     if (!bInteractionEnabled) return;
 
-    TObjectPtr<APawn> Pawn = Cast<APawn>(OtherActor);
-    if (!Pawn) return;
+	bool bIsValidActor = Cast<APawn>(OtherActor) != nullptr || Cast<AAO_MasterItem>(OtherActor) != nullptr;
+	if (!bIsValidActor) return;
 
     if (OverlappingActors.Contains(OtherActor)) return;
 
@@ -107,6 +112,11 @@ void AAO_PressurePlate::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent,
     	TargetMeshLocation = InitialMeshLocation - FVector(0, 0, PressDepth);
     	StartPlateAnimation();
     	StartProgressTimer();
+
+    	if (ActivateEffect.IsValid())
+    	{
+    		MulticastPlayInteractionEffect(ActivateEffect, GetActorTransform());
+    	}
     }
 }
 
@@ -128,6 +138,11 @@ void AAO_PressurePlate::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, A
     	TargetMeshLocation = InitialMeshLocation;
     	StartPlateAnimation();
     	StartProgressTimer();
+
+    	if (DeactivateEffect.IsValid())
+    	{
+    		MulticastPlayInteractionEffect(DeactivateEffect, GetActorTransform());
+    	}
     }
 }
 

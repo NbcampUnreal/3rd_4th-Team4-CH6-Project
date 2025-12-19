@@ -26,6 +26,7 @@ UAO_GameplayAbility_Traversal::UAO_GameplayAbility_Traversal()
 	SetAssetTags(TraversalTag);
 
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Traversal")));
+	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Debuff.NoStaminaChange")));
 }
 
 void UAO_GameplayAbility_Traversal::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo,
@@ -143,6 +144,21 @@ void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle 
 			
 			CharacterMovement->bIgnoreClientMovementErrorChecksAndCorrection = false;
 			CharacterMovement->bServerAcceptClientAuthoritativePosition = false;
+		}
+
+		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+		checkf(ASC, TEXT("Failed to get AbilitySystemComponent"));
+		
+		checkf(PostSprintNoChangeEffectClass, TEXT("PostSprintNoChangeEffectClass is null"));
+		if (ActorInfo->IsNetAuthority())
+		{
+			const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+			const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoChangeEffectClass, 1.f, Context);
+
+			if (SpecHandle.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			}
 		}
 
 		Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -407,6 +423,11 @@ bool UAO_GameplayAbility_Traversal::EvaluateTraversal(TArray<TObjectPtr<UObject>
 	EvaluateObjects = UChooserFunctionLibrary::EvaluateObjectChooserBaseMulti(
 		 EvaluationContext, ResultInstances, UAnimMontage::StaticClass());
 
+	if (EvaluateObjects.Num() == 0)
+	{
+		return false;
+	}
+	
 	TraversalResult.ActionType = OutputData.ActionType;
 	if (TraversalResult.ActionType == ETraversalActionType::None)
 	{
@@ -436,7 +457,11 @@ bool UAO_GameplayAbility_Traversal::SelectTraversal(const TArray<TObjectPtr<UObj
 		MotionMatchResult);
 
 	TObjectPtr<UAnimMontage> SelectedAnim = Cast<UAnimMontage>(MotionMatchResult.SelectedAnim);
-	checkf(SelectedAnim, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
+	if (!SelectedAnim)
+	{
+		AO_LOG(LogKH, Warning, TEXT("Failed to cast SelectedAnim to UAnimMontage"));
+		return false;
+	}
 
 	if (DrawDebugLevel >= 1)
 	{

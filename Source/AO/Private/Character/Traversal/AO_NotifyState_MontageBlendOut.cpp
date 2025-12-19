@@ -10,6 +10,15 @@ void UAO_NotifyState_MontageBlendOut::NotifyBegin(USkeletalMeshComponent* MeshCo
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
+	UWorld* World = MeshComp->GetWorld();
+	checkf(World, TEXT("Failed to get World"));
+
+	// 에디터에서 실행 제외
+	if (!World->IsGameWorld())
+	{
+		return;
+	}
+	
 	Character = Cast<ACharacter>(MeshComp->GetOwner());
 	checkf(Character, TEXT("Failed to cast MeshComp to ACharacter"));
 
@@ -29,7 +38,9 @@ void UAO_NotifyState_MontageBlendOut::NotifyTick(USkeletalMeshComponent* MeshCom
 	Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
 
 	TObjectPtr<UWorld> World = MeshComp->GetWorld();
-	if (!World || !World->IsGameWorld())
+	ensure(World);
+	
+	if (!World->IsGameWorld())
 	{
 		return;
 	}

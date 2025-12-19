@@ -5,6 +5,7 @@
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO_Log.h"
+#include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Net/UnrealNetwork.h"
 
 AAO_PlayerState::AAO_PlayerState()
@@ -14,6 +15,14 @@ AAO_PlayerState::AAO_PlayerState()
 	bLobbyIsReady = false;
 	LobbyJoinOrder = -1;
 	bIsLobbyHost = false;
+
+	CharacterCustomizingData.CharacterMeshType = ECharacterMesh::Elsa;
+
+	CharacterCustomizingData.HairOptionData.ParameterName = TEXT("HairStyle");
+	CharacterCustomizingData.HairOptionData.OptionName = TEXT("Hair01");
+
+	CharacterCustomizingData.ClothOptionData.ParameterName = TEXT("ClothType");
+	CharacterCustomizingData.ClothOptionData.OptionName = TEXT("Glacier");
 }
 
 void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -24,6 +33,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, LobbyJoinOrder);
 	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
 	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
+	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -107,6 +117,43 @@ void AAO_PlayerState::OnRep_IsAlive()
 	}
 }
 
+void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
+{
+	if (HasAuthority())
+	{
+		if (bIsAlive != bInIsAlive)
+		{
+			bIsAlive = bInIsAlive;
+			OnRep_IsAlive();
+			
+			if (UWorld* World = GetWorld())
+			{
+				if (AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>())
+				{
+					StageGM->NotifyPlayerAliveStateChanged(this);
+				}
+			}
+		}
+	}
+}
+
+void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	TObjectPtr<AAO_PlayerState> PS = Cast<AAO_PlayerState>(PlayerState);
+
+	if (PS)
+	{
+		PS->CharacterCustomizingData = this->CharacterCustomizingData;
+	}
+}
+
+void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
+{
+	CharacterCustomizingData = CustomizingData;
+}
+
 /* ==================== 이름 복제 ==================== */
 
 // 이름이 복제될 때 호출됨
@@ -157,17 +204,5 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 		}
 
 		Board->RebuildBoard();
-	}
-}
-
-void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
-{
-	if (HasAuthority())
-	{
-		if (bIsAlive != bInIsAlive)
-		{
-			bIsAlive = bInIsAlive;
-			OnRep_IsAlive();
-		}
 	}
 }

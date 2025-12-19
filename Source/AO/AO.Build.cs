@@ -50,8 +50,15 @@ public class AO : ModuleRules
 			// Voice Chat
 			"Voice",
 			
+			// Loading Screen
+			"MoviePlayer",
+			"CommonLoadingScreen",
+			
 			// Mutable
 			"CustomizableObject",
+			
+			// VFX
+			"Niagara",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

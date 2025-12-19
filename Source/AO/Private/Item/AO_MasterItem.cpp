@@ -39,7 +39,7 @@ void AAO_MasterItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority())
+	if (HasAuthority() && !ItemID.IsNone())
 	{
 		ApplyItemData();
 	}
@@ -49,17 +49,30 @@ void AAO_MasterItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	ApplyItemData();
+#if WITH_EDITOR
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!ItemID.IsNone())
+	{
+		ApplyItemData();
+	}
+#endif
 }
 
 void AAO_MasterItem::OnRep_ItemID()
 {
-	if (MeshComponent)
+	if (!HasActorBegunPlay())
+	{
+		return;
+	}
+	if (!ItemID.IsNone())
 	{
 		ApplyItemData();
 	}
 }
-
 
 void AAO_MasterItem::ApplyItemData()
 {

@@ -8,9 +8,9 @@ namespace AO_MapRoutes
 	// 스테이지 맵 경로들 (필요에 따라 수정)
 	static constexpr const TCHAR* STAGE_MAPS[] =
 	{
-		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow"),
-		TEXT("/Game/AVaOut/Train/TrainGASTest"),
-		TEXT("/Game/AVaOut/Train/TrainGASTest"),
+		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main"),
+		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main"),
+		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main")
 	};
 
 	static constexpr int32 STAGE_MAP_COUNT = UE_ARRAY_COUNT(STAGE_MAPS);

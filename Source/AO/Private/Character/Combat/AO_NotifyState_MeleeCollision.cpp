@@ -5,8 +5,6 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffect.h"
 
-#include "AO_Log.h"
-#include "Character/Combat/AO_DamageComponent.h"
 #include "Character/Combat/AO_MeleeHitEventPayload.h"
 
 UAO_NotifyState_MeleeCollision::UAO_NotifyState_MeleeCollision()
@@ -19,6 +17,15 @@ void UAO_NotifyState_MeleeCollision::NotifyBegin(USkeletalMeshComponent* MeshCom
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	checkf(World, TEXT("Failed to get World"));
+
+	// 에디터에서 실행 제외
+	if (!World->IsGameWorld())
+	{
+		return;
+	}
+	
 	checkf(MeshComp, TEXT("MeshComp is invalid"));
 	
 	OwningActor = MeshComp->GetOwner();
@@ -39,13 +46,21 @@ void UAO_NotifyState_MeleeCollision::NotifyEnd(USkeletalMeshComponent* MeshComp,
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	if (!MeshComp || !OwningActor.IsValid() || !DamageEffectClass)
+	TObjectPtr<UWorld> World = MeshComp->GetWorld();
+	checkf(World, TEXT("Failed to get World"));
+	
+	if (!World->IsGameWorld())
 	{
 		return;
 	}
+
+	checkf(MeshComp, TEXT("MeshComp is invalid"));
+	checkf(OwningActor.IsValid(), TEXT("OwningActor is invalid"));
+	checkf(DamageEffectClass, TEXT("DamageEffectClass is null"));
 	
 	AActor* Owner = OwningActor.Get();
-	if (!Owner || !Owner->HasAuthority())
+	checkf(Owner, TEXT("Owner is invalid"));
+	if (!Owner->HasAuthority())
 	{
 		return;
 	}

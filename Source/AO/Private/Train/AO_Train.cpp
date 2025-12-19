@@ -1,10 +1,8 @@
 #include "Train/AO_Train.h"
 #include "AbilitySystemComponent.h"
-#include "Game/GameInstance/AO_GameInstance.h" //JSH: GI에 연료 저장
+#include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
-#include "Train/GAS/AO_AddFuel_GameplayAbility.h"
-#include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 
 AAO_Train::AAO_Train()
 {
@@ -68,19 +66,22 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 
 	TotalFuelGained += Delta;
 
-	// JSH: GI에 연료 동기화
-	if(HasAuthority())
+	if (HasAuthority())
 	{
-		if(UGameInstance* GI = GetGameInstance())
+		// 연료가 0 이상이었다가 0 미만으로 떨어지는 순간에만 실패 트리거
+		if (OldFuel >= 0.0f && NewFuel < 0.0f)
 		{
-			if(UAO_GameInstance* AO_GI = Cast<UAO_GameInstance>(GI))
+			if (UWorld* World = GetWorld())
 			{
-				AO_GI->SharedTrainFuel = NewFuel;
+				if (AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>())
+				{
+					StageGM->TriggerStageFailByTrainFuel();
+				}
 			}
 		}
 	}
 
-	/*
+	
 	if (Delta > 0.f)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
@@ -89,7 +90,7 @@ void AAO_Train::OnFuelChanged(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
 	}
-	*/
+	
 
 	OnFuelChangedDelegate.Broadcast(NewFuel);
 }
