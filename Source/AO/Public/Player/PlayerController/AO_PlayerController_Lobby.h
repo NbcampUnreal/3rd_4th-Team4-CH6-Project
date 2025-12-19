@@ -53,4 +53,8 @@ public:
 	/* 옷장 UI 여는 로컬 함수 */
 	UFUNCTION()
 	void OpenWardrobe();
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customizing")
+	TObjectPtr<UAO_UserWidget> CustomizingWidget = nullptr;
 };

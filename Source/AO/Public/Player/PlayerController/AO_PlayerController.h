@@ -7,6 +7,9 @@
 #include "UI/Widget/AO_UserWidget.h"
 #include "AO_PlayerController.generated.h"
 
+/**
+ * 
+ */
 UCLASS()
 class AO_API AAO_PlayerController : public APlayerController
 {
@@ -28,6 +31,11 @@ public:
 	// UIStackManager 사용 시에는 필요할 때 Push → Pop으로 관리
 	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
 
+private:
+	void CleanupAudioResource();
+	void UpdateLoadingMapName(const FString& PendingURL) const;
+
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AO|Widget")
 	TSubclassOf<UAO_UserWidget> SettingsWidgetClass;
@@ -35,4 +43,5 @@ protected:
 private:
 	UPROPERTY()
 	TObjectPtr<UAO_UserWidget> SettingsWidgetInstance = nullptr;
+	
 };

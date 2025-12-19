@@ -79,8 +79,10 @@ void UAO_GameplayAbility_MeleeHitConfirm::DoMeleeHitConfirm(const FGameplayAbili
 	for (const auto& Hit : HitResults)
 	{
 		AActor* HitActor = Hit.GetActor();
-		if (!HitActor) continue;
-		if (UniqueHitActors.Contains(HitActor)) continue;
+		if (!HitActor || UniqueHitActors.Contains(HitActor))
+		{
+			continue;
+		}
 
 		UniqueHitActors.Add(HitActor);
 		ApplyDamageToActor(HitActor, Params, ActorInfo);
@@ -96,6 +98,7 @@ void UAO_GameplayAbility_MeleeHitConfirm::ApplyDamageToActor(AActor* TargetActor
 	TObjectPtr<UAbilitySystemComponent> SourceASC = ActorInfo->AbilitySystemComponent.Get();
 	checkf(SourceASC, TEXT("Failed to get SourceASC"));
 
+	// TargetASC가 없는 경우 적용하지 않음 (벽 같은 경우)
 	TObjectPtr<UAbilitySystemComponent> TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (!TargetASC)
 	{

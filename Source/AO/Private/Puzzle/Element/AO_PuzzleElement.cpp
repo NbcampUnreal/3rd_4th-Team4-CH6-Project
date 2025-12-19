@@ -5,7 +5,9 @@
 #include "Interaction/Data/AO_InteractionDataAsset.h"
 #include "Puzzle/Checker/AO_PuzzleConditionChecker.h"
 #include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Physics/AO_CollisionChannels.h"
+#include "NiagaraFunctionLibrary.h"
 
 AAO_PuzzleElement::AAO_PuzzleElement(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -77,34 +79,22 @@ bool AAO_PuzzleElement::CanInteraction(const FAO_InteractionQuery& InteractionQu
 
 void AAO_PuzzleElement::GetMeshComponents(TArray<UMeshComponent*>& OutMeshComponents) const
 {
-	if (!MeshComponent)
-	{
-		return;
-	}
-
-	// 루트 메시가 실제 메시를 가지고 있으면 추가
-	if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComponent))
-	{
-		if (StaticMesh->GetStaticMesh())
-		{
-			OutMeshComponents.Add(MeshComponent);
-		}
-	}
-
-	// 자식 메시 컴포넌트들도 모두 수집
-	TArray<USceneComponent*> ChildComponents;
-	MeshComponent->GetChildrenComponents(true, ChildComponents);
+	// Actor의 모든 메시 컴포넌트 수집
+	TArray<UMeshComponent*> AllMeshComponents;
+	GetComponents<UMeshComponent>(AllMeshComponents, true);
     
-	for (TObjectPtr<USceneComponent> Child : ChildComponents)
+	OutMeshComponents.Reserve(OutMeshComponents.Num() + AllMeshComponents.Num());
+    
+	for (TObjectPtr<UMeshComponent> MeshComp : AllMeshComponents)
 	{
-		if (TObjectPtr<UMeshComponent> ChildMesh = Cast<UMeshComponent>(Child))
+		if (!MeshComp) continue;
+        
+		// Static Mesh 체크
+		if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(MeshComp))
 		{
-			if (TObjectPtr<UStaticMeshComponent> StaticMesh = Cast<UStaticMeshComponent>(ChildMesh))
+			if (StaticMesh->GetStaticMesh())
 			{
-				if (StaticMesh->GetStaticMesh())
-				{
-					OutMeshComponents.Add(ChildMesh);
-				}
+				OutMeshComponents.Add(MeshComp);
 			}
 		}
 	}
@@ -119,13 +109,12 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		return;
 	}
 
-	// 사운드 재생
-	MulticastPlayInteractionSound();
-
 	if (!bHandleToggleInOnInteractionSuccess)
 	{
 		return;
 	}
+
+	const FAO_InteractionEffectSettings& EffectToPlay = bIsActivated ? ActivateEffect : DeactivateEffect;
 
 	// ElementType에 따른 상태 변경
 	switch (ElementType)
@@ -137,6 +126,12 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 			bIsActivated = true;
 			BroadcastPuzzleEvent(true);
 			StartInteractionAnimation(true);
+
+			if (ActivateEffect.IsValid())
+			{
+				FTransform SpawnTransform = GetInteractionTransform();
+				MulticastPlayInteractionEffect(ActivateEffect, SpawnTransform);
+			}
 		}
 		break;
 
@@ -145,6 +140,12 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		bIsActivated = !bIsActivated;
 		BroadcastPuzzleEvent(bIsActivated);
 		StartInteractionAnimation(bIsActivated);
+		
+		if (EffectToPlay.IsValid())
+		{
+			FTransform SpawnTransform = GetInteractionTransform();
+			MulticastPlayInteractionEffect(EffectToPlay, SpawnTransform);
+		}
 		break;
 
 	case EPuzzleElementType::HoldToggle:
@@ -152,6 +153,12 @@ void AAO_PuzzleElement::OnInteractionSuccess(AActor* Interactor)
 		bIsActivated = !bIsActivated;
 		BroadcastPuzzleEvent(bIsActivated);
 		StartInteractionAnimation(bIsActivated);
+
+		if (EffectToPlay.IsValid())
+		{
+			FTransform SpawnTransform = GetInteractionTransform();
+			MulticastPlayInteractionEffect(EffectToPlay, SpawnTransform);
+		}
 		break;
 	}
 }
@@ -242,6 +249,198 @@ FTransform AAO_PuzzleElement::GetInteractionTransform() const
 	}
 
 	return GetActorTransform();
+}
+
+void AAO_PuzzleElement::SpawnVFXInternal(
+    const FAO_InteractionEffectSettings& EffectSettings, 
+    const FTransform& SpawnTransform)
+{
+    // Transform 계산 (Relative 적용)
+    FTransform FinalTransform = SpawnTransform;
+    FinalTransform.AddToTranslation(FinalTransform.TransformVector(EffectSettings.VFXRelativeLocation));
+    FinalTransform.SetRotation((FinalTransform.GetRotation() * EffectSettings.VFXRelativeRotation.Quaternion()));
+    FinalTransform.SetScale3D(FinalTransform.GetScale3D() * EffectSettings.VFXScale);
+
+    // EAttachmentRule을 EAttachLocation으로 변환
+    EAttachLocation::Type AttachType = EAttachLocation::KeepRelativeOffset;
+    switch (EffectSettings.VFXAttachLocationRule)
+    {
+    case EAttachmentRule::KeepRelative:
+        AttachType = EAttachLocation::KeepRelativeOffset;
+        break;
+    case EAttachmentRule::KeepWorld:
+        AttachType = EAttachLocation::KeepWorldPosition;
+        break;
+    case EAttachmentRule::SnapToTarget:
+        AttachType = EAttachLocation::SnapToTarget;
+        break;
+    }
+
+    // Niagara
+    if (EffectSettings.NiagaraEffect)
+    {
+        if (EffectSettings.bAttachVFXToActor && MeshComponent)
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAttached(
+                EffectSettings.NiagaraEffect,
+                MeshComponent,
+                EffectSettings.VFXAttachSocketName,
+                EffectSettings.VFXRelativeLocation,
+                EffectSettings.VFXRelativeRotation,
+                EffectSettings.VFXScale,
+                AttachType,
+                true,  // bAutoDestroy
+                ENCPoolMethod::None,
+                true   // bAutoActivate
+            );
+        }
+        else
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this,
+                EffectSettings.NiagaraEffect,
+                FinalTransform.GetLocation(),
+                FinalTransform.Rotator(),
+                FinalTransform.GetScale3D(),
+                true,  // bAutoDestroy
+                true,  // bAutoActivate
+                ENCPoolMethod::None
+            );
+        }
+    }
+    // Cascade
+    else if (EffectSettings.CascadeEffect)
+    {
+        if (EffectSettings.bAttachVFXToActor && MeshComponent)
+        {
+            UGameplayStatics::SpawnEmitterAttached(
+                EffectSettings.CascadeEffect,
+                MeshComponent,
+                EffectSettings.VFXAttachSocketName,
+                EffectSettings.VFXRelativeLocation,
+                EffectSettings.VFXRelativeRotation,
+                EffectSettings.VFXScale,
+                AttachType,
+                true  // bAutoDestroy
+            );
+        }
+        else
+        {
+            UGameplayStatics::SpawnEmitterAtLocation(
+                this,
+                EffectSettings.CascadeEffect,
+                FinalTransform.GetLocation(),
+                FinalTransform.Rotator(),
+                FinalTransform.GetScale3D(),
+                true  // bAutoDestroy
+            );
+        }
+    }
+}
+
+void AAO_PuzzleElement::SpawnSFXInternal(
+    const FAO_InteractionEffectSettings& EffectSettings, 
+    const FTransform& SpawnTransform)
+{
+    if (!EffectSettings.Sound)
+    {
+        return;
+    }
+
+    if (EffectSettings.bAttachSoundToActor && MeshComponent)
+    {
+        UGameplayStatics::SpawnSoundAttached(
+            EffectSettings.Sound,
+            MeshComponent,
+            EffectSettings.SoundAttachSocketName,
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::KeepRelativeOffset,
+            false,  // bStopWhenAttachedToDestroyed
+            EffectSettings.SoundVolumeMultiplier,
+            EffectSettings.SoundPitchMultiplier
+        );
+    }
+    else
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            EffectSettings.Sound,
+            SpawnTransform.GetLocation(),
+            FRotator::ZeroRotator,
+            EffectSettings.SoundVolumeMultiplier,
+            EffectSettings.SoundPitchMultiplier
+        );
+    }
+}
+
+void AAO_PuzzleElement::MulticastPlayInteractionEffect_Implementation(
+	const FAO_InteractionEffectSettings& EffectSettings, FTransform SpawnTransform)
+{
+	if (!EffectSettings.IsValid())
+    {
+        return;
+    }
+
+    // VFX Delay 처리
+    if (EffectSettings.HasVFX())
+    {
+        if (EffectSettings.VFXSpawnDelay > 0.0f)
+        {
+            TObjectPtr<UWorld> World = GetWorld();
+            if (World)
+            {
+                TWeakObjectPtr<AAO_PuzzleElement> WeakThis(this);
+                
+                World->GetTimerManager().SetTimer(
+                    VFXSpawnTimerHandle,
+                    FTimerDelegate::CreateWeakLambda(this, [WeakThis, EffectSettings, SpawnTransform]()
+                    {
+                        if (TObjectPtr<AAO_PuzzleElement> StrongThis = WeakThis.Get())
+                        {
+                            StrongThis->SpawnVFXInternal(EffectSettings, SpawnTransform);
+                        }
+                    }),
+                    EffectSettings.VFXSpawnDelay,
+                    false
+                );
+            }
+        }
+        else
+        {
+            SpawnVFXInternal(EffectSettings, SpawnTransform);
+        }
+    }
+
+    // SFX Delay 처리
+    if (EffectSettings.HasSFX())
+    {
+        if (EffectSettings.SoundSpawnDelay > 0.0f)
+        {
+            TObjectPtr<UWorld> World = GetWorld();
+            if (World)
+            {
+                TWeakObjectPtr<AAO_PuzzleElement> WeakThis(this);
+                
+                World->GetTimerManager().SetTimer(
+                    SFXSpawnTimerHandle,
+                    FTimerDelegate::CreateWeakLambda(this, [WeakThis, EffectSettings, SpawnTransform]()
+                    {
+                        if (TObjectPtr<AAO_PuzzleElement> StrongThis = WeakThis.Get())
+                        {
+                            StrongThis->SpawnSFXInternal(EffectSettings, SpawnTransform);
+                        }
+                    }),
+                    EffectSettings.SoundSpawnDelay,
+                    false
+                );
+            }
+        }
+        else
+        {
+            SpawnSFXInternal(EffectSettings, SpawnTransform);
+        }
+    }
 }
 
 void AAO_PuzzleElement::ResetToInitialState()

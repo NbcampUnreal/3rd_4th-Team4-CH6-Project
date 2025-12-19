@@ -11,7 +11,8 @@ enum class EItemType : uint8
 	Fuel,
 	Consumable,
 	Weapon,
-	Passive
+	Passive,
+	RevivalChip
 };
 
 USTRUCT(BlueprintType)

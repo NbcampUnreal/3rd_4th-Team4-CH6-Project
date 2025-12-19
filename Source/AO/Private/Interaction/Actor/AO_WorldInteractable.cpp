@@ -4,7 +4,6 @@
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Physics/AO_CollisionChannels.h"
 
@@ -191,21 +190,6 @@ void AAO_WorldInteractable::UpdateTransformAnimation()
     		World->GetTimerManager().ClearTimer(TransformAnimationTimerHandle);
     	}
     }
-}
-
-void AAO_WorldInteractable::MulticastPlayInteractionSound_Implementation()
-{
-	if (InteractionSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			InteractionSound,
-			GetActorLocation(),
-			FRotator::ZeroRotator,
-			SoundVolumeMultiplier,
-			SoundPitchMultiplier
-		);
-	}
 }
 
 bool AAO_WorldInteractable::IsRotatorNearlyEqual(const FRotator& A, const FRotator& B, float Tolerance) const

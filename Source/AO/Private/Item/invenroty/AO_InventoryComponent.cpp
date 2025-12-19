@@ -1,14 +1,10 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
-
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
-#include "KismetTraceUtils.h"
-#include "Character/AO_PlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
 #include "Kismet/GameplayStatics.h"
-#include "Navigation/PathFollowingComponent.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
@@ -97,9 +93,6 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 {
 	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
 	if (GetOwnerRole() != ROLE_Authority) return;
-
-	AAO_MasterItem* WorldItemActor = Cast<AAO_MasterItem>(Instigator);
-	if (!WorldItemActor) return;
 	
 	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
 	
@@ -151,8 +144,11 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 		OnInventoryUpdated.Broadcast(Slots);
 		
 		EmptySlotList.Remove(SelectedSlotIndex);
-		
-		WorldItemActor->Destroy();
+		AAO_MasterItem* WorldItem = Cast<AAO_MasterItem>(Instigator);
+		if (WorldItem)
+		{
+			WorldItem->Destroy();
+		}
 	}
 	
 	/*
@@ -207,7 +203,7 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 	}
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
 
 		FHitResult Hit;
 		FVector Start = GetOwner()->GetActorLocation();
@@ -255,23 +251,31 @@ void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 
 	if (CurrentSlot.ItemID != "empty")
 	{
-		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.f;
 		FRotator SpawnRotation = FRotator::ZeroRotator;
 		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
 		
-		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-		DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(), 
+		 FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		Params.Owner = GetOwner();
+
+		AAO_MasterItem* DropItem =
+	GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+		DroppableItemClass,
 		SpawnTransform,
-		 nullptr,
-		 nullptr,
-		 ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-	   );
+		GetOwner(),
+		nullptr,
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+	);
 
 		if (DropItem)
 		{
 			DropItem->ItemID = CurrentSlot.ItemID;
-			// DropItem->FuelAmount = CurrentSlot.FuelAmount;
 			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+		
+			// DropItem->FuelAmount = CurrentSlot.FuelAmount;
 		}
 		ClearSlot();
 	}

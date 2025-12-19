@@ -87,6 +87,11 @@ void AAO_RotationPuzzleElement::RotateToNext()
     // 정답 체크 및 태그 전송
     CheckCorrectRotation();
 
+	if (ActivateEffect.IsValid())
+	{
+		MulticastPlayInteractionEffect(ActivateEffect, GetInteractionTransform());
+	}
+
     if (CurrentRotationIndex == 0)
     {
         // 한 사이클 완료 시 정확히 원위치로

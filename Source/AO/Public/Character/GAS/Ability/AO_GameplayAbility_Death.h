@@ -27,10 +27,4 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
 	TSubclassOf<UGameplayEffect> BlockAbilitiesEffectClass;
-
-	UFUNCTION()
-	void OnMontageCompleted();
-
-	UFUNCTION()
-	void OnMontageCancelled();
 };

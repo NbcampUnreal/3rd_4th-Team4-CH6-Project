@@ -341,7 +341,7 @@ void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const f
 {
 	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
 	{
-		const float ClampedVolume = FMath::Clamp(NewVolume, 0.0f, 1.0f);
+		const float ClampedVolume = FMath::Clamp(NewVolume, 0.0f, 2.0f);
 		switch (AudioType)
 		{
 		case EAudioType::Master:

@@ -54,18 +54,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|UI")
 	void RequestSpectateNext(bool bForward);
 
+	UFUNCTION()
+	void ForceReselectSpectateTarget(APawn* InvalidTarget);
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RequestSpectate();
-	
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RequestSpectateNext(bool bForward);
-
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_SetSpectateTarget(APawn* NewTarget, int32 NewPlayerIndex);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetSpectateTarget(APawn* NewTarget);
 
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<APawn> CurrentSpectateTarget;
+	UPROPERTY()
+	TObjectPtr<APawn> PrevSpectateTarget;
 
 	int32 CurrentSpectatePlayerIndex = INDEX_NONE;
 

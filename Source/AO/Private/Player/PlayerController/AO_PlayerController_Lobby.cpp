@@ -148,4 +148,6 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 	AO_LOG(LogJSH, Log,
 		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
 		*GetName());
+
+	CustomizingWidget->AddToViewport();
 }

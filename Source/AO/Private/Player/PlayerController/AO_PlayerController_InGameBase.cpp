@@ -10,12 +10,14 @@
 #include "Engine/GameInstance.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_InGameBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "Interfaces/VoiceInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Player/Camera/AO_CameraManagerComponent.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -23,6 +25,31 @@
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
+	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
+}
+
+void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	InitCameraManager();
+}
+
+void AAO_PlayerController_InGameBase::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()
@@ -120,6 +147,17 @@ UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget
 	PauseMenu->SetIsFocusable(true);
 
 	return PauseMenu;
+}
+
+void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL, ETravelType TravelType,
+	bool bIsSeamlessTravel)
+{
+	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+	checkf(PlayerCharacter, TEXT("Character is invalid"));
+
+	PlayerCharacter->GetCustomizingComponent()->SaveCustomizingDataToPlayerState();
+	
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 }
 
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
@@ -434,4 +472,20 @@ UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub
 
 	AO_LOG(LogJSH, Warning, TEXT("GetOnlineSessionSub: OnlineSessionSubsystem not found"));
 	return nullptr;
+}
+
+void AAO_PlayerController_InGameBase::InitCameraManager()
+{
+	checkf(CameraManagerComponent, TEXT("CameraManagerComponent not found"));
+	
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(GetPawn());
+	checkf(PlayerCharacter, TEXT("Character not found"));
+
+	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
+	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
+
+	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
+	{
+		CameraManagerComponent->BindToASC(ASC);
+	}
 }
