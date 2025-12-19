@@ -19,6 +19,7 @@
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Puzzle/Element/AO_InspectionPuzzle.h"
 #include "Puzzle/Element/AO_OverwatchInspectionPuzzle.h"
+#include "UI/AO_UIStackManager.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -82,6 +83,19 @@ void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (TObjectPtr<UWorld> World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
+	}
+	
+	TObjectPtr<AActor> Owner = GetOwner();
+	checkf(Owner, TEXT("Owner is null in ClientEnterInspection"));
+
+	TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
+	
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->UnlockPauseMenu();
+		}
 	}
     
 	// 하이라이트 해제
@@ -366,6 +380,15 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
 	{
 		OverwatchPuzzle->HighlightAllExternalMeshes();
 	}
+	
+	//JSH : 일시정지 설정창 락
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->LockPauseMenu();
+		}
+	}
 
     // 마우스 커서 표시, GameAndUI 모드로 전환
     PC->bShowMouseCursor = true;
@@ -405,6 +428,15 @@ void UAO_InspectionComponent::ClientExitInspection()
 		if (InspectionInputContext)
 		{
 			InputSubsystem->RemoveMappingContext(InspectionInputContext);
+		}
+	}
+	
+	//JSH : 일시정지 설정창 언락
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->UnlockPauseMenu();
 		}
 	}
 

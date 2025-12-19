@@ -7,7 +7,7 @@
 
 namespace AOUIActionKeyPath
 {
-	static const TCHAR* IMC_UI = TEXT("/Game/AVaOut/UI/ActionKey/IMC_UI.IMC_UI");
+	static const TCHAR* IMC_UI = TEXT("/Game/AVaOut/Character/Input/IMC_Player");
 	static const TCHAR* IA_UI_Open = TEXT("/Game/AVaOut/UI/ActionKey/IA_UI_Open.IA_UI_Open");
 	static const TCHAR* IA_UI_Close = TEXT("/Game/AVaOut/UI/ActionKey/IA_UI_Close.IA_UI_Close");
 }
