@@ -53,12 +53,12 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 	UE_LOG(LogTemp, Warning, TEXT("EventTag = %s"), *Payload->EventTag.ToString());
 	if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.Stamina")
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EventTag = %s"), *Payload->EventTag.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("EventTag = %s"), *Payload->EventTag.ToString());
 		SelectedPassive = MaxStaminaPassive;
 	}
 	else if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.MoveSpeed")
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EventTag = %s"), *Payload->EventTag.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("EventTag = %s"), *Payload->EventTag.ToString());
 		SelectedPassive = MovementPassive;
 	}
 
@@ -66,12 +66,12 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 
 	if (!SelectedPassive)
 	{
-		UE_LOG(LogTemp, Error, TEXT("SelectedPassive is NULL"));
+		//UE_LOG(LogTemp, Error, TEXT("SelectedPassive is NULL"));
 		return;
 	}
 	if (SpecHandle.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SpecHandle VALID!"));
+		//UE_LOG(LogTemp, Warning, TEXT("SpecHandle VALID!"));
 		SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, Payload->EventMagnitude);
 
 		/*
@@ -89,7 +89,6 @@ void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Pay
 	else
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("SpecHandle INVALID!"));
-		UE_LOG(LogTemp, Warning, TEXT("SpecHandle not VALID!"));
 	}
 	
 }

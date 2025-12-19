@@ -203,7 +203,7 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 	}
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
 
 		FHitResult Hit;
 		FVector Start = GetOwner()->GetActorLocation();
