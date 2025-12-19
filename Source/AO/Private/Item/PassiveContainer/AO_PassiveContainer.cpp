@@ -94,17 +94,20 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 
 	FGameplayTag ActivationEventTag;
 
-	if (ItemData->ItemTags.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Item.Passive.Health"))))
+	if (ItemData->ItemID == FName("p.item02"))
 	{
-		ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.MaxHP"));
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.Stamina"));
 	}
-	else if (ItemData->ItemTags.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Item.Passive.Stamina"))))
+	else if (ItemData->ItemID == FName("p.item03"))
 	{
-		ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.Stamina"));
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.MoveSpeed"));
 	}
 	else
 	{
-		ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.MoveSpeed"));
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.MaxHP"));
 	}
     
 	FGameplayEventData EventData;
