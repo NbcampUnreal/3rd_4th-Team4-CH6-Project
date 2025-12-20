@@ -15,6 +15,8 @@
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 #include "EngineUtils.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
@@ -22,6 +24,8 @@
 
 AAO_PlayerController_Stage::AAO_PlayerController_Stage()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -41,6 +45,21 @@ void AAO_PlayerController_Stage::BeginPlay()
 	}
 
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_Stage::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (bIsSpectating)
+	{
+		UpdateSpectateCamera(DeltaSeconds);
+	}
 }
 
 void AAO_PlayerController_Stage::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -269,8 +288,15 @@ void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APaw
 	CurrentSpectateTarget = NewTarget;
 	CurrentSpectatePlayerIndex = NewPlayerIndex;
 
-	const float BlendTime = 0.4f;
-	SetViewTargetWithBlend(NewTarget, BlendTime);
+	bIsSpectating = true;
+	ResetSpectateSmoothing();
+	EnsureSpectateCameraActor();
+
+	if (SpectateCameraActor)
+	{
+		const float BlendTime = 0.25f;
+		SetViewTargetWithBlend(SpectateCameraActor, BlendTime);
+	}
 
 	TObjectPtr<ACharacter> SpectatedCharacter = Cast<ACharacter>(NewTarget);
 	
@@ -363,6 +389,97 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 	}
 
 	return nullptr;
+}
+
+void AAO_PlayerController_Stage::UpdateSpectateCamera(float DeltaSeconds)
+{
+	if (!CurrentSpectateTarget)
+	{
+		return;
+	}
+
+	if (!ensure(SpectateCameraActor))
+	{
+		return;
+	}
+
+	if (AAO_PlayerCharacter* TargetChar = Cast<AAO_PlayerCharacter>(CurrentSpectateTarget))
+	{
+		if (UAO_DeathSpectateComponent* Comp = TargetChar->FindComponentByClass<UAO_DeathSpectateComponent>())
+		{
+			FRepCameraView RepView;
+			if (Comp->GetRepCameraView(RepView))
+			{
+				TargetLoc = RepView.Location;
+				TargetRot = RepView.Rotation;
+				TargetFOV = RepView.FOV;
+
+				if (!bSpectateCamInitialized)
+				{
+					SmoothedLoc = TargetLoc;
+					SmoothedRot = TargetRot;
+					SmoothedFOV = TargetFOV;
+					bSpectateCamInitialized = true;
+
+					SpectateCameraActor->SetActorLocation(SmoothedLoc);
+					SpectateCameraActor->SetActorRotation(SmoothedRot);
+
+					if (UCameraComponent* Camera = SpectateCameraActor->GetCameraComponent())
+					{
+						Camera->SetFieldOfView(SmoothedFOV);
+					}
+					return;
+				}
+
+				SmoothedLoc = FMath::VInterpTo(SmoothedLoc, TargetLoc, DeltaSeconds, PosInterpSpeed);
+				SmoothedRot = FMath::RInterpTo(SmoothedRot, TargetRot, DeltaSeconds, RotInterpSpeed);
+				SmoothedFOV = FMath::FInterpTo(SmoothedFOV, TargetFOV, DeltaSeconds, FovInterpSpeed);
+
+				SpectateCameraActor->SetActorLocation(SmoothedLoc);
+				SpectateCameraActor->SetActorRotation(SmoothedRot);
+
+				if (UCameraComponent* Camera = SpectateCameraActor->GetCameraComponent())
+				{
+					Camera->SetFieldOfView(SmoothedFOV);
+				}
+			}
+		}
+	}
+}
+
+void AAO_PlayerController_Stage::EnsureSpectateCameraActor()
+{
+	if (SpectateCameraActor)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	checkf(World, TEXT("World is null"));
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	SpectateCameraActor = World->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), Params);
+
+	if (SpectateCameraActor)
+	{
+		SpectateCameraActor->SetActorHiddenInGame(true);
+	}
+}
+
+void AAO_PlayerController_Stage::ResetSpectateSmoothing()
+{
+	bSpectateCamInitialized = false;
+
+	SmoothedLoc = FVector::ZeroVector;
+	SmoothedRot = FRotator::ZeroRotator;
+	SmoothedFOV = 90.f;
+
+	TargetLoc = FVector::ZeroVector;
+	TargetRot = FRotator::ZeroRotator;
+	TargetFOV = 90.f;
 }
 
 /* ---------------------임시 키 입력 코드----------------------- */
@@ -497,9 +614,17 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 	}
 
 	// 5) 관전 중이었다면 관전 끝 알려주기
-	if (IsLocalController())
+	bIsSpectating = false;
+	CurrentSpectateTarget = nullptr;
+	CurrentSpectatePlayerIndex = INDEX_NONE;
+	ResetSpectateSmoothing();
+
+	if (SpectateCameraActor)
 	{
-		ServerRPC_SetSpectateTarget(nullptr);
+		if (APawn* MyPawn = GetPawn())
+		{
+			SetViewTargetWithBlend(MyPawn, 0.25f);
+		}
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());

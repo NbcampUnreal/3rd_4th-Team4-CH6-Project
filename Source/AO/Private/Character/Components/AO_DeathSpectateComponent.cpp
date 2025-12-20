@@ -257,7 +257,7 @@ void UAO_DeathSpectateComponent::StartCameraSyncTimer()
 		TimerHandle_CameraSync,
 		this,
 		&UAO_DeathSpectateComponent::SendCameraViewToServer,
-		0.016f,
+		0.033f,
 		true);
 }
 
