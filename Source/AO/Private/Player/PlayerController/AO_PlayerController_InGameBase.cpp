@@ -37,7 +37,29 @@ void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
 		return;
 	}
 
+	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
+		*GetNameSafe(GetPawn()),
+		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
+		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
+	
 	//InitCameraManager();
+}
+
+void AAO_PlayerController_InGameBase::AcknowledgePossession(APawn* P)
+{
+	Super::AcknowledgePossession(P);
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
+		*GetNameSafe(GetPawn()),
+		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
+		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
+
+	InitCameraManager(P);
 }
 
 void AAO_PlayerController_InGameBase::OnRep_Pawn()
@@ -48,6 +70,11 @@ void AAO_PlayerController_InGameBase::OnRep_Pawn()
 	{
 		return;
 	}
+
+	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
+		*GetNameSafe(GetPawn()),
+		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
+		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
 
 	//InitCameraManager();
 }
@@ -474,12 +501,14 @@ UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub
 	return nullptr;
 }
 
-void AAO_PlayerController_InGameBase::InitCameraManager()
+void AAO_PlayerController_InGameBase::InitCameraManager(APawn* InPawn)
 {
 	checkf(CameraManagerComponent, TEXT("CameraManagerComponent not found"));
 	
-	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(GetPawn());
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(InPawn);
 	checkf(PlayerCharacter, TEXT("Character not found"));
+
+	AO_LOG(LogKH, Log, TEXT("Called InitCameraManager"));
 
 	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
 	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
