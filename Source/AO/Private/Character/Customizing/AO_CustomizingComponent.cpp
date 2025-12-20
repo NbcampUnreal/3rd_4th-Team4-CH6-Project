@@ -38,7 +38,12 @@ void UAO_CustomizingComponent::ServerRPC_ChangeCustomizingOption_Implementation(
 
 UCustomizableObjectInstance* UAO_CustomizingComponent::GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const
 {
-	return CustomizableObjectInstanceMap[MeshType];
+	if (CustomizableObjectInstanceMap.Contains(MeshType))
+	{
+		return CustomizableObjectInstanceMap[MeshType];
+	}
+    
+	return nullptr;
 }
 
 ECharacterMesh UAO_CustomizingComponent::GetCurrentMeshType() const
@@ -120,6 +125,11 @@ void UAO_CustomizingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 void UAO_CustomizingComponent::OnRep_CurrentMeshType()
 {
+	if (CustomizableObjectInstanceMap.Num() == 0)
+	{
+		return;
+	}
+	
 	ChangeCharacterMesh();
 }
 
@@ -152,6 +162,11 @@ void UAO_CustomizingComponent::ChangeCharacterMesh()
 
 void UAO_CustomizingComponent::OnRep_CurrentOptionData()
 {
+	if (CustomizableObjectInstanceMap.Num() == 0)
+	{
+		return;
+	}
+	
 	ChangeOption();
 }
 
