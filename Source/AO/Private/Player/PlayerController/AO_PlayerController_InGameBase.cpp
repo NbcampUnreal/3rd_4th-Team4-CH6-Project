@@ -4,6 +4,7 @@
 
 #include "AO_DelegateManager.h"
 #include "AO/AO_Log.h"
+#include "UI/AO_UIStackManager.h"
 #include "UI/Widget/AO_PauseMenuWidget.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "Engine/GameInstance.h"
@@ -18,26 +19,13 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/Camera/AO_CameraManagerComponent.h"
 #include "Player/PlayerState/AO_PlayerState.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "UI/AO_UIActionKeySubsystem.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
 	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
-	
-	bPauseMenuVisible = false;
-
-	static ConstructorHelpers::FClassFinder<UAO_PauseMenuWidget> PauseMenuBPClass(
-	TEXT("/Game/AVaOut/UI/Widget/WBP_PauseMenu")
-	);
-	if(PauseMenuBPClass.Succeeded())
-	{
-		PauseMenuClass = PauseMenuBPClass.Class;
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("PauseMenu widget not found, check path"));
-	}
-
-	// TODO: Hard Load 말고 UPROPERTY를 활용한 로드로 전환 (WBP_Settings는 완료)
 }
 
 void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
@@ -49,7 +37,7 @@ void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
 		return;
 	}
 
-	InitCameraManager();
+	//InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::OnRep_Pawn()
@@ -61,7 +49,7 @@ void AAO_PlayerController_InGameBase::OnRep_Pawn()
 		return;
 	}
 
-	InitCameraManager();
+	//InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()
@@ -71,29 +59,94 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		AO_LOG(LogJM, Log, TEXT("Create"));
-		CreateSettingsWidgetInstance(20, ESlateVisibility::Hidden);
-		
-		// Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
+		Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
 	}
+
+	if (IsLocalPlayerController())
+	{
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
+			{
+				if (UInputMappingContext* IMC = Keys->GetUIIMC())
+				{
+					if (ULocalPlayer* LP = GetLocalPlayer())
+					{
+						if (UEnhancedInputLocalPlayerSubsystem* Subsys = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+						{
+							Subsys->AddMappingContext(IMC, 100);
+						}
+					}
+				}
+			}
+		}
+
+		Client_StartVoiceChat_Implementation();
+	}
+		
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_InGameBase::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	
+
 	if (InputComponent)
 	{
-		AO_LOG(LogJSH, Log, TEXT("InGameBase SetupInputComponent: Binding ESC/P on %s"), *GetName());
-		// ESC/P 키 테스트용 직접 바인딩
-		InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ThisClass::TogglePauseMenu);
-		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &ThisClass::TogglePauseMenu);
+		AO_LOG(LogJSH, Log, TEXT("InGameBase SetupInputComponent: Binding Test Keys on %s"), *GetName());
 
 		// JM 코드추가 : 테스트용 키 직접 바인딩 (좋지 않음, 나중에 지워야함)
 		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
 		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);
 	}
+	
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+	if (!EIC)
+	{
+		return;
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
+		{
+			if (UInputAction* OpenAction = Keys->GetUIOpenAction())
+			{
+				EIC->BindAction(OpenAction, ETriggerEvent::Started, this, &ThisClass::HandleUIOpen);
+			}
+		}
+	}
+}
+
+UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget()
+{
+	if (IsValid(PauseMenu))
+	{
+		return PauseMenu;
+	}
+
+	if (!PauseMenuClass)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("GetOrCreatePauseMenuWidget: PauseMenuClass not set on %s"), *GetName());
+		return nullptr;
+	}
+
+	PauseMenu = CreateWidget<UAO_PauseMenuWidget>(this, PauseMenuClass);
+	if (!PauseMenu)
+	{
+		AO_LOG(LogJSH, Error, TEXT("GetOrCreatePauseMenuWidget: Failed to create PauseMenu"));
+		return nullptr;
+	}
+
+	// 델리게이트 바인딩 1회
+	PauseMenu->OnRequestSettings.AddDynamic(this, &ThisClass::OnPauseMenu_RequestSettings);
+	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby);
+	PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame);
+	PauseMenu->OnRequestResume.AddDynamic(this, &ThisClass::OnPauseMenu_RequestResume);
+
+	PauseMenu->SetIsFocusable(true);
+
+	return PauseMenu;
 }
 
 void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL, ETravelType TravelType,
@@ -176,7 +229,7 @@ void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AA
 			{
 				continue;
 			}
-			
+
 			if (OtherPS == AO_PS)	// JM : Ensure 생략, 본인은 unmute 작업을 생략하려는 의도
 			{
 				AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
@@ -190,7 +243,7 @@ void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AA
 	{
 		OSS->MuteRemoteTalker(0, DeadPlayerState, false);
 	}
-	
+
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
@@ -256,16 +309,16 @@ void AAO_PlayerController_InGameBase::Client_UnmuteVoiceMember_Implementation(AA
 	}
 
 	OSS->UnmuteRemoteTalker(0, AlivePlayerState, false);
-	
+
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 void AAO_PlayerController_InGameBase::Test_Die()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	
+
 	Test_Server_SelfDie();
-	
+
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
@@ -290,7 +343,7 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 	{
 		return;
 	}
-	
+
 	// 사망자 모두 뮤트
 	for (TObjectPtr<APlayerState> OtherPS : World->GetGameState()->PlayerArray)
 	{
@@ -298,7 +351,7 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 		{
 			continue;
 		}
-			
+
 		if (OtherPS == AO_PS)  // JM : Ensure 안씀. 본인은 mute 작업을 생략하려는 의도
 		{
 			AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
@@ -317,100 +370,34 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 			continue;
 			// JM : Ensure 안씀. 생존자는 mute 작업을 생략하려는 의도
 		}
-			
+
 		OSS->MuteRemoteTalker(0, AO_OtherPS, false);
 	}
-	
+
 	Test_Server_SelfAlive();	// 생존자들이 나를 Unmute 하도록 ServerRPC 보냄
-	
+
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerController_InGameBase::TogglePauseMenu()
+
+
+void AAO_PlayerController_InGameBase::HandleUIOpen()
 {
-	if (!PauseMenuClass)
+	if (UGameInstance* GI = GetGameInstance())
 	{
-		AO_LOG(LogJSH, Warning, TEXT("PauseMenuClass not set on %s"), *GetName());
-		return;
-	}
-
-	if (!PauseMenu)
-	{
-		PauseMenu = CreateWidget<UAO_PauseMenuWidget>(this, PauseMenuClass);
-		if (!PauseMenu)
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
 		{
-			AO_LOG(LogJSH, Error, TEXT("Failed to create PauseMenu"));
-			return;
+			// “열기”만 담당. 닫기는 UI_Close로 UI가 처리.
+			UIStack->TryTogglePauseMenu(this);
 		}
-
-		PauseMenu->OnRequestSettings.AddDynamic(this, &ThisClass::OnPauseMenu_RequestSettings);
-		PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby);
-		PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame);
-		PauseMenu->OnRequestResume.AddDynamic(this, &ThisClass::OnPauseMenu_RequestResume);
 	}
-
-	if (bPauseMenuVisible)
-	{
-		// JM : ESC 누르면 설정창도 같이 닫히게 하기
-		if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
-		{
-			DelegateManager->OnSettingsClose.Broadcast();
-		}
-		else
-		{
-			AO_ENSURE(false, TEXT("Can't Get Delegate Manager"));
-		}
-		HidePauseMenu();
-	}
-	else
-	{
-		ShowPauseMenu();
-	}
-}
-
-void AAO_PlayerController_InGameBase::ShowPauseMenu()
-{
-	if (!PauseMenu || bPauseMenuVisible)
-	{
-		return;
-	}
-
-	// NOTE : 기존 상현님이 하셨던 대로 ZOrder 10으로 변경 (설정은 20으로)
-	PauseMenu->AddToViewport(10);
-	PauseMenu->SetVisibility(ESlateVisibility::Visible);
-	PauseMenu->SetIsFocusable(true);
-
-	FInputModeGameAndUI Mode;
-	Mode.SetWidgetToFocus(PauseMenu->TakeWidget());
-	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	Mode.SetHideCursorDuringCapture(false);
-	SetInputMode(Mode);
-
-	bShowMouseCursor = true;
-	bPauseMenuVisible = true;
-}
-
-void AAO_PlayerController_InGameBase::HidePauseMenu()
-{
-	if (!PauseMenu || !bPauseMenuVisible)
-	{
-		return;
-	}
-
-	PauseMenu->RemoveFromParent();
-
-	FInputModeGameOnly Mode;
-	SetInputMode(Mode);
-	bShowMouseCursor = false;
-
-	bPauseMenuVisible = false;
 }
 
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestSettings()
 {
 	AO_LOG(LogJSH, Log, TEXT("Settings clicked"));
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	
+
 	if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
 	{
 		DelegateManager->OnSettingsOpen.Broadcast();
@@ -420,20 +407,18 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestSettings()
 	{
 		AO_ENSURE(false, TEXT("Can't Get Delegate Manager"));
 	}
+
 	AO_LOG(LogJM, Log, TEXT("End"));
-	
 }
 
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()
 {
-	HidePauseMenu();
-
-	if(UAO_OnlineSessionSubsystem* Sub = GetOnlineSessionSub())
+	if (UAO_OnlineSessionSubsystem* Sub = GetOnlineSessionSub())
 	{
 		// 세션을 떠나기 전에 GameInstance의 세션 데이터 초기화
-		if(UWorld* World = GetWorld())
+		if (UWorld* World = GetWorld())
 		{
-			if(UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+			if (UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
 			{
 				AO_GI->ResetSessionData();
 			}
@@ -444,9 +429,9 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()
 	}
 
 	// 서브시스템 없으면 안전하게 메인 메뉴로
-	if(UWorld* World = GetWorld())
+	if (UWorld* World = GetWorld())
 	{
-		if(UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+		if (UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
 		{
 			AO_GI->ResetSessionData();
 		}
@@ -458,6 +443,21 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()
 void AAO_PlayerController_InGameBase::OnPauseMenu_RequestQuitGame()
 {
 	UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
+{
+	// UIStackManager 단일 경로로 Pause 닫기
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	AO_LOG(LogJSH, Warning, TEXT("UIStackManager not found. Resume ignored."));
 }
 
 UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const
@@ -472,11 +472,6 @@ UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub
 
 	AO_LOG(LogJSH, Warning, TEXT("GetOnlineSessionSub: OnlineSessionSubsystem not found"));
 	return nullptr;
-}
-
-void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
-{
-	HidePauseMenu();
 }
 
 void AAO_PlayerController_InGameBase::InitCameraManager()
