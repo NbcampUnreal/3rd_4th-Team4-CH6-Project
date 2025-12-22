@@ -103,7 +103,7 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 		DeathWidget->AddToViewport();
 	}
 
-	FInputModeGameAndUI InputMode;
+	FInputModeUIOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
 }
