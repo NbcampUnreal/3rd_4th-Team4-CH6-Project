@@ -37,9 +37,9 @@ private:
 	void StartServerTravel();
 
 private:
-	bool bIsTravelSyncInProgress = false;
-	FString PendingTravelURL;
-	
 	UPROPERTY()
 	TSet<TObjectPtr<AAO_PlayerController>> CleanupCompletePlayers;
+	
+	bool bIsTravelSyncInProgress = false;
+	FString PendingTravelURL;
 };

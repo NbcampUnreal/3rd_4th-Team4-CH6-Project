@@ -179,11 +179,7 @@ void AAO_GameMode_InGameBase::NotifyPlayerCleanupCompleteForTravel(AAO_PlayerCon
 
 	if (CleanupCompletePlayers.Num() >= TotalPlayers)
 	{
-		StartServerTravel();	// 딜레이... 추가... ㅠㅠㅠ 아니 근데 안하면 죽어.. 오... 딜레이를 걸어도 죽는구먼! 하하하하 
-		/*if (!GetWorld()->GetTimerManager().IsTimerActive(ServerTravelTimerHandle))
-		{
-			GetWorld()->GetTimerManager().SetTimer(ServerTravelTimerHandle, this, &ThisClass::StartServerTravel, 10.2f, false);
-		}*/
+		StartServerTravel();	// NOTE : Delay를 주는 방법으로는 해결할 수 없음
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -200,7 +196,7 @@ void AAO_GameMode_InGameBase::StartServerTravel()
 	}
 
 	bIsTravelSyncInProgress = false;
-	PendingTravelURL.Empty();	// PendingTravelURL = TEXT("");	/
+	PendingTravelURL.Empty();
 	CleanupCompletePlayers.Empty();
 	
 	AO_LOG(LogJM, Log, TEXT("End"));

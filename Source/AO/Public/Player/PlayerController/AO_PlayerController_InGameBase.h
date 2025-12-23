@@ -112,7 +112,4 @@ private:
 
 private:
 	bool bIsCheckingVoiceCleanup = false;
-	FString PendingTravelURL;
-	/** Unregister 확인이 필요한 원격 플레이어들의 ID 목록 */
-	// TSet<FUniqueNetIdWrapper> PendingUnregisterIDs;
 };

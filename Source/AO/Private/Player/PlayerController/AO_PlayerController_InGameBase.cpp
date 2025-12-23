@@ -168,75 +168,13 @@ void AAO_PlayerController_InGameBase::Tick(float DeltaTime)
 	if (bIsCheckingVoiceCleanup)
 	{
 		AO_LOG_ROLE(LogJM, Log, TEXT("Inner bIsCheckingVoiceCleanup while Tick"));
-		
-		/*// 1. OSS 내부 상태 확인 (사용자 제안 방식)
-		IOnlineVoicePtr VoiceInt = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>()->GetOnlineVoiceInterface();
-		if (VoiceInt.IsValid())
-		{
-			TArray<FUniqueNetIdWrapper> ToRemove;
-			for (const FUniqueNetIdWrapper& TargetID : PendingUnregisterIDs)
-			{
-				// Unregister를 시도했을 때 false가 나오면 이미 목록에 없는 것임
-				if (TargetID.IsValid() && !VoiceInt->UnregisterRemoteTalker(*TargetID))
-				{
-					AO_LOG(LogJM, Warning, TEXT("UnregisterRemoteTalker Failed: %s (즉, 이미 unregister 한 녀석임)"), *TargetID->ToString());
-					ToRemove.Add(TargetID);
-				}
-			}
 
-			for (const FUniqueNetIdWrapper& DoneID : ToRemove)
-			{
-				PendingUnregisterIDs.Remove(DoneID);
-			}
-		}
-		else
-		{
-			// 인터페이스가 없으면 이미 정리된 것으로 간주
-			PendingUnregisterIDs.Empty();
-		}*/
-
-		// 2. 컴포넌트 및 OSS 상태 최종 확인
 		if (IsVoiceFullyCleanedUp())
 		{
 			bIsCheckingVoiceCleanup = false;
 			Server_NotifyReadyForTravel();
 			AO_LOG(LogJM, Log, TEXT("All Voice Resources Cleaned Up."));
 		}
-		
-		/*
-		bool bAnyComponentRemaining = false;
-		UWorld* World = GetWorld();
-
-		// 1. VoipListenerSynthComponent가 월드에 남아있는지 확인
-		for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-		{
-			if (It->GetWorld() == World && IsValid(*It))
-			{
-				bAnyComponentRemaining = true;
-				break;
-			}
-		}
-
-		// 2. VOIPTalker가 월드에 남아있는지 확인
-		if (!bAnyComponentRemaining)
-		{
-			for (TObjectIterator<UVOIPTalker> It; It; ++It)
-			{
-				if (It->GetWorld() == World && IsValid(*It))
-				{
-					bAnyComponentRemaining = true;
-					break;
-				}
-			}
-		}
-
-		// 모든 관련 컴포넌트가 사라졌다면 서버에 보고
-		if (!bAnyComponentRemaining)
-		{
-			bIsCheckingVoiceCleanup = false;
-			Server_NotifyReadyForTravel();
-			AO_LOG(LogJM, Log, TEXT("Voice Cleanup Complete - Reporting to Server"));
-		}*/
 	}
 }
 
@@ -462,27 +400,6 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
 {
 	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
-
-	/*// 1. 현재 존재하는 모든 원격 타커의 ID를 수집
-	PendingUnregisterIDs.Empty();
-	if (UWorld* World = GetWorld())
-	{
-		if (AGameStateBase* GS = World->GetGameState())
-		{
-			for (APlayerState* PS : GS->PlayerArray)
-			{
-				if (PS && (PS != PlayerState))	// 본인 PS 가 아니라면 추가
-				// if (PS && !PS-> ->IsLocalPlayerController())
-				{
-					// 유효한 NetId가 있는 경우만 추가
-					if (PS->GetUniqueId().IsValid())
-					{
-						PendingUnregisterIDs.Add(PS->GetUniqueId());
-					}
-				}
-			}
-		}
-	}*/
 	
 	CleanupAudioResource();
 	bIsCheckingVoiceCleanup = true;
@@ -506,42 +423,6 @@ void AAO_PlayerController_InGameBase::CleanupAudioResource()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	/*// 1. VOIP 관련 Synth 컴포넌트 정리
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			// It->Stop();	// 컴파일 에러 
-			It->UnregisterComponent();
-			It->MarkAsGarbage();
-		}
-	}
-
-	// 2. 오디오 컴포넌트 정리 (특히 VOIP 내부 컴포넌트 타겟팅)
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			// 이름에 "Voip"가 포함되어 있거나, 부모(Outer)가 Voip 관련 객체인 경우
-			bool bIsVoipRelated = It->GetName().Contains(TEXT("Voip"));
-            
-			if (!bIsVoipRelated && It->GetOuter())
-			{
-				bIsVoipRelated = It->GetOuter()->IsA<UVoipListenerSynthComponent>() || 
-								 It->GetOuter()->GetName().Contains(TEXT("Voip"));
-			}
-
-			if (bIsVoipRelated)
-			{
-				It->Stop();
-				It->UnregisterComponent(); // 핵심: 렌더링 씬에서 즉시 제거
-				It->MarkAsGarbage();
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister AudioComponent - %s"), *It->GetName());
-			}
-		}
-	}*/
-
-	// 3. OnlineSubsystem 소리 정지
 	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
 	{
 		OSS->MuteAllRemoteTalker();	// JM : 안정성을 위해 Mute도 해주기
@@ -551,160 +432,6 @@ void AAO_PlayerController_InGameBase::CleanupAudioResource()
 	{
 		AO_ENSURE(false, TEXT("Can't Get OSS"));
 	}
-
-	/*
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		if (!IsValid(*It))
-		{
-			continue;
-		}
-
-		if (It->IsRegistered())
-		{
-			It->ClosePacketStream();
-			It->Deactivate();
-			It->UnregisterComponent();
-			It->MarkAsGarbage();
-			AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister SynthComponent"));
-			// It->DestroyComponent();
-		}
-	}
-
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			if (It->GetName().Contains(TEXT("Voip")))
-			{
-				It->Stop();
-				It->UnregisterComponent();
-				It->MarkAsGarbage();
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister UAudioComponent"));
-				// It->DestroyComponent();
-			}
-		}
-	}
-	*/
-
-	
-	
-	/*
-	// 1. 모든 오디오/보이스 관련 컴포넌트를 전수 조사 (월드 제한 해제)
-	// TObjectIterator는 Transient 패키지 내의 객체도 모두 찾아냅니다.
-	// A. VoipListenerSynthComponent 정리
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		// 유효하지 않거나 이미 파괴 중인 객체 제외
-		if (!IsValid(*It)) continue;
-
-		// [중요] 월드 체크를 하지 않거나, 등록된 상태(IsRegistered)라면 무조건 해제
-		if (It->IsRegistered() || It->IsActive())
-		{
-			AO_LOG(LogJM, Warning, TEXT("Cleaning Transient UVoipListenerSynthComponent : %s"), *It->GetName());
-            
-			It->ClosePacketStream();
-			// It->Stop();
-			It->Deactivate();
-            
-			// 렌더링 씬에서 강제로 등록 해제 (로그의 에러를 해결하는 핵심)
-			It->UnregisterComponent(); 
-            
-			// Transient에 있는 경우 MarkAsGarbage를 통해 GC 대상임을 명시
-			
-			// It->MarkAsGarbage();
-			// It->BeginDestroy();
-			It->DestroyComponent();
-		}
-	}
-
-	// B. 일반 AudioComponent 중 VOIP용 사운드 시트를 사용하는 것들 정리
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		if (!IsValid(*It)) continue;
-
-		// 로그에 나온 것처럼 Transient에 있으면서 문제를 일으키는 것들 타겟팅
-		if (It->IsRegistered())
-		{
-			// 이름이나 아우터(Outer)에 Voip가 포함되어 있다면 보이스 관련임
-			if (It->GetName().Contains(TEXT("Voip")) || (It->GetOuter() && It->GetOuter()->IsA<UVoipListenerSynthComponent>()))
-			{
-				AO_LOG(LogJM, Warning, TEXT("Cleaning Orphaned Audio Component: %s"), *It->GetPathName());
-				It->Stop();
-				It->UnregisterComponent();
-				// It->MarkAsGarbage();
-				// It->BeginDestroy(); // 이건 외부에서 호출하면 안되는구나?! crash 나네?
-				It->DestroyComponent();
-			}
-		}
-	}
-
-	for (TObjectIterator<UVOIPTalker> It; It; ++It)		// VOIPTalker를 모두 찾아서 제거
-	{
-		if (!IsValid(*It)) continue;
-
-		It->Deactivate();
-		It->UnregisterComponent();
-		It->DestroyComponent();
-		AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Destruction of VOIPTalker"));
-	}
-	*/
-
-	/*// 2. 엔진 레벨의 오디오 하드웨어 중단 (이전 답변 드린 내용 포함)
-	if (GEngine && GEngine->GetMainAudioDevice())
-	{
-		GEngine->GetMainAudioDevice()->StopAllSounds(true);
-	}*/
-	
-
-	
-	/* 내가 수동으로 지우는건 안좋은 거 같은데... */
-	// 월드 뿐만 아니라 Transient 도 확인해서 지워보자
-	/*if (UWorld* World = GetWorld())
-	{
-		// 2. 모든 SynthComponent 및 AudioComponent 중지 및 해제
-		// TObjectIterator는 월드에 상관없이 모든 객체를 찾으므로 월드 체크가 필수입니다. // 강화
-		for (TObjectIterator<UAudioComponent> It; It; ++It)
-		{
-			if (It->GetWorld() == World)
-			{
-				It->Stop();
-				It->SetComponentTickEnabled(false);
-				It->UnregisterComponent();
-				It->DestroyComponent(); // GC로는 안되는데? 여전히 크래시가발생해 // Unregister만으로도 충분히 안전하며 GC가 처리하게 둠
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister & Destroy Audio Component"));
-			}
-		}
-		
-		// JM : 실제 에러의 주범인 'VoipListenerSynthComponent'를 모두 찾아 제거
-		for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)		// TObjectIterator는 Transient 패키지에 숨은 컴포넌트까지 다 찾아냄
-		{
-			if (It->GetWorld() == World)	// 이 컴포넌트가 현재 파괴되려는 월드와 연결되어 있는지 확인
-			{
-				It->ClosePacketStream();	// 강화
-				It->BeginDestroy();			// 
-				
-				// It->Stop();					// 강화 (사용 불가 컴파일에러)
-				It->Deactivate();			// 강화
-				//	It->GetAudioComponent()->UnregisterComponent(); // 안됨 (컴파일에러)
-				It->UnregisterComponent();
-				It->DestroyComponent();		// 강제 삭제까지
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister SynthComponent"));
-			}
-		}
-
-		for (TObjectIterator<UVOIPTalker> It; It; ++It)		// VOIPTalker를 모두 찾아서 제거
-		{
-			if (It->GetWorld() == World)
-			{
-				It->Deactivate();
-				It->UnregisterComponent();
-				It->DestroyComponent();
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Destruction of VOIPTalker"));
-			}
-		}
-	}*/
-	
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -820,202 +547,48 @@ void AAO_PlayerController_InGameBase::InitCameraManager()
 
 bool AAO_PlayerController_InGameBase::IsVoiceFullyCleanedUp()
 {
-	AGameStateBase* GS_Base = GetWorld()->GetGameState<AGameStateBase>();
-	if (GS_Base)
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("No World")))
 	{
-		UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
-		if (OSS)
+		return true;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	AGameStateBase* GS_Base = World->GetGameState<AGameStateBase>();
+	if (OSS && GS_Base)
+	{
+		if (IOnlineVoicePtr VoiceInterface = OSS->GetOnlineVoiceInterface(); VoiceInterface.IsValid())
 		{
-			IOnlineVoicePtr VoiceInterface = OSS->GetOnlineVoiceInterface();
-			if (VoiceInterface.IsValid())
+			const FUniqueNetIdPtr LocalNetId = PlayerState->GetUniqueId().GetUniqueNetId();
+			for (APlayerState* PS : GS_Base->PlayerArray)
 			{
-				for (APlayerState* PS : GS_Base->PlayerArray)
+				if (!PS || PS == PlayerState)
 				{
-					if (!AO_ENSURE(PS, TEXT("PS is Null")))
-					{
-						continue;
-					}
+					continue;
+				}
 
-					AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
-					if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+				if (FUniqueNetIdPtr RemoteNetId = PS->GetUniqueId().GetUniqueNetId(); RemoteNetId.IsValid())
+				{
+					if (!VoiceInterface->IsMuted(0, *RemoteNetId))
 					{
-						continue;
-					}
-
-					TSharedPtr<const FUniqueNetId> PlayerID = AO_PS->GetUniqueId().GetUniqueNetId();
-					if (PlayerID)
-					{
-						if (PlayerID == PlayerState->GetUniqueId().GetUniqueNetId())
-						{
-							/*if (VoiceInterface->UnregisterLocalTalker(0))
-							{
-								AO_LOG(LogJM, Warning, TEXT("자신을 아직 Unregister 하지 못한 경우"));
-								return false;
-							}*/
-							continue;
-						}
-						
-						if (!VoiceInterface->IsMuted(0, *PlayerID))
-						{
-							AO_LOG(LogJM, Warning, TEXT("IsVoiceFullyCleanedUp: Player %s is not muted"), *PlayerID->ToString());
-							// VoiceInterface->MuteRemoteTalker(0, *PlayerID, false); // 이거로 해결 안됨
-							return false;
-						}
-						
+						AO_LOG(LogJM, Warning, TEXT("Wait: Player(%s) is not muted yet"), *RemoteNetId->ToString())
+						return false;
 					}
 				}
 			}
 		}
 	}
 
-	// TODO: 이게 필요한가? 안도는데?
-	// 2. 엔진이 내부적으로 Audio 자원을 씬에서 뺐는지 확인 (이게 핵심)
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		AO_LOG(LogJM, Warning, TEXT("Audio Component가 있다 : %s"), *It->GetName());
-		// 이름에 "Voip"가 들어간 녀석이 '아직' Registered 상태라면 엔진이 작업 중인 것임
-		if (It->IsRegistered() && It->GetName().Contains(TEXT("Voip")))
-		{
-			AO_LOG(LogJM, Warning, TEXT("엔진이 아직 VOIP 컴포넌트를 정리 중입니다... Wait: %s"), *It->GetName());
-			It->UnregisterComponent();
-			return false; 
-		}
-	}
-
 	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
 	{
-		// IsValid(GC 대상이 아님)이고 IsRegistered(씬에 등록됨) 상태라면 아직 정리 안 됨
-		// 이걸 UnregisterRemoteTalker보다 먼저 하면 안됨
 		if (IsValid(*It) && It->IsRegistered())
 		{
-			AO_LOG(LogJM, Warning, TEXT("IsVoiceFullyCleanedUp: UVoipListenerSynthComponent is still Registered - %s"), *It->GetName());
+			AO_LOG(LogJM, Warning, TEXT("Wait: Engine is still unregistering %s"), *It->GetName());
 			It->UnregisterComponent();
 			return false;
 		}
 	}
-
-	AO_LOG(LogJM, Log, TEXT("End"));
+	AO_LOG(LogJM, Log, TEXT("All remoteTalkers Muted & Component Unregistered"));
 	return true;
-
-	/*
-	// 1. VOIP 리스너 컴포넌트 체크
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		// IsValid(GC 대상이 아님)이고 IsRegistered(씬에 등록됨) 상태라면 아직 정리 안 됨
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			AO_LOG(LogJM, Warning, TEXT("IsVoiceFullyCleanedUp: UVoipListenerSynthComponent is still Registered - %s"), *It->GetName());
-			return false;
-		}
-	}
-
-	// 2. VOIP 관련 오디오 컴포넌트 체크 (핵심)
-	// 크래시 로그에서 AudioComponent가 문제를 일으킨 것으로 확인됨 
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			// 이름에 "Voip"가 포함되어 있거나, 부모(Outer)가 Voip 관련 객체인 경우 체크
-			bool bIsVoipRelated = It->GetName().Contains(TEXT("Voip"));
-            
-			if (!bIsVoipRelated && It->GetOuter())
-			{
-				bIsVoipRelated = It->GetOuter()->IsA<UVoipListenerSynthComponent>() || 
-								 It->GetOuter()->GetName().Contains(TEXT("Voip"));
-			}
-
-			if (bIsVoipRelated)
-			{
-				AO_LOG(LogJM, Warning, TEXT("IsVoiceFullyCleanedUp: VOIP AudioComponent is still Registered - %s"), *It->GetName());
-				return false;
-			}
-		}
-	}
-
-	// 3. (선택사항) VOIP 토커 체크
-	for (TObjectIterator<UVOIPTalker> It; It; ++It)
-	{
-		if (IsValid(*It) && !It->IsGarbageEliminationEnabled()) // UVOIPTalker는 컴포넌트가 아니므로 IsRegistered 없음
-		{
-			// Talker가 여전히 유효하다면 완전히 정리된 것이 아닐 수 있음
-			// 필요에 따라 추가 로직 작성
-			It->UnregisterComponent();
-			It->MarkAsGarbage();
-			AO_LOG(LogJM, Warning, TEXT("IsVoiceFullyCleanedUp: UVOIPTalker is still Registered - %s"), *It->GetName());
-			return false;
-		}
-	}
-	*/
-	
-
-	/*for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			AO_LOG(LogJM, Warning, TEXT("UVoipListenerSynthComponent is Registered"));
-			return false;
-		}
-	}*/
-
-
-
-	
-
-	// A. OSS 타커 리스트가 비었는가?
-	/*if (PendingUnregisterIDs.Num() > 0)
-	{
-		AO_LOG(LogJM, Warning, TEXT("PendingUnregisterIDs.Num() : %d > 0"), PendingUnregisterIDs.Num());
-		return false;
-	}*/
-
-	/*
-	// B. 월드에 잔류 컴포넌트가 있는가?
-	UWorld* World = GetWorld();
-	
-	// B. 월드에 살아있는 Audio/Synth Component가 하나라도 있는가?
-	for (TObjectIterator<UAudioComponent> It; It; ++It)
-	{
-		// IsRegistered()가 true이면서 이 월드 소속인 것이 있다면 아직 정리 중인 것임
-		if (It->IsRegistered() || IsValid(*It))
-		{
-			AO_LOG(LogJM, Warning, TEXT("AudioComp 남아있음"));
-			return false; 
-		}
-	}
-	
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		if (IsValid(*It))
-		// if (It->GetWorld() == World && (IsValid(*It) || It->IsGarbageEliminationEnabled()))
-		// if (It->GetWorld() == World && !It->IsGarbageEliminationEnabled())
-		{
-			AO_LOG(LogJM, Warning, TEXT("VoipListenerSynthComp 남아있음"));
-			return false;
-		}
-	}
-	for (TObjectIterator<UVOIPTalker> It; It; ++It)
-	{
-		if (IsValid(*It))
-		// if (It->GetWorld() == World && (IsValid(*It) || It->IsGarbageEliminationEnabled()))
-		// if (It->GetWorld() == World && !It->IsGarbageEliminationEnabled())
-		{
-			AO_LOG(LogJM, Warning, TEXT("VOIP Talker 남아있음"));
-			return false;
-		}
-	}
-
-	// 월드 필터 없이 IsRegistered 상태인 Voip 컴포넌트가 하나라도 있으면 false
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		if (IsValid(*It) && It->IsRegistered())
-		{
-			AO_LOG(LogJM, Warning, TEXT("Transient에 VoipListenerSynthComp 남아있음"));
-			return false;
-		}
-	}
-	
-	AO_LOG(LogJM, Log, TEXT("End"));
-	return true;
-
-	*/
 }
