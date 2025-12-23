@@ -42,6 +42,8 @@ void AAO_PlayerController_Stage::BeginPlay()
 			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
 			HUDWidget->AddToViewport();
 		}
+
+		EnsureSpectateCameraActor();
 	}
 
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -214,13 +216,13 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 	int32 NewIndex = INDEX_NONE;
 
 	TObjectPtr<UWorld> World = GetWorld();
-	checkf(World, TEXT("World is null"));
-	
 	TObjectPtr<AGameStateBase> GS = GetWorld()->GetGameState<AGameStateBase>();
-	checkf(GS, TEXT("GameState is null"));
-
 	TObjectPtr<AAO_PlayerState> MyPS = GetPlayerState<AAO_PlayerState>();
-	checkf(MyPS, TEXT("PlayerState is null"));
+	
+	if (!ensure(World) || !ensure(GS) || !ensure(MyPS))
+	{
+		return;
+	}
 
 	const TArray<TObjectPtr<APlayerState>>& Players = GS->PlayerArray;
 	const int32 NumPlayers = Players.Num();
@@ -259,6 +261,11 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 	int32 NewIndex = INDEX_NONE;
 	TObjectPtr<APawn> NewTarget = FindNextSpectateTarget(bForward, NewIndex);
 
+	if (NewTarget == CurrentSpectateTarget)
+	{
+		return;
+	}
+
 	if (!NewTarget)
 	{
 		ServerRPC_SetSpectateTarget(nullptr);
@@ -278,10 +285,16 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 
 void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APawn* NewTarget, int32 NewPlayerIndex)
 {
-	checkf(NewTarget, TEXT("NewTarget is null"));
-	
 	if (!IsLocalController())
 	{
+		return;
+	}
+
+	if (!IsValid(NewTarget))
+	{
+		bIsSpectating = false;
+		CurrentSpectateTarget = nullptr;
+		CurrentSpectatePlayerIndex = INDEX_NONE;
 		return;
 	}
 
@@ -314,13 +327,13 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 	OutNewIndex = INDEX_NONE;
 	
 	TObjectPtr<UWorld> World = GetWorld();
-	checkf(World, TEXT("World is null"));
-	
 	TObjectPtr<AGameStateBase> GS = GetWorld()->GetGameState<AGameStateBase>();
-	checkf(GS, TEXT("GameState is null"));
-
 	TObjectPtr<AAO_PlayerState> MyPS = GetPlayerState<AAO_PlayerState>();
-	checkf(MyPS, TEXT("PlayerState is null"));
+	
+	if (!ensure(World) || !ensure(GS) || !ensure(MyPS))
+	{
+		return nullptr;
+	}
 
 	const TArray<TObjectPtr<APlayerState>>& Players = GS->PlayerArray;
 	const int32 NumPlayers = Players.Num();
@@ -346,6 +359,11 @@ TObjectPtr<APawn> AAO_PlayerController_Stage::FindNextSpectateTarget(bool bForwa
 	if (AliveIndices.Num() == 0)
 	{
 		return nullptr;
+	}
+	if (AliveIndices.Num() == 1)
+	{
+		OutNewIndex = AliveIndices[0];
+		return Players[AliveIndices[0]]->GetPawn();
 	}
 
 	// 현재 관전 인덱스 기준으로 다음/이전 찾기

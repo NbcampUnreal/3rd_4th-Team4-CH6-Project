@@ -167,7 +167,7 @@ void UAO_DeathSpectateComponent::NotifySpectators_TargetInvalidated()
 		}
 	}
 
-	for (const TWeakObjectPtr<APlayerController>& PC : SpectatorSet)
+	for (const TWeakObjectPtr<APlayerController>& PC : Spectators)
 	{
 		AAO_PlayerController_Stage* SpectatorPC = Cast<AAO_PlayerController_Stage>(PC.Get());
 		if (!SpectatorPC)
