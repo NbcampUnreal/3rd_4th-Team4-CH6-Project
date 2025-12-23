@@ -16,7 +16,7 @@ void AAO_PlayerController::PreClientTravel(const FString& PendingURL, ETravelTyp
 	
 	if (IsLocalController())
 	{
-		CleanupAudioResource();
+		// CleanupAudioResource();
 		UpdateLoadingMapName(PendingURL);
 	}
 
@@ -46,6 +46,7 @@ UAO_UserWidget* AAO_PlayerController::GetOrCreateSettingsWidgetInstance()
 	return SettingsWidgetInstance;
 }
 
+/*
 void AAO_PlayerController::CleanupAudioResource()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -86,7 +87,7 @@ void AAO_PlayerController::CleanupAudioResource()
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
-}
+}*/
 
 void AAO_PlayerController::UpdateLoadingMapName(const FString& PendingURL) const
 {

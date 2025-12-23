@@ -135,6 +135,77 @@ void AAO_GameMode_InGameBase::Test_LetUnmuteVoiceMemberForSurvivor(const TObject
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void AAO_GameMode_InGameBase::RequestSynchronizedServerTravel(const FString& URL)
+{
+	AO_LOG(LogJM, Log, TEXT("Start(URL : %s"), *URL);
+	if (bIsTravelSyncInProgress)
+	{
+		return;
+	}
+
+	bIsTravelSyncInProgress = true;
+	PendingTravelURL = URL;
+	CleanupCompletePlayers.Empty();
+
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("World is not Valid")))
+	{
+		return;
+	}
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAO_PlayerController_InGameBase* PC = Cast<AAO_PlayerController_InGameBase>(It->Get()))
+		{
+			PC->Client_PrepareForTravel(URL);
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_InGameBase::NotifyPlayerCleanupCompleteForTravel(AAO_PlayerController* PC)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!bIsTravelSyncInProgress || !PC)
+	{
+		return;
+	}
+
+	CleanupCompletePlayers.Add(PC);
+	int32 TotalPlayers = GetNumPlayers();
+	AO_LOG(LogJM, Log, TEXT("Player CleanupComplete : %s (%d / %d)"), *PC->GetName(), CleanupCompletePlayers.Num(), TotalPlayers);
+
+	if (CleanupCompletePlayers.Num() >= TotalPlayers)
+	{
+		StartServerTravel();	// 딜레이... 추가... ㅠㅠㅠ 아니 근데 안하면 죽어.. 오... 딜레이를 걸어도 죽는구먼! 하하하하 
+		/*if (!GetWorld()->GetTimerManager().IsTimerActive(ServerTravelTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(ServerTravelTimerHandle, this, &ThisClass::StartServerTravel, 10.2f, false);
+		}*/
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_InGameBase::StartServerTravel()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	UWorld* World = GetWorld();
+	if (World && !PendingTravelURL.IsEmpty())
+	{
+		World->ServerTravel(PendingTravelURL);
+	}
+
+	bIsTravelSyncInProgress = false;
+	PendingTravelURL.Empty();	// PendingTravelURL = TEXT("");	/
+	CleanupCompletePlayers.Empty();
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 void AAO_GameMode_InGameBase::LetStartVoiceChat(AController*& TargetController)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
