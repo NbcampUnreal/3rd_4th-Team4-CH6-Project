@@ -3,7 +3,7 @@
 #include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Train/AO_TrainWorldSubsystem.h"
-#include "Train/ITrainFuelListener.h"
+#include "Train/AO_TrainFuelListener.h"
 
 AAO_newTrain::AAO_newTrain()
 {
@@ -46,7 +46,7 @@ void AAO_newTrain::BeginPlay()
 			World->GetSubsystem<UAO_TrainWorldSubsystem>())
 		{
 			Subsystem->RegisterTrain(this);
-			UE_LOG(LogTemp, Warning, TEXT("Train BeginPlay & RegisterTrain called"));
+			//UE_LOG(LogTemp, Warning, TEXT("Train BeginPlay & RegisterTrain called"));
 
 		}
 	}
@@ -122,11 +122,10 @@ void AAO_newTrain::OnInteractionSuccess(AActor* Interactor)
 	Inventory->ClearSlot();
 }
 
-void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
+void AAO_newTrain::HandleFuelAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	const float OldFuel = Data.OldValue;
 	const float NewFuel = Data.NewValue;
-	const float Delta = NewFuel - OldFuel;
 	
 	if (HasAuthority())
 	{
@@ -142,36 +141,13 @@ void AAO_newTrain::OnFuelChange(const FOnAttributeChangeData& Data)
 			}
 		}
 	}
-
-	OnFuelChangedDelegate.Broadcast(NewFuel);
-	
-	//해당 로그에는 GI의 초기값은 적용되지 않음
-	/*
-	TotalFuelGained += Delta;
-	if (Delta > 0.f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("🔥 연료 추가 +%.1f (누적합: %.1f)"), Delta, TotalFuelGained);
-	}
-	else if (Delta < 0.f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("💨 연료 감소 %.1f (누적합: %.1f)"), Delta, TotalFuelGained);
-	}
-	*/
-	
-}
-
-
-void AAO_newTrain::HandleFuelAttributeChanged(const FOnAttributeChangeData& Data)
-{
-	const float NewFuel = Data.NewValue;
-	
 	for (auto& ListenerPtr : FuelListeners)
 	{
 		if (ListenerPtr.IsValid())
 		{
 			UObject* Listener = ListenerPtr.Get();
-			ITrainFuelListener::Execute_OnFuelChanged(Listener, NewFuel);
-			UE_LOG(LogTemp, Warning, TEXT("Fuel Changed: %f"), Data.NewValue);
+			IAO_TrainFuelListener::Execute_OnFuelChanged(Listener, NewFuel);
+			//UE_LOG(LogTemp, Warning, TEXT("Fuel Changed: %f"), Data.NewValue);
 
 		}
 	}
@@ -181,7 +157,7 @@ void AAO_newTrain::BindFuel(UObject* Listener)
 {
 	if (!ASC || !Listener) return;
 
-	if (!Listener->GetClass()->ImplementsInterface(UTrainFuelListener::StaticClass()))
+	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))
 	{
 		return;
 	}
@@ -191,8 +167,8 @@ void AAO_newTrain::BindFuel(UObject* Listener)
 	const float CurrentFuel =
 		ASC->GetNumericAttribute(UAO_Fuel_AttributeSet::GetFuelAttribute());
 
-	ITrainFuelListener::Execute_OnFuelChanged(Listener, CurrentFuel);
-	UE_LOG(LogTemp, Warning, TEXT("BindFuel: Initial Fuel = %f"), CurrentFuel);
+	IAO_TrainFuelListener::Execute_OnFuelChanged(Listener, CurrentFuel);
+	//UE_LOG(LogTemp, Warning, TEXT("BindFuel: Initial Fuel = %f"), CurrentFuel);
 
 }
 
@@ -201,12 +177,12 @@ void AAO_newTrain::BindFuelListener(UObject* Listener)
 {
 	if (!IsValid(Listener)) return;
 
-	if (!Listener->GetClass()->ImplementsInterface(UTrainFuelListener::StaticClass()))
+	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))
 	{
 		return;
 	}
 
 	BindFuel(Listener);
-	UE_LOG(LogTemp, Warning, TEXT("BindFuelListener called"));
+	//UE_LOG(LogTemp, Warning, TEXT("BindFuelListener called"));
 
 }

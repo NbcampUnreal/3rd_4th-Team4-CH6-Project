@@ -2,15 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "ITrainFuelListener.generated.h"
+#include "AO_TrainFuelListener.generated.h"
 
 UINTERFACE(BlueprintType)
-class UTrainFuelListener : public UInterface
+class UAO_TrainFuelListener : public UInterface
 {
 	GENERATED_BODY()
 };
 
-class ITrainFuelListener
+class IAO_TrainFuelListener
 {
 	GENERATED_BODY()
 

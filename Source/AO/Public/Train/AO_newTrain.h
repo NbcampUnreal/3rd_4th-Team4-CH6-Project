@@ -12,8 +12,6 @@
 #include "Interaction/Base/AO_BaseInteractable.h"
 #include "AO_newTrain.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFuelChange, float, NewFuel);
-
 UCLASS()
 class AO_API AAO_newTrain : public AAO_BaseInteractable
 {
@@ -28,15 +26,12 @@ public:
 	void FuelLeakSkillOn();
 	UFUNCTION(BlueprintCallable, Category = "GAS|Abilities")
 	void FuelLeakSkillOut();
-
-	UPROPERTY(BlueprintAssignable, Category="Fuel")
-	FOnFuelChange OnFuelChangedDelegate;
 	
+	UPROPERTY()
+	TArray<TWeakObjectPtr<UObject>> FuelListeners;
 	void BindFuel(UObject* Listener);
 	UFUNCTION(BlueprintCallable, Category="Train|UI")
 	void BindFuelListener(UObject* Listener);
-	UPROPERTY()
-	TArray<TWeakObjectPtr<UObject>> FuelListeners;
 protected:
 	virtual void BeginPlay() override;
 
@@ -54,9 +49,4 @@ protected:
 	void HandleFuelAttributeChanged(const FOnAttributeChangeData& Data);
 	
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
-	void OnFuelChange(const FOnAttributeChangeData& Data);
-	
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fuel")
-	float TotalFuelGained = 0.f;
 };
