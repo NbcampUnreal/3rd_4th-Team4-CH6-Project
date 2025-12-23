@@ -64,6 +64,7 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
+		ApplyInGameInputDefaults();
 		if (UGameInstance* GI = GetGameInstance())
 		{
 			if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
@@ -118,6 +119,22 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 	}
 }
 
+void AAO_PlayerController_InGameBase::ApplyInGameInputDefaults()
+{
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+
+	bShowMouseCursor = false;
+	bEnableClickEvents = false;
+	bEnableMouseOverEvents = false;
+
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	FlushPressedKeys();
+}
+
 UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget()
 {
 	if (IsValid(PauseMenu))
@@ -156,6 +173,11 @@ void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL,
 	checkf(PlayerCharacter, TEXT("Character is invalid"));
 
 	PlayerCharacter->GetCustomizingComponent()->SaveCustomizingDataToPlayerState();
+	
+	if (IsLocalPlayerController())
+	{
+		ApplyInGameInputDefaults();
+	}
 	
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 }
@@ -453,11 +475,13 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
 		{
 			UIStack->PopTop(this);
+			ApplyInGameInputDefaults();
 			return;
 		}
 	}
 
 	AO_LOG(LogJSH, Warning, TEXT("UIStackManager not found. Resume ignored."));
+	ApplyInGameInputDefaults();
 }
 
 UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const

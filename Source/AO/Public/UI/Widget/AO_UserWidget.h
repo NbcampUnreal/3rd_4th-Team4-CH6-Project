@@ -17,29 +17,10 @@ class AO_API UAO_UserWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-public:
-	// ESC로 닫기 로직이 발동했을 때, BP에서 추가 처리하고 싶으면 여기 이벤트를 사용
-	UFUNCTION(BlueprintImplementableEvent, Category="AO|UI")
-	void OnEscapeCloseRequested();
-
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
 	float HoverOpacity = 1.0f;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
 	float UnHoverOpacity = 0.5f;
-
-	// 이 위젯이 "ESC로 닫혀야 하는 모달/메뉴"라면 true로 켜서 사용 (기본 false)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AO|UI|Close")
-	bool bCloseOnEscape = false;
-
-	// ESC를 처리했을 때 입력을 먹을지(Handled) 여부
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AO|UI|Close")
-	bool bConsumeEscape = true;
-
-protected:
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
-
-private:
-	void RequestCloseByEscape();
 };

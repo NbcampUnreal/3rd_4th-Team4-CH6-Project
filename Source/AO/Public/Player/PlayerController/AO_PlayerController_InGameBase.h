@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//JSH: AO_PlayerController_InGameBase.h
 
 #pragma once
 
@@ -77,6 +77,7 @@ public:
 
 protected:
 	void HandleUIOpen();
+	void ApplyInGameInputDefaults();
 
 	// 위젯 델리게이트 콜백
 	UFUNCTION()
