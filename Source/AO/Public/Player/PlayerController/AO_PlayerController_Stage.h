@@ -7,9 +7,15 @@
 #include "AO_PlayerController_Stage.generated.h"
 
 class UCameraComponent;
-/**
- * 
- */
+
+UENUM()
+enum EAO_SpectateEndReason : uint8
+{
+	Revived,
+	NoValidTarget,
+	TargetDestroyed
+};
+
 UCLASS()
 class AO_API AAO_PlayerController_Stage : public AAO_PlayerController_InGameBase
 {
@@ -59,6 +65,9 @@ public:
 	UFUNCTION()
 	void ForceReselectSpectateTarget(APawn* InvalidTarget);
 
+	UFUNCTION(BlueprintCallable, Category = "AO|Spectate")
+	void RequestStopSpectate(EAO_SpectateEndReason Reason);
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RequestSpectate();
@@ -68,6 +77,12 @@ protected:
 	void ClientRPC_SetSpectateTarget(APawn* NewTarget, int32 NewPlayerIndex);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetSpectateTarget(APawn* NewTarget);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StopSpectate();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_StopSpectate(EAO_SpectateEndReason Reason);
+
+	void StopSpectate(EAO_SpectateEndReason Reason);
 
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<APawn> CurrentSpectateTarget;

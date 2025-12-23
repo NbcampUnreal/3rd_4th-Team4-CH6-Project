@@ -25,9 +25,7 @@ public:
 	AAO_PlayerController_InGameBase();
 
 protected:
-	virtual void OnPossess(APawn* InPawn) override;
 	virtual void AcknowledgePossession(APawn* P) override;
-	virtual void OnRep_Pawn() override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;

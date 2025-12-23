@@ -28,23 +28,6 @@ AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
 }
 
-void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
-{
-	Super::OnPossess(InPawn);
-
-	if (!IsLocalController())
-	{
-		return;
-	}
-
-	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
-		*GetNameSafe(GetPawn()),
-		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
-		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
-	
-	//InitCameraManager();
-}
-
 void AAO_PlayerController_InGameBase::AcknowledgePossession(APawn* P)
 {
 	Super::AcknowledgePossession(P);
@@ -54,29 +37,7 @@ void AAO_PlayerController_InGameBase::AcknowledgePossession(APawn* P)
 		return;
 	}
 	
-	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
-		*GetNameSafe(GetPawn()),
-		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
-		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
-
 	InitCameraManager(P);
-}
-
-void AAO_PlayerController_InGameBase::OnRep_Pawn()
-{
-	Super::OnRep_Pawn();
-
-	if (!IsLocalController())
-	{
-		return;
-	}
-
-	AO_LOG(LogKH, Warning, TEXT("Pawn=%s Controller=%s CanCast=%s"),
-		*GetNameSafe(GetPawn()),
-		*GetNameSafe(GetPawn() ? GetPawn()->GetController() : nullptr),
-		Cast<AAO_PlayerCharacter>(GetPawn()) ? TEXT("true") : TEXT("false"));
-
-	//InitCameraManager();
 }
 
 void AAO_PlayerController_InGameBase::BeginPlay()

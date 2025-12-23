@@ -62,48 +62,16 @@ void AAO_PlayerController_Stage::Tick(float DeltaSeconds)
 	if (bIsSpectating)
 	{
 		UpdateSpectateCamera(DeltaSeconds);
-		
-		static float GNetDebugAccum = 0;
-	
-		GNetDebugAccum += DeltaSeconds;
-		if (GNetDebugAccum < 0.5f)   // 0.5초에 한 번만 출력
-			return;
-		GNetDebugAccum = 0.f;
-
-		AActor* Target = CurrentSpectateTarget;
-		UActorComponent* MoveComp = Target->GetComponentByClass(UCharacterMovementComponent::StaticClass());
-		UCharacterMovementComponent* Move = Cast<UCharacterMovementComponent>(MoveComp);
-
-		const float NetUpdate = Target->GetNetUpdateFrequency();
-		const float MinNetUpdate = Target->GetMinNetUpdateFrequency();
-		const ENetDormancy Dormancy = Target->NetDormancy;
-		const bool bAlwaysRelevant_Target = Target->bAlwaysRelevant;
-		const bool bOnlyRelevantToOwner_Target = Target->bOnlyRelevantToOwner;
-
-		AO_LOG(LogKH, Warning,
-			TEXT("[SpectateNetDebug] Target=%s NetUpdate=%.1f MinNetUpdate=%.1f Dormancy=%d AlwaysRel=%d OnlyOwnerRel=%d"),
-			*Target->GetName(),
-			NetUpdate,
-			MinNetUpdate,
-			(int32)Dormancy,
-			bAlwaysRelevant_Target ? 1 : 0,
-			bOnlyRelevantToOwner_Target ? 1 : 0
-		);
-
-		if (Move)
-		{
-			UE_LOG(LogKH, Warning,
-				TEXT("  [MoveComp] Smoothing=%d MaxSpeed=%.1f Velocity=%.1f"),
-				(int32)Move->NetworkSmoothingMode,
-				Move->GetMaxSpeed(),
-				Move->Velocity.Size()
-			);
-		}
 	}
 }
 
 void AAO_PlayerController_Stage::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (HasAuthority())
+	{
+		ServerRPC_SetSpectateTarget(nullptr);
+	}
+	
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::EndPlay(EndPlayReason);
 	AO_LOG(LogJM, Log, TEXT("End"));	
@@ -150,38 +118,40 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 
 void AAO_PlayerController_Stage::RequestSpectate()
 {
-	if (IsLocalController())
+	if (!IsLocalController())
 	{
-		if (!SpectateWidget && SpectateWidgetClass)
-		{
-			SpectateWidget = CreateWidget<UUserWidget>(this, SpectateWidgetClass);
-		}
-	
-		if (SpectateWidget)
-		{
-			SpectateWidget->AddToViewport();
-		}
-
-		if (DeathWidget)
-		{
-			DeathWidget->RemoveFromParent();
-		}
-
-		if (HUDWidget)
-		{
-			HUDWidget->RemoveFromParent();
-		}
-		
-		ServerRPC_RequestSpectate();
+		return;
 	}
+	
+	if (!SpectateWidget && SpectateWidgetClass)
+	{
+		SpectateWidget = CreateWidget<UUserWidget>(this, SpectateWidgetClass);
+	}
+
+	if (SpectateWidget)
+	{
+		SpectateWidget->AddToViewport();
+	}
+	if (DeathWidget)
+	{
+		DeathWidget->RemoveFromParent();
+	}
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+	}
+
+	ServerRPC_RequestSpectate();
 }
 
 void AAO_PlayerController_Stage::RequestSpectateNext(bool bForward)
 {
-	if (IsLocalController())
+	if (!IsLocalController())
 	{
-		ServerRPC_RequestSpectateNext(bForward);
+		return;
 	}
+
+	ServerRPC_RequestSpectateNext(bForward);
 }
 
 void AAO_PlayerController_Stage::ForceReselectSpectateTarget(APawn* InvalidTarget)
@@ -205,6 +175,8 @@ void AAO_PlayerController_Stage::ForceReselectSpectateTarget(APawn* InvalidTarge
 
 		CurrentSpectateTarget = nullptr;
 		CurrentSpectatePlayerIndex = INDEX_NONE;
+
+		ClientRPC_StopSpectate(EAO_SpectateEndReason::NoValidTarget);
 		return;
 	}
 
@@ -216,13 +188,118 @@ void AAO_PlayerController_Stage::ForceReselectSpectateTarget(APawn* InvalidTarge
 	ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
 }
 
-void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APawn* NewTarget)
+void AAO_PlayerController_Stage::RequestStopSpectate(EAO_SpectateEndReason Reason)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	// 서버 Spectator 등록 해제
+	ServerRPC_StopSpectate();
+
+	// 로컬 정리
+	StopSpectate(Reason);
+}
+
+void AAO_PlayerController_Stage::ServerRPC_StopSpectate_Implementation()
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
+	ServerRPC_SetSpectateTarget(nullptr);
+
+	CurrentSpectateTarget = nullptr;
+	PrevSpectateTarget = nullptr;
+	CurrentSpectatePlayerIndex = INDEX_NONE;
+}
+
+void AAO_PlayerController_Stage::ClientRPC_StopSpectate_Implementation(EAO_SpectateEndReason Reason)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	StopSpectate(Reason);
+}
+
+void AAO_PlayerController_Stage::StopSpectate(EAO_SpectateEndReason Reason)
+{
+	bIsSpectating = false;
+	CurrentSpectateTarget = nullptr;
+	CurrentSpectatePlayerIndex = INDEX_NONE;
+
+	ResetSpectateSmoothing();
+
+	// ViewTarget 복구
+	if (APawn* MyPawn = GetPawn())
+	{
+		SetViewTargetWithBlend(MyPawn, 0.25f);
+	}
+
+	// 관전 UI 정리
+	if (SpectateWidget)
+	{
+		SpectateWidget->RemoveFromParent();
+	}
+
+	// 이유별 UI 처리
+	switch (Reason)
+	{
+	case EAO_SpectateEndReason::Revived:
+		{
+			if (HUDWidget)
+			{
+				HUDWidget->RemoveFromParent();
+				HUDWidget = nullptr;
+			}
+			
+			if (HUDWidgetClass)
+			{
+				HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+				if (HUDWidget)
+				{
+					HUDWidget->AddToViewport();
+				}
+			}
+
+			FInputModeGameOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = false;
+		}
+		break;
+
+	case EAO_SpectateEndReason::NoValidTarget:
+	case EAO_SpectateEndReason::TargetDestroyed:
+	default:
+		{
+			if (DeathWidgetClass && !DeathWidget)
+			{
+				DeathWidget = CreateWidget<UUserWidget>(this, DeathWidgetClass);
+			}
+			if (DeathWidget)
+			{
+				DeathWidget->AddToViewport();
+			}
+
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+		}
+		break;
+	}
+}
+
+void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APawn* NewTarget)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
 	if (PrevSpectateTarget)
 	{
 		if (AAO_PlayerCharacter* OldChar = Cast<AAO_PlayerCharacter>(PrevSpectateTarget))
@@ -250,6 +327,11 @@ void AAO_PlayerController_Stage::ServerRPC_SetSpectateTarget_Implementation(APaw
 
 void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
 	TObjectPtr<APawn> NewTarget = nullptr;
 	int32 NewIndex = INDEX_NONE;
 
@@ -282,20 +364,33 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectate_Implementation()
 		NewTarget = OtherPawn;
 		break;
 	}
-
-	if (NewTarget)
+	
+	if (!NewTarget)
 	{
-		ServerRPC_SetSpectateTarget(NewTarget);
-		
-		CurrentSpectateTarget = NewTarget;
-		CurrentSpectatePlayerIndex = NewIndex;
-		
-		ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
+		ServerRPC_SetSpectateTarget(nullptr);
+
+		CurrentSpectateTarget = nullptr;
+		CurrentSpectatePlayerIndex = INDEX_NONE;
+
+		ClientRPC_StopSpectate(EAO_SpectateEndReason::NoValidTarget);
+		return;
 	}
+	
+	ServerRPC_SetSpectateTarget(NewTarget);
+	
+	CurrentSpectateTarget = NewTarget;
+	CurrentSpectatePlayerIndex = NewIndex;
+	
+	ClientRPC_SetSpectateTarget(NewTarget, NewIndex);
 }
 
 void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bool bForward)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
 	int32 NewIndex = INDEX_NONE;
 	TObjectPtr<APawn> NewTarget = FindNextSpectateTarget(bForward, NewIndex);
 
@@ -310,6 +405,8 @@ void AAO_PlayerController_Stage::ServerRPC_RequestSpectateNext_Implementation(bo
 
 		CurrentSpectateTarget = nullptr;
 		CurrentSpectatePlayerIndex = INDEX_NONE;
+
+		ClientRPC_StopSpectate(EAO_SpectateEndReason::NoValidTarget);
 		return;
 	}
 
@@ -333,6 +430,8 @@ void AAO_PlayerController_Stage::ClientRPC_SetSpectateTarget_Implementation(APaw
 		bIsSpectating = false;
 		CurrentSpectateTarget = nullptr;
 		CurrentSpectatePlayerIndex = INDEX_NONE;
+
+		ClientRPC_StopSpectate(EAO_SpectateEndReason::NoValidTarget);
 		return;
 	}
 
@@ -634,20 +733,25 @@ void AAO_PlayerController_Stage::Server_RequestRevive_Implementation()
 
 void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 {
+	if (bIsSpectating)
+	{
+		RequestStopSpectate(EAO_SpectateEndReason::Revived);
+	}
+	
 	// 1) Death UI 닫기
 	if (DeathWidget)
 	{
 		DeathWidget->RemoveFromParent();
 		DeathWidget = nullptr;
 	}
-
+	
 	// 2) HUD 위젯 완전히 갈아끼우기
 	if (HUDWidget)
 	{
 		HUDWidget->RemoveFromParent();
 		HUDWidget = nullptr;
 	}
-
+	
 	if (HUDWidgetClass)
 	{
 		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
@@ -656,31 +760,17 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 			HUDWidget->AddToViewport();
 		}
 	}
-
+	
 	// 3) 입력 모드 복구
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = false;
-
+	
 	// 4) 관전 UI 떠 있었으면 닫기
 	if (SpectateWidget)
 	{
 		SpectateWidget->RemoveFromParent();
 		SpectateWidget = nullptr;
-	}
-
-	// 5) 관전 중이었다면 관전 끝 알려주기
-	bIsSpectating = false;
-	CurrentSpectateTarget = nullptr;
-	CurrentSpectatePlayerIndex = INDEX_NONE;
-	ResetSpectateSmoothing();
-
-	if (SpectateCameraActor)
-	{
-		if (APawn* MyPawn = GetPawn())
-		{
-			SetViewTargetWithBlend(MyPawn, 0.25f);
-		}
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());
