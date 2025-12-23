@@ -31,6 +31,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Fuel")
 	FOnFuelChange OnFuelChangedDelegate;
+	
+	void BindFuel(UObject* Listener);
+	UFUNCTION(BlueprintCallable, Category="Train|UI")
+	void BindFuelListener(UObject* Listener);
+	UPROPERTY()
+	TArray<TWeakObjectPtr<UObject>> FuelListeners;
 protected:
 	virtual void BeginPlay() override;
 
@@ -44,9 +50,12 @@ protected:
 	TSubclassOf<UGameplayAbility> AddEnergyAbilityClass;
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayAbility> LeakEnergyAbilityClass;
-
+	
+	void HandleFuelAttributeChanged(const FOnAttributeChangeData& Data);
+	
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 	void OnFuelChange(const FOnAttributeChangeData& Data);
+	
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fuel")
 	float TotalFuelGained = 0.f;
