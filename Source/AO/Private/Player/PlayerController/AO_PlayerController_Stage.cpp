@@ -19,6 +19,7 @@
 #include "Camera/CameraComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 /*-----------------------------------*/
 
@@ -61,6 +62,43 @@ void AAO_PlayerController_Stage::Tick(float DeltaSeconds)
 	if (bIsSpectating)
 	{
 		UpdateSpectateCamera(DeltaSeconds);
+		
+		static float GNetDebugAccum = 0;
+	
+		GNetDebugAccum += DeltaSeconds;
+		if (GNetDebugAccum < 0.5f)   // 0.5초에 한 번만 출력
+			return;
+		GNetDebugAccum = 0.f;
+
+		AActor* Target = CurrentSpectateTarget;
+		UActorComponent* MoveComp = Target->GetComponentByClass(UCharacterMovementComponent::StaticClass());
+		UCharacterMovementComponent* Move = Cast<UCharacterMovementComponent>(MoveComp);
+
+		const float NetUpdate = Target->GetNetUpdateFrequency();
+		const float MinNetUpdate = Target->GetMinNetUpdateFrequency();
+		const ENetDormancy Dormancy = Target->NetDormancy;
+		const bool bAlwaysRelevant_Target = Target->bAlwaysRelevant;
+		const bool bOnlyRelevantToOwner_Target = Target->bOnlyRelevantToOwner;
+
+		AO_LOG(LogKH, Warning,
+			TEXT("[SpectateNetDebug] Target=%s NetUpdate=%.1f MinNetUpdate=%.1f Dormancy=%d AlwaysRel=%d OnlyOwnerRel=%d"),
+			*Target->GetName(),
+			NetUpdate,
+			MinNetUpdate,
+			(int32)Dormancy,
+			bAlwaysRelevant_Target ? 1 : 0,
+			bOnlyRelevantToOwner_Target ? 1 : 0
+		);
+
+		if (Move)
+		{
+			UE_LOG(LogKH, Warning,
+				TEXT("  [MoveComp] Smoothing=%d MaxSpeed=%.1f Velocity=%.1f"),
+				(int32)Move->NetworkSmoothingMode,
+				Move->GetMaxSpeed(),
+				Move->Velocity.Size()
+			);
+		}
 	}
 }
 
