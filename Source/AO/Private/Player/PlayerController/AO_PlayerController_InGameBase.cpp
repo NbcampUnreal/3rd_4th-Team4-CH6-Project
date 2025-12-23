@@ -570,7 +570,7 @@ bool AAO_PlayerController_InGameBase::IsVoiceFullyCleanedUp()
 
 				if (FUniqueNetIdPtr RemoteNetId = PS->GetUniqueId().GetUniqueNetId(); RemoteNetId.IsValid())
 				{
-					if (!VoiceInterface->IsMuted(0, *RemoteNetId))
+					if (!VoiceInterface->IsMuted(0, *RemoteNetId))		// NOTE : PlayerController::IsPlayerMuted(*RemoteNetId) 이거로는 체크 안됨 (무한 루프 돎)
 					{
 						AO_LOG(LogJM, Warning, TEXT("Wait: Player(%s) is not muted yet"), *RemoteNetId->ToString())
 						return false;
