@@ -31,8 +31,8 @@ public:
 	// UIStackManager 사용 시에는 필요할 때 Push → Pop으로 관리
 	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
 
-private:
-	void CleanupAudioResource();
+protected:
+	// void CleanupAudioResource();
 	void UpdateLoadingMapName(const FString& PendingURL) const;
 
 

@@ -21,6 +21,7 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "VoipListenerSynthComponent.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
@@ -158,6 +159,23 @@ void AAO_PlayerController_InGameBase::PreClientTravel(const FString& PendingURL,
 	PlayerCharacter->GetCustomizingComponent()->SaveCustomizingDataToPlayerState();
 	
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+}
+
+void AAO_PlayerController_InGameBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsCheckingVoiceCleanup)
+	{
+		AO_LOG_ROLE(LogJM, Log, TEXT("Inner bIsCheckingVoiceCleanup while Tick"));
+
+		if (IsVoiceFullyCleanedUp())
+		{
+			bIsCheckingVoiceCleanup = false;
+			Server_NotifyReadyForTravel();
+			AO_LOG(LogJM, Log, TEXT("All Voice Resources Cleaned Up."));
+		}
+	}
 }
 
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
@@ -379,7 +397,44 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
+{
+	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
+	
+	CleanupAudioResource();
+	bIsCheckingVoiceCleanup = true;
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
 
+void AAO_PlayerController_InGameBase::Server_NotifyReadyForTravel_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (AAO_GameMode_InGameBase* GM_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+	{
+		GM_InGame->NotifyPlayerCleanupCompleteForTravel(this);
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::CleanupAudioResource()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSS->MuteAllRemoteTalker();	// JM : 안정성을 위해 Mute도 해주기
+		OSS->StopVoiceChat();
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Can't Get OSS"));
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
 
 void AAO_PlayerController_InGameBase::HandleUIOpen()
 {
@@ -488,4 +543,52 @@ void AAO_PlayerController_InGameBase::InitCameraManager()
 	{
 		CameraManagerComponent->BindToASC(ASC);
 	}
+}
+
+bool AAO_PlayerController_InGameBase::IsVoiceFullyCleanedUp()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("No World")))
+	{
+		return true;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	AGameStateBase* GS_Base = World->GetGameState<AGameStateBase>();
+	if (OSS && GS_Base)
+	{
+		if (IOnlineVoicePtr VoiceInterface = OSS->GetOnlineVoiceInterface(); VoiceInterface.IsValid())
+		{
+			const FUniqueNetIdPtr LocalNetId = PlayerState->GetUniqueId().GetUniqueNetId();
+			for (APlayerState* PS : GS_Base->PlayerArray)
+			{
+				if (!PS || PS == PlayerState)
+				{
+					continue;
+				}
+
+				if (FUniqueNetIdPtr RemoteNetId = PS->GetUniqueId().GetUniqueNetId(); RemoteNetId.IsValid())
+				{
+					if (!VoiceInterface->IsMuted(0, *RemoteNetId))		// NOTE : PlayerController::IsPlayerMuted(*RemoteNetId) 이거로는 체크 안됨 (무한 루프 돎)
+					{
+						AO_LOG(LogJM, Warning, TEXT("Wait: Player(%s) is not muted yet"), *RemoteNetId->ToString())
+						return false;
+					}
+				}
+			}
+		}
+	}
+
+	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
+	{
+		if (IsValid(*It) && It->IsRegistered())
+		{
+			AO_LOG(LogJM, Warning, TEXT("Wait: Engine is still unregistering %s"), *It->GetName());
+			It->UnregisterComponent();
+			return false;
+		}
+	}
+	AO_LOG(LogJM, Log, TEXT("All remoteTalkers Muted & Component Unregistered"));
+	return true;
 }
