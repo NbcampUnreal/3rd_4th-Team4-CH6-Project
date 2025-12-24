@@ -34,12 +34,130 @@ bool AAO_BunkerDoor::CanInteraction(const FAO_InteractionQuery& InteractionQuery
 		return false;
 	}
 
+	if (bLockedByPuzzle)
+	{
+		return false;
+	}
+
 	if (bIsAnimating)
 	{
 		return false;
 	}
 
 	return true;
+}
+
+void AAO_BunkerDoor::SetDoorState(bool bShouldOpen)
+{
+	if (bDoorOpen == bShouldOpen)
+	{
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		bDoorOpen = bShouldOpen;
+	}
+
+	if (bShouldOpen)
+	{
+		OpenDoor();
+	}
+	else
+	{
+		CloseDoor();
+	}
+}
+
+void AAO_BunkerDoor::LockInteraction()
+{
+	if (HasAuthority())
+	{
+		bLockedByPuzzle = true;
+	}
+}
+
+void AAO_BunkerDoor::UnlockInteraction()
+{
+	if (HasAuthority())
+	{
+		bLockedByPuzzle = false;
+	}
+}
+
+void AAO_BunkerDoor::OpenDoor()
+{
+    bIsAnimating = true;
+    
+    if (DoorOpenSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DoorOpenSound, GetActorLocation());
+    }
+
+    if (DoorSkeletalMesh && DoorAnimation)
+    {
+        DoorSkeletalMesh->PlayAnimation(DoorAnimation, false);
+        DoorSkeletalMesh->SetPlayRate(DoorAnimationSpeed);
+        
+        TObjectPtr<UWorld> World = GetWorld();
+        if (World)
+        {
+            TWeakObjectPtr<AAO_BunkerDoor> WeakThis(this);
+            World->GetTimerManager().SetTimer(
+                DoorAnimationCheckTimer,
+                FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+                {
+                    if (TObjectPtr<AAO_BunkerDoor> StrongThis = WeakThis.Get())
+                    {
+                        StrongThis->CheckDoorAnimation();
+                    }
+                }),
+                0.016f,
+                true
+            );
+        }
+    }
+}
+
+void AAO_BunkerDoor::CloseDoor()
+{
+    bIsAnimating = true;
+    
+    if (DoorCloseSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DoorCloseSound, GetActorLocation());
+    }
+
+    if (DoorSkeletalMesh && DoorAnimation)
+    {
+        DoorSkeletalMesh->PlayAnimation(DoorAnimation, false);
+        
+        if (DoorAnimation)
+        {
+            float AnimLength = DoorAnimation->GetPlayLength();
+            DoorSkeletalMesh->SetPosition(AnimLength);
+        }
+        
+        DoorSkeletalMesh->SetPlayRate(-DoorAnimationSpeed);
+        
+        TObjectPtr<UWorld> World = GetWorld();
+        if (World)
+        {
+            TWeakObjectPtr<AAO_BunkerDoor> WeakThis(this);
+            World->GetTimerManager().SetTimer(
+                DoorAnimationCheckTimer,
+                FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
+                {
+                    if (TObjectPtr<AAO_BunkerDoor> StrongThis = WeakThis.Get())
+                    {
+                        StrongThis->CheckDoorAnimation();
+                    }
+                }),
+                0.016f,
+                true
+            );
+        }
+    }
 }
 
 void AAO_BunkerDoor::BeginPlay()
@@ -74,6 +192,7 @@ void AAO_BunkerDoor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     
     DOREPLIFETIME(AAO_BunkerDoor, bDoorOpen);
     DOREPLIFETIME(AAO_BunkerDoor, bIsAnimating);
+	DOREPLIFETIME(AAO_BunkerDoor, bLockedByPuzzle);
 }
 
 void AAO_BunkerDoor::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
@@ -99,81 +218,6 @@ void AAO_BunkerDoor::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
     else
     {
         CloseDoor();
-    }
-}
-
-void AAO_BunkerDoor::OpenDoor()
-{
-    bIsAnimating = true;
-    
-    if (DoorOpenSound && HasAuthority())
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, DoorOpenSound, GetActorLocation());
-    }
-
-    if (DoorSkeletalMesh && DoorAnimation)
-    {
-        DoorSkeletalMesh->PlayAnimation(DoorAnimation, false);
-        DoorSkeletalMesh->SetPlayRate(DoorAnimationSpeed);
-        
-        TObjectPtr<UWorld> World = GetWorld();
-        if (World)
-        {
-            TWeakObjectPtr<AAO_BunkerDoor> WeakThis(this);
-            World->GetTimerManager().SetTimer(
-                DoorAnimationCheckTimer,
-                FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-                {
-                    if (TObjectPtr<AAO_BunkerDoor> StrongThis = WeakThis.Get())
-                    {
-                        StrongThis->CheckDoorAnimation();
-                    }
-                }),
-                0.016f,
-                true
-            );
-        }
-    }
-}
-
-void AAO_BunkerDoor::CloseDoor()
-{
-    bIsAnimating = true;
-    
-    if (DoorCloseSound && HasAuthority())
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, DoorCloseSound, GetActorLocation());
-    }
-
-    if (DoorSkeletalMesh && DoorAnimation)
-    {
-        DoorSkeletalMesh->PlayAnimation(DoorAnimation, false);
-        
-        if (DoorAnimation)
-        {
-            float AnimLength = DoorAnimation->GetPlayLength();
-            DoorSkeletalMesh->SetPosition(AnimLength);
-        }
-        
-        DoorSkeletalMesh->SetPlayRate(-DoorAnimationSpeed);
-        
-        TObjectPtr<UWorld> World = GetWorld();
-        if (World)
-        {
-            TWeakObjectPtr<AAO_BunkerDoor> WeakThis(this);
-            World->GetTimerManager().SetTimer(
-                DoorAnimationCheckTimer,
-                FTimerDelegate::CreateWeakLambda(this, [WeakThis]()
-                {
-                    if (TObjectPtr<AAO_BunkerDoor> StrongThis = WeakThis.Get())
-                    {
-                        StrongThis->CheckDoorAnimation();
-                    }
-                }),
-                0.016f,
-                true
-            );
-        }
     }
 }
 
