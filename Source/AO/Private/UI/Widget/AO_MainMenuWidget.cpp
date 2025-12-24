@@ -12,7 +12,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "AO/AO_Log.h"
 
-void UAO_MainMenuWidget::NativeConstruct()
+/* void UAO_MainMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
@@ -51,7 +51,7 @@ void UAO_MainMenuWidget::NativeConstruct()
 	{
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Quit is null"));
 	}
-}
+}*/
 
 void UAO_MainMenuWidget::OnClicked_Host()
 {

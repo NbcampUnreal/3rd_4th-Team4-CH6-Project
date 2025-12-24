@@ -18,14 +18,14 @@ class AO_API UAO_MainMenuWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	virtual void NativeConstruct() override;
+	// virtual void NativeConstruct() override;
 
 protected:
 	/* === BindWidget === */
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Host = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Join = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Settings = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Quit = nullptr;
+	// UPROPERTY(meta=(BindWidget)) UButton* Btn_Host = nullptr;
+	// UPROPERTY(meta=(BindWidget)) UButton* Btn_Join = nullptr;
+	// UPROPERTY(meta=(BindWidget)) UButton* Btn_Settings = nullptr;
+	// UPROPERTY(meta=(BindWidget)) UButton* Btn_Quit = nullptr;
 
 	/* === Class Slots (에디터에서 지정) === */
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
