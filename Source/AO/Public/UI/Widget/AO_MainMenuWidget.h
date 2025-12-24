@@ -35,8 +35,15 @@ protected:
 	TSubclassOf<UAO_LobbyListWidget> LobbyListWidgetClass;
 
 	/* === Click Handlers === */
-	UFUNCTION() void OnClicked_Host();
-	UFUNCTION() void OnClicked_Join();
-	UFUNCTION() void OnClicked_Settings();
-	UFUNCTION() void OnClicked_Quit();
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Host();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Join();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Settings();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Quit();
 };
