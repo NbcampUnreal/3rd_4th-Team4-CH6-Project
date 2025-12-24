@@ -32,6 +32,7 @@ public:
 	void BindFuel(UObject* Listener);
 	UFUNCTION(BlueprintCallable, Category="Train|UI")
 	void BindFuelListener(UObject* Listener);
+	void HandleFuelAttributeChanged(const FOnAttributeChangeData& Data);
 protected:
 	virtual void BeginPlay() override;
 
@@ -45,8 +46,5 @@ protected:
 	TSubclassOf<UGameplayAbility> AddEnergyAbilityClass;
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayAbility> LeakEnergyAbilityClass;
-	
-	void HandleFuelAttributeChanged(const FOnAttributeChangeData& Data);
-	
 	virtual void OnInteractionSuccess(AActor* Interactor) override;
 };

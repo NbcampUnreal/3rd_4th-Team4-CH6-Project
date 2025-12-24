@@ -20,6 +20,26 @@ void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 	Super::HandleSeamlessTravelPlayer(C);
 
 	// LetStartVoiceChat(C);	// 강제로 실행할 필요 없음. 그냥 사용자 설정에 맞게 반영	// 레벨 이동시 VoiceChat이 종료되어서 다시 실행시킴
+
+	// ms: 레벨 이동후 인벤토리 유지
+	if (auto* PC = Cast<APlayerController>(C))
+		if (TObjectPtr<APawn> Pawn = PC->GetPawn())
+		{
+			if (UAO_InventoryComponent* Inv =
+				Pawn->FindComponentByClass<UAO_InventoryComponent>())
+			{
+				if (AAO_PlayerState* PS =
+					Cast<AAO_PlayerState>(PC->PlayerState))
+				{
+					if (PS->PersistentInventory.Num() > 0)
+					{
+						Inv->ApplySlotsFromSave(PS->PersistentInventory);
+						PS->PersistentInventory.Empty();
+					}
+				}
+			}
+		}
+	//ms
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -153,6 +173,28 @@ void AAO_GameMode_InGameBase::RequestSynchronizedServerTravel(const FString& URL
 		return;
 	}
 
+	//ms 인벤토리 저장
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAO_PlayerController_InGameBase* PC =
+			Cast<AAO_PlayerController_InGameBase>(It->Get()))
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (UAO_InventoryComponent* Inv =
+					Pawn->FindComponentByClass<UAO_InventoryComponent>())
+				{
+					if (AAO_PlayerState* PS =
+						Cast<AAO_PlayerState>(PC->PlayerState))
+					{
+						PS->PersistentInventory = Inv->Slots;
+					}
+				}
+			}
+		}
+	}
+	//ms
+	
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (AAO_PlayerController_InGameBase* PC = Cast<AAO_PlayerController_InGameBase>(It->Get()))
@@ -173,6 +215,21 @@ void AAO_GameMode_InGameBase::NotifyPlayerCleanupCompleteForTravel(AAO_PlayerCon
 		return;
 	}
 
+	//ms : 인벤토리 저장후 다음레벨
+	if (APawn* Pawn = PC->GetPawn())
+	{
+		if (UAO_InventoryComponent* Inv =
+			Pawn->FindComponentByClass<UAO_InventoryComponent>())
+		{
+			if (AAO_PlayerState* PS =
+				Cast<AAO_PlayerState>(PC->PlayerState))
+			{
+				PS->PersistentInventory = Inv->Slots;
+			}
+		}
+	}
+	//ms
+	
 	CleanupCompletePlayers.Add(PC);
 	int32 TotalPlayers = GetNumPlayers();
 	AO_LOG(LogJM, Log, TEXT("Player CleanupComplete : %s (%d / %d)"), *PC->GetName(), CleanupCompletePlayers.Num(), TotalPlayers);
@@ -181,7 +238,6 @@ void AAO_GameMode_InGameBase::NotifyPlayerCleanupCompleteForTravel(AAO_PlayerCon
 	{
 		StartServerTravel();	// NOTE : Delay를 주는 방법으로는 해결할 수 없음
 	}
-	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 

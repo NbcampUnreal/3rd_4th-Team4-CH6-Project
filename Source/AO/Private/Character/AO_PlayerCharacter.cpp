@@ -126,6 +126,21 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 		
 		BindAttributeDelegates();
 	}
+
+	//ms: 부활시 인벤토리 ui 연동 + 다음레벨 이동시 인벤토리 유지
+	if (auto* Inv = FindComponentByClass<UAO_InventoryComponent>())
+	{
+		if (AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
+		{
+			if (PS->PersistentInventory.Num() > 0)
+			{
+				Inv->ApplySlotsFromSave(PS->PersistentInventory);
+				PS->PersistentInventory.Empty();
+			}
+			Inv->NotifyListeners();
+		}
+	}
+	//ms
 }
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
@@ -557,6 +572,12 @@ void AAO_PlayerCharacter::BindGameplayEffects()
 void AAO_PlayerCharacter::BindAttributeDelegates()
 {
 	checkf(AttributeSet, TEXT("AttributeSet is null"));
+	//ms: 사망 확인
+	if (auto* PlayerAttr = Cast<UAO_PlayerCharacter_AttributeSet>(AttributeSet))
+	{
+		PlayerAttr->OnPlayerDeath.AddUObject(this, &AAO_PlayerCharacter::HandlePlayerDeath);
+	}
+	//ms
 }
 
 void AAO_PlayerCharacter::BindSpeedAttributeDelegates()
@@ -615,6 +636,7 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 
 	if (!Interactor) return;
 
+	//ms : 사망한 시체에서 부활칩 수급
 	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
 	if (!Inventory) return;
 
@@ -624,6 +646,7 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 	ItemToAdd.ItemType = EItemType::Consumable;
 		
 	Inventory->PickupItem(ItemToAdd, this);
+	//ms
 	
 	// HSJ : 상호작용 비활성화
 	if (InteractableComponent)
@@ -699,5 +722,14 @@ void AAO_PlayerCharacter::InitVoiceChat()
 	{
 		OSS->StartVoiceChat();
 		OSS->UnmuteAllRemoteTalker();
+	}
+}
+
+//ms: 사망시 아이템 버리기
+void AAO_PlayerCharacter::HandlePlayerDeath()
+{
+	if (InventoryComp)
+	{
+		InventoryComp->CharDead();
 	}
 }

@@ -34,6 +34,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, bIsLobbyHost);
 	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
 	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
+	DOREPLIFETIME(AAO_PlayerState, PersistentInventory); // ms : 인벤토리
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -147,6 +148,12 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		PS->CharacterCustomizingData = this->CharacterCustomizingData;
 	}
+	//ms : 다음스테이지에서 인벤토리 유지
+	if (AAO_PlayerState* NewPS = Cast<AAO_PlayerState>(PlayerState))
+	{
+		NewPS->PersistentInventory = PersistentInventory;
+	}
+	//ms
 }
 
 void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
@@ -205,4 +212,10 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 
 		Board->RebuildBoard();
 	}
+}
+
+//ms: 인벤토리 유지
+void AAO_PlayerState::SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv)
+{
+	PersistentInventory = Inv->Slots;
 }
