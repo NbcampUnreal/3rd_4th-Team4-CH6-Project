@@ -16,7 +16,6 @@ void AAO_PlayerController::PreClientTravel(const FString& PendingURL, ETravelTyp
 	
 	if (IsLocalController())
 	{
-		CleanupAudioResource();
 		UpdateLoadingMapName(PendingURL);
 	}
 
@@ -24,72 +23,26 @@ void AAO_PlayerController::PreClientTravel(const FString& PendingURL, ETravelTyp
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerController::CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility)
+UAO_UserWidget* AAO_PlayerController::GetOrCreateSettingsWidgetInstance()
 {
-	AO_LOG(LogJM, Log, TEXT("Start"));
-
-	if (!AO_ENSURE(!SettingsWidgetInstance, TEXT("Settings Widget Instance is Already Created")))	// 위젯 중복 생성 방지
+	if (SettingsWidgetInstance)
 	{
-		return;
+		return SettingsWidgetInstance;
 	}
 
 	if (!AO_ENSURE(SettingsWidgetClass, TEXT("Settings Widget Class is nullptr")))
 	{
-		return;
+		return nullptr;
 	}
 
 	SettingsWidgetInstance = CreateWidget<UAO_UserWidget>(this, SettingsWidgetClass);
 	if (!AO_ENSURE(SettingsWidgetInstance, TEXT("Settings Widget Instance Create Failed")))
 	{
-		return;
+		return nullptr;
 	}
 
-	SettingsWidgetInstance->AddToViewport(ZOrder);
-	SettingsWidgetInstance->SetVisibility(Visibility);
-	
-	AO_LOG(LogJM, Log, TEXT("End"));
-}
-
-void AAO_PlayerController::CleanupAudioResource()
-{
-	AO_LOG(LogJM, Log, TEXT("Start"));
-
-	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
-	{
-		OSS->MuteAllRemoteTalker();	// JM : 안정성을 위해 Mute도 해주기
-		OSS->StopVoiceChat();
-	}
-	else
-	{
-		AO_ENSURE(false, TEXT("Can't Get OSS"));
-	}
-
-	if (UWorld* World = GetWorld())
-	{
-		// JM : 실제 에러의 주범인 'VoipListenerSynthComponent'를 모두 찾아 제거
-		for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)		// TObjectIterator는 Transient 패키지에 숨은 컴포넌트까지 다 찾아냄
-		{
-			if (It->GetWorld() == World)	// 이 컴포넌트가 현재 파괴되려는 월드와 연결되어 있는지 확인
-			{
-				It->UnregisterComponent();
-				It->DestroyComponent();
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Unregister SynthComponent"));
-			}
-		}
-
-		for (TObjectIterator<UVOIPTalker> It; It; ++It)		// VOIPTalker를 모두 찾아서 제거
-		{
-			if (It->GetWorld() == World)
-			{
-				It->Deactivate();
-				It->UnregisterComponent();
-				It->DestroyComponent();
-				AO_LOG(LogJM, Log, TEXT("Cleanup: Forced Destruction of VOIPTalker"));
-			}
-		}
-	}
-	
-	AO_LOG(LogJM, Log, TEXT("End"));
+	// UIStackManager가 AddToViewport/RemoveFromParent를 담당
+	return SettingsWidgetInstance;
 }
 
 void AAO_PlayerController::UpdateLoadingMapName(const FString& PendingURL) const
