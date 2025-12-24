@@ -29,6 +29,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+	virtual void Tick(float DeltaTime) override;	// JM : 보이스 챗 크래쉬 방지 확인용
 
 protected:
 	UPROPERTY(Transient)
@@ -74,6 +75,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|Test")
 	void Test_Alive();
 
+	UFUNCTION(Client, Reliable)
+	void Client_PrepareForTravel(const FString& URL);
+
+	UFUNCTION(Server, Reliable)
+	void Server_NotifyReadyForTravel();
+
+protected:
+	void CleanupAudioResource();
+
 protected:
 	void HandleUIOpen();
 
@@ -95,4 +105,10 @@ protected:
 private:
 	// 카메라 관리자 초기화
 	void InitCameraManager(APawn* InPawn);
+	
+	/** 모든 보이스 자원이 정리되었는지 확인 */
+	bool IsVoiceFullyCleanedUp();
+
+private:
+	bool bIsCheckingVoiceCleanup = false;
 };
