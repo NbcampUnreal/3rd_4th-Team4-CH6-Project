@@ -25,8 +25,7 @@ public:
 	AAO_PlayerController_InGameBase();
 
 protected:
-	virtual void OnPossess(APawn* InPawn) override;
-	virtual void OnRep_Pawn() override;
+	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
@@ -105,7 +104,7 @@ protected:
 
 private:
 	// 카메라 관리자 초기화
-	void InitCameraManager();
+	void InitCameraManager(APawn* InPawn);
 	
 	/** 모든 보이스 자원이 정리되었는지 확인 */
 	bool IsVoiceFullyCleanedUp();

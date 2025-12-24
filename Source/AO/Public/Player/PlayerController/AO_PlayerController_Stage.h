@@ -6,9 +6,16 @@
 #include "AO_PlayerController_InGameBase.h"
 #include "AO_PlayerController_Stage.generated.h"
 
-/**
- * 
- */
+class UCameraComponent;
+
+UENUM()
+enum EAO_SpectateEndReason : uint8
+{
+	Revived,
+	NoValidTarget,
+	TargetDestroyed
+};
+
 UCLASS()
 class AO_API AAO_PlayerController_Stage : public AAO_PlayerController_InGameBase
 {
@@ -20,6 +27,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	// JM : 생명주기 테스트용
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
@@ -57,6 +65,9 @@ public:
 	UFUNCTION()
 	void ForceReselectSpectateTarget(APawn* InvalidTarget);
 
+	UFUNCTION(BlueprintCallable, Category = "AO|Spectate")
+	void RequestStopSpectate(EAO_SpectateEndReason Reason);
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RequestSpectate();
@@ -66,6 +77,12 @@ protected:
 	void ClientRPC_SetSpectateTarget(APawn* NewTarget, int32 NewPlayerIndex);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetSpectateTarget(APawn* NewTarget);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StopSpectate();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_StopSpectate(EAO_SpectateEndReason Reason);
+
+	void StopSpectate(EAO_SpectateEndReason Reason);
 
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<APawn> CurrentSpectateTarget;
@@ -75,6 +92,40 @@ protected:
 	int32 CurrentSpectatePlayerIndex = INDEX_NONE;
 
 	TObjectPtr<APawn> FindNextSpectateTarget(bool bForward, int32& OutNewIndex);
+
+	// == 관전 카메라 스무딩용 로직 == //
+	
+	// 관전 카메라 보간 로직
+	void UpdateSpectateCamera(float DeltaSeconds);
+	void EnsureSpectateCameraActor();
+	void ResetSpectateSmoothing();
+
+	UPROPERTY(Transient)
+	TObjectPtr<ACameraActor> SpectateCameraActor = nullptr;
+
+	// 스무딩된 현재값
+	FVector  SmoothedLoc = FVector::ZeroVector;
+	FRotator SmoothedRot = FRotator::ZeroRotator;
+	float    SmoothedFOV = 90.f;
+	
+	// 타겟 (복제된 값)
+	FVector  TargetLoc = FVector::ZeroVector;
+	FRotator TargetRot = FRotator::ZeroRotator;
+	float    TargetFOV = 90.f;
+
+	bool bSpectateCamInitialized = false;
+
+	// 보간 속도
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float PosInterpSpeed = 12.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float RotInterpSpeed = 12.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float FovInterpSpeed = 8.f;
+
+	bool bIsSpectating = false;
 	
 	/* ----------테스트용 임시 코드------------*/
 public:
