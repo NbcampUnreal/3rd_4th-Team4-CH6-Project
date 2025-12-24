@@ -126,6 +126,11 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 		
 		BindAttributeDelegates();
 	}
+
+	if (auto* Comp = FindComponentByClass<UAO_InventoryComponent>())
+	{
+		Comp->RegisterToSubsystem();
+	}
 }
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const

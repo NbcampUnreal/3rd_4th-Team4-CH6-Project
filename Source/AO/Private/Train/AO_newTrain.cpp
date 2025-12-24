@@ -169,9 +169,7 @@ void AAO_newTrain::BindFuel(UObject* Listener)
 
 	IAO_TrainFuelListener::Execute_OnFuelChanged(Listener, CurrentFuel);
 	//UE_LOG(LogTemp, Warning, TEXT("BindFuel: Initial Fuel = %f"), CurrentFuel);
-
 }
-
 
 void AAO_newTrain::BindFuelListener(UObject* Listener)
 {
