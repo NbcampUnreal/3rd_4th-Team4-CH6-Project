@@ -6,7 +6,6 @@
 #include "AbilitySystemComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 UAO_GA_AIAttackBase::UAO_GA_AIAttackBase()
 {
@@ -54,7 +53,6 @@ void UAO_GA_AIAttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_AIAttackBase: No Montage to play"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }

@@ -31,12 +31,16 @@ void UAO_GA_Werewolf_Howl::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		return;
 	}
 
-	// Howl 전파
+	// Howl 전파 (결과는 Controller에서 활용)
 	if (UAO_PackCoordComp* PackComp = Wolf->GetPackCoordComp())
 	{
 		if (AAO_AggressiveAICtrl* AIC = Cast<AAO_AggressiveAICtrl>(Wolf->GetController()))
 		{
-			PackComp->BroadcastHowl(AIC->GetChaseTarget());
+			FAO_HowlResult HowlResult = PackComp->BroadcastHowl(AIC->GetChaseTarget());
+			
+			// 동료가 없으면 포위 모드 해제 (일반 추격/공격으로)
+			// 동료가 있으면 포위 모드로 진행 (이미 BroadcastHowl에서 처리됨)
+			// StateTree에서 IsSurrounding 조건으로 분기 처리
 		}
 	}
 

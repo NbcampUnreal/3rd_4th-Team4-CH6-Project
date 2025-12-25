@@ -44,11 +44,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
 	bool CheckCeilingAvailability() const;
 
+	// 이동 중 천장 감지 및 자동 전환 체크 (바닥 모드일 때 호출)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	void CheckForCeilingAutoTransition();
+
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	void UpdateCeilingPosition(float DeltaTime, bool bImmediate = false);
+	
+	// 천장 Normal에 맞춰 캡슐 회전 조정
+	void UpdateCapsuleRotationToCeiling(const FVector& CeilingNormal);
 
 protected:
 	UPROPERTY()
@@ -76,5 +83,17 @@ protected:
 	// 초기 Rotation 저장 여부
 	UPROPERTY()
 	bool bInitialRotationSaved = false;
+
+	// 자동 전환 체크 타이머
+	UPROPERTY()
+	float AutoTransitionCheckTimer = 0.f;
+
+	// 자동 전환 체크 간격
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move")
+	float AutoTransitionCheckInterval = 0.2f;
+
+	// 기울어진 천장 지원 최대 각도 (도 단위, 0~90)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move")
+	float MaxCeilingAngle = 60.f;
 };
 

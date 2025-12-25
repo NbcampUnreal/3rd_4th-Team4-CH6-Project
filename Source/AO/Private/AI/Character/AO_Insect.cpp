@@ -7,7 +7,6 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NavigationSystem.h"
-#include "AO_Log.h"
 
 AAO_Insect::AAO_Insect()
 {
@@ -70,7 +69,6 @@ void AAO_Insect::HandleStunBegin()
 	if (IsKidnapping())
 	{
 		KidnapComponent->ReleaseKidnap(false);
-		AO_LOG(LogKSJ, Log, TEXT("Insect Stunned: Dropped Victim"));
 	}
 }
 
@@ -92,7 +90,6 @@ void AAO_Insect::OnKidnapStateChanged(bool bIsKidnapping)
 			if (UAO_AISubsystem* Subsystem = World->GetSubsystem<UAO_AISubsystem>())
 			{
 				CachedPlayerLocations = Subsystem->GetAllPlayerLocations();
-				AO_LOG(LogKSJ, Log, TEXT("Insect: Cached %d player locations for kidnap routing"), CachedPlayerLocations.Num());
 			}
 		}
 	}

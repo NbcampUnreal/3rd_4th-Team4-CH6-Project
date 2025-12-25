@@ -6,7 +6,6 @@
 #include "Item/AO_MasterItem.h"
 #include "AIController.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 bool FAO_STCond_ItemNearby::TestCondition(FStateTreeExecutionContext& Context) const
 {

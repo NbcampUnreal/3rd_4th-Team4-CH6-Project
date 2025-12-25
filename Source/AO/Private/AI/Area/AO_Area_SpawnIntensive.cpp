@@ -3,7 +3,6 @@
 #include "AI/Area/AO_Area_SpawnIntensive.h"
 #include "AI/Base/AO_AICharacterBase.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 AAO_Area_SpawnIntensive::AAO_Area_SpawnIntensive(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

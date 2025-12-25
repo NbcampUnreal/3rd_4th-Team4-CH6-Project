@@ -8,7 +8,6 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "StateTreeExecutionContext.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "AO_Log.h"
 #include "AI/Component/AO_CeilingMoveComponent.h"
 
 EStateTreeRunStatus FAO_STTask_Chase::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
@@ -128,7 +127,6 @@ EStateTreeRunStatus FAO_STTask_Chase::Tick(FStateTreeExecutionContext& Context, 
 				if (CeilingComp->IsInCeilingMode())
 				{
 					Stalker->SetCeilingMode(false);
-					AO_LOG(LogKSJ, Log, TEXT("Stalker: Disabled ceiling mode - player can see"));
 				}
 			}
 			else
@@ -137,7 +135,6 @@ EStateTreeRunStatus FAO_STTask_Chase::Tick(FStateTreeExecutionContext& Context, 
 				if (!CeilingComp->IsInCeilingMode() && CeilingComp->CheckCeilingAvailability())
 				{
 					Stalker->SetCeilingMode(true);
-					AO_LOG(LogKSJ, Log, TEXT("Stalker: Enabled ceiling mode - player cannot see"));
 				}
 			}
 		}

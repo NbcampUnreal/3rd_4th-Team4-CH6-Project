@@ -7,7 +7,6 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 #include "AI/GAS/Ability/AO_GA_Troll_Attack.h"
 
 AAO_Troll::AAO_Troll()
@@ -131,7 +130,6 @@ void AAO_Troll::ExecuteAttack(ETrollAttackType AttackType)
 {
 	if (bIsAttacking)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ExecuteAttack: Already attacking"));
 		return;
 	}
 
@@ -165,30 +163,12 @@ void AAO_Troll::ExecuteAttack(ETrollAttackType AttackType)
 			}
 		}
 
-		if (!bAbilityActivated)
-		{
-			// 실패 원인 로그 (쿨타임, 비용, 태그 등)
-			AO_LOG(LogKSJ, Error, TEXT("ExecuteAttack: Failed to activate Troll Attack Ability! Check Ability Tags or Constraints."));
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Error, TEXT("ExecuteAttack: No ASC found"));
 	}
 }
 
 void AAO_Troll::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	bIsAttacking = false;
-
-	if (bInterrupted)
-	{
-		AO_LOG(LogKSJ, Log, TEXT("%s: Attack interrupted"), *GetName());
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Log, TEXT("%s: Attack completed"), *GetName());
-	}
 }
 
 void AAO_Troll::HandleStunBegin()
@@ -210,7 +190,6 @@ void AAO_Troll::HandleStunBegin()
 	if (HasWeapon())
 	{
 		WeaponHolderComp->DropWeapon();
-		AO_LOG(LogKSJ, Log, TEXT("%s: Dropped weapon due to stun"), *GetName());
 	}
 
 	// 무기 줍기 중이면 취소
@@ -265,6 +244,5 @@ void AAO_Troll::SpawnAndEquipWeapon()
 	{
 		// 바로 장착
 		WeaponHolderComp->PickupWeapon(NewWeapon);
-		AO_LOG(LogKSJ, Log, TEXT("%s: Spawned and equipped weapon %s"), *GetName(), *NewWeapon->GetName());
 	}
 }

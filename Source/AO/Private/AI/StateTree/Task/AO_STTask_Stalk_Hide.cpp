@@ -3,6 +3,7 @@
 #include "AI/StateTree/Task/AO_STTask_Stalk_Hide.h"
 #include "AI/Controller/AO_StalkerController.h"
 #include "AI/Character/AO_Stalker.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "EnvironmentQuery/EnvQueryManager.h"
 #include "StateTreeExecutionContext.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -26,9 +27,32 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 		return EStateTreeRunStatus::Failed;
 	}
 
-	// EQS 실행하여 숨을 곳 찾기
-	if (InstanceData.HideQuery)
+	InstanceData.PlayerProximityCheckTimer = 0.f;
+	InstanceData.CurrentHideLocation = FVector::ZeroVector;
+	InstanceData.bIsMoving = false;
+
+	// 후퇴 모드인지 확인
+	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
+	bool bIsRetreating = Stalker && Stalker->IsRetreating();
+
+	// 엄폐 위치 찾기 (EQS 또는 직접 계산)
+	AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
+	FVector HideLocation = FVector::ZeroVector;
+
+	if (bIsRetreating)
 	{
+		// 후퇴 모드: 플레이어로부터 멀어지고 시야가 가려지는 곳으로 이동
+		HideLocation = InstanceData.Controller->FindRetreatLocation();
+		if (!HideLocation.IsZero())
+		{
+			InstanceData.CurrentHideLocation = HideLocation;
+			InstanceData.Controller->MoveToLocation(HideLocation);
+			InstanceData.bIsMoving = true;
+		}
+	}
+	else if (InstanceData.HideQuery)
+	{
+		// EQS 사용
 		FEnvQueryRequest Request(InstanceData.HideQuery, InstanceData.Controller->GetPawn());
 		Request.Execute(EEnvQueryRunMode::SingleResult, 
 			FQueryFinishedSignature::CreateWeakLambda(InstanceData.Controller, 
@@ -37,10 +61,22 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 				if (Result.IsValid() && Result->IsSuccessful() && Controller)
 				{
 					FVector HideLoc = Result->GetItemAsLocation(0);
+					InstanceData.CurrentHideLocation = HideLoc;
 					Controller->MoveToLocation(HideLoc);
 					InstanceData.bIsMoving = true;
 				}
 			}));
+	}
+	else
+	{
+		// EQS가 없으면 Controller의 FindHideLocation 사용
+		HideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+		if (!HideLocation.IsZero())
+		{
+			InstanceData.CurrentHideLocation = HideLocation;
+			InstanceData.Controller->MoveToLocation(HideLocation);
+			InstanceData.bIsMoving = true;
+		}
 	}
 
 	return EStateTreeRunStatus::Running;
@@ -52,6 +88,41 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 
 	if (!InstanceData.Controller) return EStateTreeRunStatus::Failed;
 
+	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
+	AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
+
+	if (!Stalker || !Target)
+	{
+		return EStateTreeRunStatus::Failed;
+	}
+
+	// 플레이어 접근 체크 (주기적으로)
+	InstanceData.PlayerProximityCheckTimer += DeltaTime;
+	const float ProximityCheckInterval = 0.5f; // 0.5초마다 체크
+
+	if (InstanceData.PlayerProximityCheckTimer >= ProximityCheckInterval)
+	{
+		InstanceData.PlayerProximityCheckTimer = 0.f;
+
+		// 플레이어와의 거리 체크
+		const float DistanceToPlayer = FVector::Dist(Stalker->GetActorLocation(), Target->GetActorLocation());
+		const float MinSafeDistance = 500.f; // 최소 안전 거리
+
+		// 플레이어가 너무 가까이 접근했고, 현재 이동 중이 아니면 다른 엄폐물로 재이동
+		if (DistanceToPlayer < MinSafeDistance && !InstanceData.bIsMoving)
+		{
+			// 새로운 엄폐 위치 찾기
+			FVector NewHideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+			if (!NewHideLocation.IsZero() && FVector::Dist(NewHideLocation, InstanceData.CurrentHideLocation) > 200.f)
+			{
+				// 현재 위치와 충분히 떨어진 새로운 위치로 이동
+				InstanceData.CurrentHideLocation = NewHideLocation;
+				InstanceData.Controller->MoveToLocation(NewHideLocation);
+				InstanceData.bIsMoving = true;
+			}
+		}
+	}
+
 	// 이동 완료 확인
 	if (InstanceData.bIsMoving)
 	{
@@ -59,6 +130,13 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 		{
 			// 숨기 완료
 			InstanceData.bIsMoving = false;
+			
+			// 후퇴 모드였다면 후퇴 모드 해제 (다시 숨기 준비)
+			if (Stalker && Stalker->IsRetreating())
+			{
+				Stalker->SetRetreatMode(false);
+			}
+			
 			return EStateTreeRunStatus::Succeeded;
 		}
 	}

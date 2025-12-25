@@ -9,7 +9,6 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTagContainer.h"
-#include "AO_Log.h"
 
 AAO_Bull::AAO_Bull()
 {
@@ -60,8 +59,6 @@ void AAO_Bull::SetIsCharging(bool bCharging)
 		{
 			ChargeCollisionBox->SetCollisionEnabled(bCharging ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 		}
-
-		AO_LOG(LogKSJ, Log, TEXT("Bull Charging State: %s"), bCharging ? TEXT("ON") : TEXT("OFF"));
 	}
 }
 
@@ -72,8 +69,6 @@ void AAO_Bull::OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	// 플레이어만 타격
 	AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(OtherActor);
 	if (!Player) return;
-
-	AO_LOG(LogKSJ, Log, TEXT("Bull Hit Player: %s"), *Player->GetName());
 
 	// 1. 데미지 적용
 	if (DamageEffectClass)
@@ -96,30 +91,10 @@ void AAO_Bull::OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* Othe
 				{
 					const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
 					DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, ChargeDamage);
-					FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-					
-					AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Applied GE_Damage. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
-				}
-				else
-				{
-					AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageSpec is Invalid!"));
+					SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 				}
 			}
-			else
-			{
-				AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Target is Invulnerable"));
-			}
 		}
-		else
-		{
-			AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: Missing ASC (Source: %s, Target: %s)"), 
-				SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
-				TargetASC ? *TargetASC->GetName() : TEXT("Null"));
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageEffectClass is not set!"));
 	}
 
 	// 2. 넉다운 태그 이벤트 전송 (Player가 HitReact하도록)

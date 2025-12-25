@@ -8,7 +8,6 @@
 #include "NavModifierVolume.h"
 #include "AI/NavArea/AO_NavArea_SpawnRestriction.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 UAO_EQS_Test_NavAreaExclusion::UAO_EQS_Test_NavAreaExclusion()
 {

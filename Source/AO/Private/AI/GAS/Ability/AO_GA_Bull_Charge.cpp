@@ -9,7 +9,6 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTagContainer.h"
-#include "AO_Log.h"
 
 UAO_GA_Bull_Charge::UAO_GA_Bull_Charge()
 {
@@ -67,7 +66,6 @@ void UAO_GA_Bull_Charge::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("Bull Charge: No Montage"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }
@@ -126,9 +124,6 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 {
 	if (!TargetActor || !DamageEffectClass)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Invalid Target or DamageEffectClass (Target: %s, DamageClass: %s)"), 
-			TargetActor ? *TargetActor->GetName() : TEXT("Null"), 
-			DamageEffectClass ? *DamageEffectClass->GetName() : TEXT("Null"));
 		return;
 	}
 
@@ -137,9 +132,6 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 
 	if (!SourceASC || !TargetASC)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Missing ASC (Source: %s, Target: %s)"), 
-			SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
-			TargetASC ? *TargetASC->GetName() : TEXT("Null"));
 		return;
 	}
 
@@ -147,7 +139,6 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 	const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Target is Invulnerable"));
 		return;
 	}
 
@@ -160,13 +151,7 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 	{
 		const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
 		DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, ChargeDamage);
-		FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-		
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Applied GE_Damage. Spec Valid: True. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: DamageSpec is Invalid!"));
+		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
 	// 넉백 적용
@@ -189,16 +174,11 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 
 			// 캐릭터 런치
 			TargetCharacter->LaunchCharacter(KnockbackDirection * KnockbackStrength, true, true);
-			AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: LaunchCharacter executed"));
 		}
 	}
 
 	// 넉다운 HitReact 이벤트 발송
 	SendKnockdownEvent(TargetActor, InstigatorActor);
-	AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Sent Knockdown Event"));
-
-	AO_LOG(LogKSJ, Log, TEXT("Applied damage %.1f and knockback %.1f to %s"),
-		ChargeDamage, KnockbackStrength, *TargetActor->GetName());
 }
 
 void UAO_GA_Bull_Charge::SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor)

@@ -8,6 +8,8 @@
 #include "AIController.h"
 #include "StateTreeExecutionContext.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NavigationSystem.h"
 
 EStateTreeRunStatus FAO_STTask_Insect_Drag::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -26,13 +28,16 @@ EStateTreeRunStatus FAO_STTask_Insect_Drag::EnterState(FStateTreeExecutionContex
 	}
 
 	// Victim을 바라보도록 포커스 설정 (뒷걸음질 효과)
-	if (AActor* Victim = Insect->GetKidnapComponent()->GetCurrentVictim())
+	AActor* Victim = Insect->GetKidnapComponent()->GetCurrentVictim();
+	if (Victim)
 	{
 		AIC->SetFocus(Victim);
 	}
 
-	// 초기 이동 명령
-	AIC->MoveToLocation(InstanceData.SafeLocation, InstanceData.AcceptanceRadius, false, true, true, true, 0, false);
+	// 뒷걸음질 구현:
+	// PathFollowing을 사용하지 않고 직접 이동 입력을 제어하여 뒷걸음질 구현
+	// Insect는 Victim을 바라보면서(bOrientRotationToMovement = false),
+	// SafeLocation 방향으로 이동하되, Forward와 반대면 자동으로 뒷걸음질
 
 	return EStateTreeRunStatus::Running;
 }
@@ -58,15 +63,57 @@ EStateTreeRunStatus FAO_STTask_Insect_Drag::Tick(FStateTreeExecutionContext& Con
 		return EStateTreeRunStatus::Succeeded;
 	}
 
-	// 목표 지점 갱신 (Evaluator가 SafeLocation을 계속 업데이트한다고 가정)
-	// 매 프레임 MoveTo 호출은 비효율적이므로 거리 차이가 클 때만 업데이트하거나 PathFollowingComp 사용
-	if (AIC->GetPathFollowingComponent())
+	// 뒷걸음질 구현:
+	// PathFollowing을 사용하지 않고 직접 이동 입력을 제어하여 뒷걸음질 구현
+	AActor* Victim = Insect->GetKidnapComponent()->GetCurrentVictim();
+	if (!Victim)
 	{
-		FVector CurrentTarget = AIC->GetPathFollowingComponent()->GetPathDestination();
-		if (FVector::DistSquared(CurrentTarget, InstanceData.SafeLocation) > 100.f * 100.f)
+		return EStateTreeRunStatus::Failed;
+	}
+
+	FVector CurrentLocation = Insect->GetActorLocation();
+	FVector ToSafeLocation = (InstanceData.SafeLocation - CurrentLocation);
+	ToSafeLocation.Z = 0.f;
+	float DistanceToSafe = ToSafeLocation.Size();
+	
+	// 도착 확인 (AcceptanceRadius 내에 있으면 도착)
+	if (DistanceToSafe <= InstanceData.AcceptanceRadius)
+	{
+		// 도착했으면 납치 해제 및 던지기 수행
+		Insect->GetKidnapComponent()->ReleaseKidnap(true); // 던지기 true
+		return EStateTreeRunStatus::Succeeded;
+	}
+	
+	// SafeLocation 방향 정규화
+	ToSafeLocation.Normalize();
+	
+	// NavMesh 프로젝션으로 이동 가능한 방향 확인
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(AIC->GetWorld());
+	if (NavSys)
+	{
+		FVector TestLocation = CurrentLocation + ToSafeLocation * 100.f;
+		FNavLocation NavLocation;
+		if (NavSys->ProjectPointToNavigation(TestLocation, NavLocation))
 		{
-			AIC->MoveToLocation(InstanceData.SafeLocation, InstanceData.AcceptanceRadius, false, true, true, true, 0, false);
+			// NavMesh 위에 있으면 해당 방향으로 이동
+			FVector NavDirection = (NavLocation.Location - CurrentLocation).GetSafeNormal();
+			NavDirection.Z = 0.f;
+			
+			// SafeLocation 방향으로 이동 입력
+			// Insect는 Victim을 바라보고 있으므로(bOrientRotationToMovement = false),
+			// SafeLocation 방향이 Insect의 Forward와 반대면 자동으로 뒷걸음질
+			Insect->AddMovementInput(NavDirection, 1.0f);
 		}
+		else
+		{
+			// NavMesh 위가 아니면 직접 방향으로 이동 시도
+			Insect->AddMovementInput(ToSafeLocation, 1.0f);
+		}
+	}
+	else
+	{
+		// NavMesh가 없으면 직접 방향으로 이동
+		Insect->AddMovementInput(ToSafeLocation, 1.0f);
 	}
 
 	return EStateTreeRunStatus::Running;

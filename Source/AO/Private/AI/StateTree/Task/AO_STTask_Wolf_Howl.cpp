@@ -8,6 +8,7 @@
 #include "StateTreeExecutionContext.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "AIController.h"
+#include "AbilitySystemComponent.h"
 
 EStateTreeRunStatus FAO_STTask_Wolf_Howl::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -38,11 +39,26 @@ EStateTreeRunStatus FAO_STTask_Wolf_Howl::EnterState(FStateTreeExecutionContext&
 
 	if (InstanceData.PackComp && Ctrl)
 	{
-		// Howl 전파
-		InstanceData.PackComp->BroadcastHowl(Ctrl->GetChaseTarget());
+		// Howl 전파 (결과는 GAS Ability에서 처리)
+		// StateTree Task에서는 GAS Ability 실행을 기다림
+		// GAS Ability가 BroadcastHowl을 호출하므로 여기서는 추가 처리 불필요
 		
-		// TODO: Play Animation Montage (GAS Ability로 대체 예정)
-		// UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(...)
+		// GAS Ability 실행 (Howl Ability)
+		AAO_Werewolf* WerewolfPawn = Cast<AAO_Werewolf>(Ctrl->GetPawn());
+		if (WerewolfPawn)
+		{
+			UAbilitySystemComponent* ASC = WerewolfPawn->GetAbilitySystemComponent();
+			if (ASC)
+			{
+				FGameplayTag HowlTag = FGameplayTag::RequestGameplayTag(FName("Ability.Action.Howl"));
+				if (HowlTag.IsValid())
+				{
+					FGameplayTagContainer TagContainer;
+					TagContainer.AddTag(HowlTag);
+					ASC->TryActivateAbilitiesByTag(TagContainer);
+				}
+			}
+		}
 	}
 	else
 	{

@@ -4,7 +4,6 @@
 #include "AI/Character/AO_Troll.h"
 #include "AI/Component/AO_WeaponHolderComp.h"
 #include "AI/Item/AO_TrollWeapon.h"
-#include "AO_Log.h"
 
 AAO_TrollController::AAO_TrollController()
 {
@@ -15,10 +14,6 @@ void AAO_TrollController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	AAO_Troll* Troll = Cast<AAO_Troll>(InPawn);
-	if (Troll)
-	{
-		AO_LOG(LogKSJ, Log, TEXT("TrollController possessed %s"), *Troll->GetName());
-	}
 }
 
 AAO_Troll* AAO_TrollController::GetTroll() const

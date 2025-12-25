@@ -5,7 +5,6 @@
 #include "AI/Controller/AO_TrollController.h"
 #include "AI/Component/AO_WeaponHolderComp.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 void FAO_STEval_TrollContext::TreeStart(FStateTreeExecutionContext& Context) const
 {
@@ -70,29 +69,5 @@ void FAO_STEval_TrollContext::UpdateContextData(FStateTreeExecutionContext& Cont
 	InstanceData.bShouldPrioritizeWeapon = Controller->ShouldPrioritizeWeaponPickup();
 	InstanceData.NearestWeaponLocation = Controller->GetNearestWeaponLocation();
 
-	// [DEBUG] 상태 로그 (1초 간격) - PickWeapon State 진입 가능 여부 확인
-	static double LastLogTime = 0.0;
-	double CurrentTime = FPlatformTime::Seconds();
-	if (CurrentTime - LastLogTime > 1.0)
-	{
-		AO_LOG(LogKSJ, Log, TEXT("[DEBUG] TrollContext: bIsStunned=%s, bIsChasing=%s, bIsSearching=%s, bHasPlayerInSight=%s, bTargetInAttackRange=%s, bHasWeapon=%s, bHasWeaponInSight=%s, bShouldPrioritizeWeapon=%s"),
-			InstanceData.bIsStunned ? TEXT("true") : TEXT("false"),
-			InstanceData.bIsChasing ? TEXT("true") : TEXT("false"),
-			InstanceData.bIsSearching ? TEXT("true") : TEXT("false"),
-			InstanceData.bHasPlayerInSight ? TEXT("true") : TEXT("false"),
-			InstanceData.bTargetInAttackRange ? TEXT("true") : TEXT("false"),
-			InstanceData.bHasWeapon ? TEXT("true") : TEXT("false"),
-			InstanceData.bHasWeaponInSight ? TEXT("true") : TEXT("false"),
-			InstanceData.bShouldPrioritizeWeapon ? TEXT("true") : TEXT("false"));
-		
-		// PickWeapon State 진입 조건 분석
-		// 조건: IF (AO Has Weapon [Invert] AND AO Troll Weapon Nearby)
-		// 즉: IF (NOT HasWeapon AND WeaponNearby)
-		bool bPickWeaponCondition1 = !InstanceData.bHasWeapon; // Invert 체크됨
-		AO_LOG(LogKSJ, Log, TEXT("[DEBUG] PickWeapon State Condition Check: NOT HasWeapon=%s, WeaponNearby=?, FullCondition=? (StateTree가 평가해야 함)"),
-			bPickWeaponCondition1 ? TEXT("true") : TEXT("false"));
-		
-		LastLogTime = CurrentTime;
-	}
 }
 

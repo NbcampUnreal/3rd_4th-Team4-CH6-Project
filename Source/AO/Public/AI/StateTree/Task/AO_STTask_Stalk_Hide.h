@@ -22,6 +22,14 @@ struct FAO_STTask_Stalk_Hide_InstanceData
 
 	UPROPERTY()
 	bool bIsMoving = false;
+
+	// 플레이어 접근 체크 타이머
+	UPROPERTY()
+	float PlayerProximityCheckTimer = 0.f;
+
+	// 현재 엄폐 위치
+	UPROPERTY()
+	FVector CurrentHideLocation = FVector::ZeroVector;
 };
 
 /**

@@ -10,7 +10,6 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "AO_Log.h"
 
 UAO_GA_Troll_Attack::UAO_GA_Troll_Attack()
 {
@@ -34,7 +33,6 @@ void UAO_GA_Troll_Attack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	AAO_Troll* Troll = Cast<AAO_Troll>(ActorInfo->AvatarActor.Get());
 	if (!Troll)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Troll_Attack: Avatar is not a Troll"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -49,7 +47,6 @@ void UAO_GA_Troll_Attack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	// 몽타주 확인
 	if (!CurrentAttackConfig.AttackMontage)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Troll_Attack: No montage for attack type %d"), static_cast<int32>(CurrentAttackType));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -78,7 +75,6 @@ void UAO_GA_Troll_Attack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 	if (!MontageTask)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Troll_Attack: Failed to create montage task"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -90,8 +86,6 @@ void UAO_GA_Troll_Attack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	MontageTask->OnInterrupted.AddDynamic(this, &UAO_GA_Troll_Attack::OnMontageCancelled);
 
 	MontageTask->ReadyForActivation();
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Started attack type %d"), *Troll->GetName(), static_cast<int32>(CurrentAttackType));
 }
 
 void UAO_GA_Troll_Attack::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -140,12 +134,9 @@ bool UAO_GA_Troll_Attack::CanActivateAbility(const FGameplayAbilitySpecHandle Ha
 
 void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 {
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Troll_Attack: Received HitConfirmEvent!"));
-
 	const UAO_MeleeHitEventPayload* HitPayload = Cast<UAO_MeleeHitEventPayload>(Payload.OptionalObject);
 	if (!HitPayload)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("OnHitConfirmEvent: Invalid payload"));
 		return;
 	}
 
@@ -154,11 +145,6 @@ void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 	{
 		return;
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Troll_Attack: Performing Trace. Start: %s, End: %s, Radius: %f"), 
-		*HitPayload->Params.TraceStart.ToString(), 
-		*HitPayload->Params.TraceEnd.ToString(), 
-		HitPayload->Params.TraceRadius);
 
 	// 스피어 트레이스 수행 (NotifyState에서 전달된 정보 사용)
 	TArray<FHitResult> HitResults;
@@ -181,12 +167,8 @@ void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 		2.f
 	);
 
-	// 감지된 갯수 로그
-	AO_LOG(LogKSJ, Log, TEXT("Trace Result: Found %d hits"), HitResults.Num());
-
 	if (!bHit)
 	{
-		AO_LOG(LogKSJ, Log, TEXT("Trace Result: No hits detected"));
 		return;
 	}
 
@@ -201,9 +183,6 @@ void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 			continue;
 		}
 
-		// 감지된 액터 이름 로그
-		AO_LOG(LogKSJ, Log, TEXT("Hit Actor: %s"), *HitActor->GetName());
-
 		// 이미 처리한 액터 스킵
 		if (ProcessedActors.Contains(HitActor))
 		{
@@ -214,14 +193,10 @@ void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 		AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(HitActor);
 		if (!Player)
 		{
-			AO_LOG(LogKSJ, Log, TEXT("  -> Not a Player Character"));
 			continue;
 		}
 
 		ProcessedActors.Add(HitActor);
-		
-		// ApplyDamageAndKnockback 호출 직전 로그
-		AO_LOG(LogKSJ, Log, TEXT("  -> Applying Damage to Player!")); 
 		
 		// 데미지 적용 (CurrentAttackConfig 사용)
 		ApplyDamageAndKnockback(HitActor, CurrentAttackConfig);
@@ -232,9 +207,6 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 {
 	if (!TargetActor || !DamageEffectClass)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Invalid Target or DamageEffectClass (Target: %s, DamageClass: %s)"), 
-			TargetActor ? *TargetActor->GetName() : TEXT("Null"), 
-			DamageEffectClass ? *DamageEffectClass->GetName() : TEXT("Null"));
 		return;
 	}
 
@@ -243,9 +215,6 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 
 	if (!SourceASC || !TargetASC)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Missing ASC (Source: %s, Target: %s)"), 
-			SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
-			TargetASC ? *TargetASC->GetName() : TEXT("Null"));
 		return;
 	}
 
@@ -253,7 +222,6 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 	const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Target is Invulnerable"));
 		return;
 	}
 
@@ -266,13 +234,7 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 	{
 		const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
 		DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, Config.Damage);
-		FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-		
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Applied GE_Damage. Spec Valid: True. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: DamageSpec is Invalid!"));
+		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
 	// 넉백 적용
@@ -295,16 +257,11 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 
 			// 캐릭터 런치
 			TargetCharacter->LaunchCharacter(KnockbackDirection * Config.KnockbackStrength, true, true);
-			AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: LaunchCharacter executed"));
 		}
 	}
 
 	// 넉다운 HitReact 이벤트 발송
 	SendKnockdownEvent(TargetActor, GetAvatarActorFromActorInfo());
-	AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Sent Knockdown Event"));
-
-	AO_LOG(LogKSJ, Log, TEXT("Applied damage %.1f and knockback %.1f to %s"),
-		Config.Damage, Config.KnockbackStrength, *TargetActor->GetName());
 }
 
 void UAO_GA_Troll_Attack::SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor)

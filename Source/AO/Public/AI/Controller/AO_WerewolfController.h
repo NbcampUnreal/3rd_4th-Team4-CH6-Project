@@ -21,6 +21,26 @@ class AO_API AAO_WerewolfController : public AAO_AggressiveAICtrl
 public:
 	AAO_WerewolfController();
 
+	// Howl 강제 실행 (StateTree와 독립적으로 실행)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	void TriggerHowl(AAO_PlayerCharacter* Target);
+
+	// 도주로 차단 위치 계산
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	FVector FindEscapeRouteBlockPosition(AAO_PlayerCharacter* Target, float BlockRadius = 500.f);
+
+	// 플레이어 이동 방향 분석
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	FVector AnalyzePlayerMovementDirection(AAO_PlayerCharacter* Target);
+
+	// 잠재적 도주 경로 찾기
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	TArray<FVector> FindPotentialEscapeRoutes(AAO_PlayerCharacter* Target, float SearchRadius = 1000.f);
+
+	// 개선된 잠재적 도주 경로 찾기 (8방향 이상 샘플링)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	TArray<FVector> FindPotentialEscapeRoutesImproved(AAO_PlayerCharacter* Target, float SearchRadius = 1000.f, int32 NumSamples = 8);
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 
@@ -31,10 +51,18 @@ protected:
 	UFUNCTION()
 	void HandleHowlReceived(AActor* TargetActor);
 
+	// 일제공격 시작 이벤트 핸들러
+	UFUNCTION()
+	void HandleCoordinatedAttackStarted();
+
 protected:
 	UPROPERTY()
 	TObjectPtr<UAO_PackCoordComp> PackComp;
 
 	// 이미 Howl을 했거나 참여했는지 여부 (상태 관리용)
 	bool bHasHowledOrJoined = false;
+
+	// 플레이어 이동 방향 추적용 (최근 위치)
+	FVector LastPlayerLocation = FVector::ZeroVector;
+	float LastLocationUpdateTime = 0.f;
 };

@@ -12,7 +12,6 @@
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
-#include "AO_Log.h"
 
 UAO_KidnapComponent::UAO_KidnapComponent()
 {
@@ -67,7 +66,6 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	UAbilitySystemComponent* TargetASC = TargetPlayer->GetAbilitySystemComponent();
 	if (TargetASC && TargetASC->HasMatchingGameplayTag(KidnappedStatusTag))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TryKidnapPlayer: Player is already kidnapped (tag check)"));
 		return false;
 	}
 
@@ -80,14 +78,12 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 			// 이미 다른 AI가 납치 중이거나 쿨다운 중이면 실패
 			if (!AISubsystem->TryReservePlayerForKidnap(TargetPlayer, GetOwner()))
 			{
-				AO_LOG(LogKSJ, Log, TEXT("TryKidnapPlayer: Player cannot be kidnapped (already reserved or on cooldown)"));
 				return false;
 			}
 			
 			// 예약 성공 후, 다시 한 번 태그 체크 (예약과 납치 사이에 다른 Insect가 납치했을 수 있음)
 			if (TargetASC && TargetASC->HasMatchingGameplayTag(KidnappedStatusTag))
 			{
-				AO_LOG(LogKSJ, Warning, TEXT("TryKidnapPlayer: Player was kidnapped by another Insect after reservation (releasing reservation)"));
 				// 예약 해제
 				AISubsystem->ReleasePlayerFromKidnap(TargetPlayer);
 				return false;
@@ -95,7 +91,6 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 		}
 		else
 		{
-			AO_LOG(LogKSJ, Error, TEXT("TryKidnapPlayer: AISubsystem not found"));
 			return false;
 		}
 	}
@@ -133,14 +128,6 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	}
 
 	OnKidnapStateChanged.Broadcast(true);
-	if (IsValid(CurrentVictim))
-	{
-		AO_LOG(LogKSJ, Log, TEXT("Insect Kidnapped Player: %s"), *CurrentVictim->GetName());
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("Insect Kidnapped Player: [Invalid]"));
-	}
 
 	return true;
 }
@@ -157,7 +144,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 	// 플레이어가 유효한지 확인
 	if (!IsValid(ReleasedPlayer))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ReleaseKidnap: ReleasedPlayer is not valid"));
 		CurrentVictim = nullptr;
 		OnKidnapStateChanged.Broadcast(false);
 		return;
@@ -187,7 +173,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		{
 			FGameplayTagContainer AllAbilityTags(FGameplayTag::RequestGameplayTag(FName("Ability")));
 			ASC->CancelAbilities(&AllAbilityTags);
-			AO_LOG(LogKSJ, Log, TEXT("ReleaseKidnap: Cancelled all abilities"));
 		}
 	}
 
@@ -216,8 +201,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 				
 				// 중력 복구
 				MoveComp->GravityScale = 1.0f;
-				
-				AO_LOG(LogKSJ, Log, TEXT("ReleaseKidnap: Reset movement state"));
 			}
 
 			// 제약 해제 및 태그 제거
@@ -226,8 +209,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		else
 		{
 			// 사망한 플레이어: 위치만 바닥으로 조정
-			AO_LOG(LogKSJ, Log, TEXT("ReleaseKidnap: Player is dead, adjusting position to ground"));
-			
 			if (MoveComp)
 			{
 				// 속도 초기화
@@ -255,7 +236,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 						SafeLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
 					}
 					ReleasedPlayer->SetActorLocation(SafeLocation, false, nullptr, ETeleportType::TeleportPhysics);
-					AO_LOG(LogKSJ, Log, TEXT("ReleaseKidnap: Adjusted player location to NavMesh (Dead: %s)"), bIsDead ? TEXT("true") : TEXT("false"));
 				}
 				else
 				{
@@ -275,7 +255,6 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 							GroundLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
 						}
 						ReleasedPlayer->SetActorLocation(GroundLocation, false, nullptr, ETeleportType::TeleportPhysics);
-						AO_LOG(LogKSJ, Log, TEXT("ReleaseKidnap: Adjusted player location to ground via LineTrace (Dead: %s)"), bIsDead ? TEXT("true") : TEXT("false"));
 					}
 				}
 			}
@@ -309,20 +288,11 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			AISubsystem->ReleasePlayerFromKidnap(ReleasedPlayer);
 			// 쿨다운 등록 (같은 플레이어를 바로 다시 납치하지 못하도록)
 			AISubsystem->MarkPlayerAsRecentlyKidnapped(ReleasedPlayer, KidnapCooldownDuration);
-			AO_LOG(LogKSJ, Log, TEXT("Marked player as recently kidnapped (Cooldown: %.1fs)"), KidnapCooldownDuration);
 		}
 	}
 
 	CurrentVictim = nullptr;
 	OnKidnapStateChanged.Broadcast(false);
-	if (IsValid(ReleasedPlayer))
-	{
-		AO_LOG(LogKSJ, Log, TEXT("Insect Released Player: %s (Throw: %d)"), *ReleasedPlayer->GetName(), bThrow);
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Log, TEXT("Insect Released Player: [Invalid] (Throw: %d)"), bThrow);
-	}
 }
 
 void UAO_KidnapComponent::ApplyDotDamage()
@@ -343,7 +313,6 @@ void UAO_KidnapComponent::ApplyDotDamage()
 	UAbilitySystemComponent* TargetASC = Victim->GetAbilitySystemComponent();
 	if (!TargetASC)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDotDamage: Target ASC is null"));
 		// ASC가 없으면 타이머 정리
 		if (UWorld* World = GetWorld())
 		{
@@ -357,7 +326,6 @@ void UAO_KidnapComponent::ApplyDotDamage()
 	if (TargetASC->HasMatchingGameplayTag(DeathTag))
 	{
 		// 사망한 플레이어는 납치 해제하고 타이머 정리
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDotDamage: Player died, releasing kidnap"));
 		if (UWorld* World = GetWorld())
 		{
 			World->GetTimerManager().ClearTimer(DotTimerHandle);
@@ -400,30 +368,11 @@ void UAO_KidnapComponent::ApplyDotDamage()
 			// Victim이 유효한지 확인 (ApplyGameplayEffectSpecToTarget 호출 전)
 			if (!IsValid(Victim))
 			{
-				AO_LOG(LogKSJ, Warning, TEXT("ApplyDotDamage: Victim became invalid before applying damage"));
 				return;
 			}
 
 			SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-			
-			// 로그 출력 전에 다시 한 번 유효성 확인 (ApplyGameplayEffectSpecToTarget 후 사망 가능)
-			if (IsValid(Victim))
-			{
-				AO_LOG(LogKSJ, Log, TEXT("Applied DoT Damage %.1f to %s"), DotDamageAmount, *Victim->GetName());
-			}
-			else
-			{
-				AO_LOG(LogKSJ, Log, TEXT("Applied DoT Damage %.1f to [Player died during damage application]"), DotDamageAmount);
-			}
 		}
-		else
-		{
-			AO_LOG(LogKSJ, Warning, TEXT("ApplyDotDamage: Failed to create damage spec"));
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDotDamage: DotDamageEffectClass is not set! Please assign a Damage GameplayEffect in Insect blueprint."));
 	}
 }
 
@@ -437,7 +386,6 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 		const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
 		if (ASC->HasMatchingGameplayTag(DeathTag))
 		{
-			AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Player is dead, skipping"));
 			return;
 		}
 	}
@@ -449,7 +397,6 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 		{
 			if (InspectionComp->IsInspecting())
 			{
-				AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Forcing exit from Inspection mode due to kidnap"));
 				InspectionComp->ExitInspectionMode();
 			}
 		}
@@ -479,13 +426,11 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 			// 납치 전 상태 저장
 			bOriginalCameraCollision = SpringArm->bDoCollisionTest;
 			SpringArm->bDoCollisionTest = false;
-			AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Disabled camera collision for kidnapped player"));
 		}
 		else
 		{
 			// 원래 상태 복구
 			SpringArm->bDoCollisionTest = bOriginalCameraCollision;
-			AO_LOG(LogKSJ, Log, TEXT("SetPlayerRestrictions: Restored camera collision"));
 		}
 	}
 
@@ -524,14 +469,6 @@ void UAO_KidnapComponent::BindDeathDelegate()
 	// 사망 태그 변경 감지
 	const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
 	ASC->RegisterGameplayTagEvent(DeathTag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &UAO_KidnapComponent::OnPlayerDeathTagChanged);
-	if (IsValid(CurrentVictim))
-	{
-		AO_LOG(LogKSJ, Log, TEXT("BindDeathDelegate: Registered death tag event for %s"), *CurrentVictim->GetName());
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("BindDeathDelegate: Registered death tag event for [Invalid]"));
-	}
 }
 
 void UAO_KidnapComponent::OnPlayerDeathTagChanged(const FGameplayTag Tag, int32 NewCount)
@@ -539,8 +476,6 @@ void UAO_KidnapComponent::OnPlayerDeathTagChanged(const FGameplayTag Tag, int32 
 	// NewCount > 0이면 태그가 추가된 것 (사망)
 	if (NewCount > 0 && CurrentVictim && IsValid(CurrentVictim))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("OnPlayerDeathTagChanged: Player %s died while kidnapped, releasing"), *CurrentVictim->GetName());
-		
 		// 즉시 DoT 타이머 정리 (사망 후 데미지 주지 않도록)
 		if (UWorld* World = GetWorld())
 		{
@@ -551,4 +486,3 @@ void UAO_KidnapComponent::OnPlayerDeathTagChanged(const FGameplayTag Tag, int32 
 		ReleaseKidnap(false);
 	}
 }
-

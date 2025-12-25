@@ -8,12 +8,15 @@
 #include "GameplayTagContainer.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 AAO_AICharacterBase::AAO_AICharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
+	
+	// CharacterMovementComponent 리플리케이션 설정 (멀티플레이어 동기화를 위해 필수)
+	// Character 클래스는 기본적으로 이동 리플리케이션이 활성화되어 있지만, 명시적으로 확인
+	// bReplicates = true만 설정하면 CharacterMovementComponent는 자동으로 리플리케이트됩니다
 
 	// GAS 컴포넌트 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -82,21 +85,17 @@ void AAO_AICharacterBase::HandleStunBegin()
 	{
 		GetCharacterMovement()->StopMovementImmediately();
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AI Stunned: %s"), *GetName());
 }
 
 void AAO_AICharacterBase::HandleStunEnd()
 {
 	// 기절 해제 처리
-	AO_LOG(LogKSJ, Log, TEXT("AI Stun Ended: %s"), *GetName());
 }
 
 void AAO_AICharacterBase::TestStun()
 {
 	if (!AbilitySystemComponent)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TestStun: AbilitySystemComponent is null on %s"), *GetName());
 		return;
 	}
 
@@ -107,15 +106,12 @@ void AAO_AICharacterBase::TestStun()
 	EventData.Target = this;
 	
 	AbilitySystemComponent->HandleGameplayEvent(StunEventTag, &EventData);
-	
-	AO_LOG(LogKSJ, Log, TEXT("TestStun: Triggered stun event on %s"), *GetName());
 }
 
 void AAO_AICharacterBase::TestStunEnd()
 {
 	if (!AbilitySystemComponent)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TestStunEnd: AbilitySystemComponent is null on %s"), *GetName());
 		return;
 	}
 
@@ -124,8 +120,6 @@ void AAO_AICharacterBase::TestStunEnd()
 	StunAbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Stunned")));
 	
 	AbilitySystemComponent->CancelAbilities(&StunAbilityTags);
-	
-	AO_LOG(LogKSJ, Log, TEXT("TestStunEnd: Cancelled stun ability on %s"), *GetName());
 }
 
 void AAO_AICharacterBase::InitializeAbilitySystem()

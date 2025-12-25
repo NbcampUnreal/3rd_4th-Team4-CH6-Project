@@ -5,7 +5,6 @@
 #include "AI/Controller/AO_AggressiveAICtrl.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 void FAO_STEval_AggressiveCtx::TreeStart(FStateTreeExecutionContext& Context) const
 {
@@ -52,17 +51,9 @@ void FAO_STEval_AggressiveCtx::UpdateContextData(FStateTreeExecutionContext& Con
 
 	if (!AI || !Controller)
 	{
-		// [Debug] 컨트롤러나 AI를 못 가져오는지 확인
-		/*AO_LOG(LogKSJ, Warning, TEXT("AO_STEval_AggressiveCtx: Failed to get AI(%s) or Controller(%s)"), 
-			AI ? *AI->GetName() : TEXT("None"), 
-			Controller ? *Controller->GetName() : TEXT("None"));*/
 		return;
 	}
 
-	// [Debug] Evaluator 실행 및 데이터 확인
-	/*AO_LOG(LogKSJ, Log, TEXT("AO_STEval_AggressiveCtx: HasSight=%d, NearestDist=%.1f"), 
-		Controller->HasPlayerInSight(), 
-		NearestPlayer ? FVector::Dist(AI->GetActorLocation(), NearestPlayer->GetActorLocation()) : -1.f);*/
 
 	// 기본 상태 업데이트
 	InstanceData.bIsStunned = AI->IsStunned();

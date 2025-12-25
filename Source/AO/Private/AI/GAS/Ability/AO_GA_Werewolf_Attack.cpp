@@ -3,51 +3,38 @@
 
 #include "AI/GAS/Ability/AO_GA_Werewolf_Attack.h"
 #include "AI/Character/AO_Werewolf.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Character/AO_PlayerCharacter.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 UAO_GA_Werewolf_Attack::UAO_GA_Werewolf_Attack()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	
+	// 기본 HitReact 태그를 Heavy로 설정
+	HitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Heavy"));
 }
 
-void UAO_GA_Werewolf_Attack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UAO_GA_Werewolf_Attack::OnTargetHit(AActor* TargetActor, AActor* InstigatorActor)
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	// 부모 클래스의 기본 처리 (데미지 + 넉백)
+	Super::OnTargetHit(TargetActor, InstigatorActor);
+	
+	// Werewolf는 Heavy Hit React를 사용하므로
+	// 부모 클래스에서 이미 HitReactTag로 이벤트를 보내지만,
+	// 명시적으로 Heavy 태그로 재전송 (부모가 다른 태그를 사용할 수 있으므로)
+	if (TargetActor)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
+		FGameplayTag HeavyHitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Heavy"));
+		if (HeavyHitReactTag.IsValid())
+		{
+			FGameplayEventData EventData;
+			EventData.EventTag = HeavyHitReactTag;
+			EventData.Instigator = InstigatorActor;
+			EventData.Target = TargetActor;
+			EventData.EventMagnitude = DamageAmount;
+			
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetActor, HeavyHitReactTag, EventData);
+		}
 	}
-
-	// 몽타주 재생
-	if (AttackMontage)
-	{
-		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this,
-			TEXT("Attack"),
-			AttackMontage
-		);
-
-		Task->OnBlendOut.AddDynamic(this, &UAO_GA_Werewolf_Attack::OnMontageCompleted);
-		Task->OnCompleted.AddDynamic(this, &UAO_GA_Werewolf_Attack::OnMontageCompleted);
-		Task->OnInterrupted.AddDynamic(this, &UAO_GA_Werewolf_Attack::OnMontageCompleted);
-		Task->OnCancelled.AddDynamic(this, &UAO_GA_Werewolf_Attack::OnMontageCompleted);
-
-		Task->ReadyForActivation();
-	}
-	else
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-	}
-}
-
-void UAO_GA_Werewolf_Attack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UAO_GA_Werewolf_Attack::OnMontageCompleted()
-{
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

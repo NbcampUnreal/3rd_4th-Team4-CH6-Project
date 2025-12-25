@@ -8,7 +8,6 @@
 #include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Crab_Pickup::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {

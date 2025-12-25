@@ -5,7 +5,6 @@
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Navigation/CrowdFollowingComponent.h"
-#include "AO_Log.h"
 
 AAO_AggressiveAICtrl::AAO_AggressiveAICtrl()
 {
@@ -77,8 +76,6 @@ void AAO_AggressiveAICtrl::StartChase(AAO_PlayerCharacter* Target)
 	{
 		AI->SetChaseMode(true);
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Started chasing %s"), *GetName(), *Target->GetName());
 }
 
 void AAO_AggressiveAICtrl::UpdateChaseTargetToNearest()
@@ -93,7 +90,6 @@ void AAO_AggressiveAICtrl::UpdateChaseTargetToNearest()
 	if (NearestPlayer && NearestPlayer != ChaseTarget.Get())
 	{
 		SetChaseTarget(NearestPlayer);
-		AO_LOG(LogKSJ, Log, TEXT("%s: Chase target updated to nearest: %s"), *GetName(), *NearestPlayer->GetName());
 	}
 }
 
@@ -117,8 +113,6 @@ void AAO_AggressiveAICtrl::StartSearch()
 		SearchDuration,
 		false
 	);
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Started searching for %.1f seconds"), *GetName(), SearchDuration);
 }
 
 void AAO_AggressiveAICtrl::EndSearch()
@@ -137,8 +131,6 @@ void AAO_AggressiveAICtrl::EndSearch()
 	// 추격 대상 초기화
 	SetChaseTarget(nullptr);
 	LastKnownTargetLocation = FVector::ZeroVector;
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Search ended, returning to roam"), *GetName());
 }
 
 void AAO_AggressiveAICtrl::OnSearchTimerExpired()

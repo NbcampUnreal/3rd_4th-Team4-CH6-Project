@@ -8,7 +8,6 @@
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 UAO_EQS_Test_LineOfSight::UAO_EQS_Test_LineOfSight()
 {

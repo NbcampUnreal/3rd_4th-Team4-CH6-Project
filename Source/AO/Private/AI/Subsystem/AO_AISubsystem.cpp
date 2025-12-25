@@ -3,9 +3,9 @@
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "Item/AO_MasterItem.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "AI/Character/AO_Stalker.h"
 #include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 void UAO_AISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -27,7 +27,6 @@ void UAO_AISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		);
 	}
 
-	AO_LOG(LogKSJ, Log, TEXT("AISubsystem Initialized"));
 }
 
 void UAO_AISubsystem::Deinitialize()
@@ -90,7 +89,6 @@ bool UAO_AISubsystem::TryReserveItem(AAO_MasterItem* Item, AActor* Reserver)
 
 	ItemReservations.Add(Item, Reservation);
 
-	AO_LOG(LogKSJ, Log, TEXT("Item Reserved: %s by %s"), *Item->GetName(), *Reserver->GetName());
 	return true;
 }
 
@@ -103,7 +101,6 @@ void UAO_AISubsystem::ReleaseItem(AAO_MasterItem* Item)
 	}
 
 	ItemReservations.Remove(Item);
-	AO_LOG(LogKSJ, Log, TEXT("Item Released: %s"), *Item->GetName());
 }
 
 bool UAO_AISubsystem::IsItemReserved(AAO_MasterItem* Item) const
@@ -154,8 +151,6 @@ void UAO_AISubsystem::MarkItemAsRecentlyDropped(AAO_MasterItem* Item, float Cool
 
 	RecentlyDroppedItems.Add(Item, DropInfo);
 
-	AO_LOG(LogKSJ, Log, TEXT("Item marked as recently dropped: %s (Cooldown: %.1fs)"), 
-		*Item->GetName(), CooldownDuration);
 }
 
 bool UAO_AISubsystem::IsItemRecentlyDropped(AAO_MasterItem* Item) const
@@ -202,10 +197,6 @@ bool UAO_AISubsystem::TryReservePlayerForKidnap(AAO_PlayerCharacter* Player, AAc
 		const TWeakObjectPtr<AActor>* ExistingKidnapper = KidnappedPlayers.Find(Player);
 		if (ExistingKidnapper && ExistingKidnapper->IsValid())
 		{
-			AO_LOG(LogKSJ, Log, TEXT("TryReservePlayerForKidnap: Player %s already reserved by %s (requested by %s)"), 
-				*Player->GetName(), 
-				ExistingKidnapper->IsValid() ? *ExistingKidnapper->Get()->GetName() : TEXT("Invalid"),
-				*Kidnapper->GetName());
 		}
 		return false;
 	}
@@ -213,22 +204,18 @@ bool UAO_AISubsystem::TryReservePlayerForKidnap(AAO_PlayerCharacter* Player, AAc
 	// 최근 납치된 플레이어인지 확인 - 쿨다운 중이면 실패
 	if (IsPlayerRecentlyKidnapped(Player))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("TryReservePlayerForKidnap: Player %s is on cooldown"), *Player->GetName());
 		return false;
 	}
 
 	// Race condition 방지: Add 전에 다시 한 번 체크 (double-check)
 	if (IsPlayerBeingKidnapped(Player))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TryReservePlayerForKidnap: Player %s was reserved by another Insect between checks (race condition detected)"), *Player->GetName());
 		return false;
 	}
 
 	// 예약 추가
 	KidnappedPlayers.Add(Player, Kidnapper);
 
-	AO_LOG(LogKSJ, Log, TEXT("Player Reserved for Kidnap: %s by %s"), 
-		*Player->GetName(), *Kidnapper->GetName());
 	return true;
 }
 
@@ -241,7 +228,6 @@ void UAO_AISubsystem::ReleasePlayerFromKidnap(AAO_PlayerCharacter* Player)
 	}
 
 	KidnappedPlayers.Remove(Player);
-	AO_LOG(LogKSJ, Log, TEXT("Player Released from Kidnap: %s"), *Player->GetName());
 }
 
 bool UAO_AISubsystem::IsPlayerBeingKidnapped(AAO_PlayerCharacter* Player) const
@@ -355,7 +341,7 @@ FVector UAO_AISubsystem::FindLocationFarthestFromPlayers(const FVector& Origin, 
 	const int32 NumSamples = 16;
 	for (int32 i = 0; i < NumSamples; ++i)
 	{
-		const float Angle = (2.f * PI * i) / NumSamples;
+		const float Angle = (2.f * UE_PI * i) / NumSamples;
 		const FVector SampleDir = FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f);
 		const FVector SamplePoint = Origin + SampleDir * SearchRadius;
 
@@ -380,6 +366,32 @@ FVector UAO_AISubsystem::FindLocationFarthestFromPlayers(const FVector& Origin, 
 	}
 
 	return BestLocation;
+}
+
+TArray<FVector> UAO_AISubsystem::GetAllStalkerLocations(AActor* ExcludeStalker) const
+{
+	TArray<FVector> Locations;
+
+	UWorld* World = GetWorld();
+	if (!ensure(World))
+	{
+		return Locations;
+	}
+
+	// 모든 Stalker 캐릭터의 위치 수집
+	TArray<AActor*> StalkerActors;
+	UGameplayStatics::GetAllActorsOfClass(World, AAO_Stalker::StaticClass(), StalkerActors);
+
+	Locations.Reserve(StalkerActors.Num());
+	for (AActor* Actor : StalkerActors)
+	{
+		if (Actor && Actor != ExcludeStalker)
+		{
+			Locations.Add(Actor->GetActorLocation());
+		}
+	}
+
+	return Locations;
 }
 
 void UAO_AISubsystem::CleanupExpiredReservations()

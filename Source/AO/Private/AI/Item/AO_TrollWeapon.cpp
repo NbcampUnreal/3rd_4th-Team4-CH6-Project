@@ -5,7 +5,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "AO_Log.h"
 
 AAO_TrollWeapon::AAO_TrollWeapon()
 {
@@ -46,14 +45,12 @@ bool AAO_TrollWeapon::PickupByTroll(AAO_Troll* Troll)
 {
 	if (!Troll)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("PickupByTroll: Troll is null"));
 		return false;
 	}
 
 	// 이미 다른 Troll이 소지 중인 경우
 	if (OwningTroll.IsValid() && OwningTroll.Get() != Troll)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("PickupByTroll: Weapon already owned by %s"), *OwningTroll->GetName());
 		return false;
 	}
 
@@ -72,7 +69,6 @@ bool AAO_TrollWeapon::PickupByTroll(AAO_Troll* Troll)
 		AttachToComponent(TrollMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
 	}
 
-	AO_LOG(LogKSJ, Log, TEXT("Weapon picked up by %s"), *Troll->GetName());
 	return true;
 }
 
@@ -94,8 +90,6 @@ void AAO_TrollWeapon::Drop()
 
 	// 물리 시뮬레이션 활성화 (약간의 낙하)
 	SetPhysicsEnabled(true);
-
-	AO_LOG(LogKSJ, Log, TEXT("Weapon dropped by %s"), PreviousOwner ? *PreviousOwner->GetName() : TEXT("Unknown"));
 }
 
 void AAO_TrollWeapon::OnRep_OwningTroll()

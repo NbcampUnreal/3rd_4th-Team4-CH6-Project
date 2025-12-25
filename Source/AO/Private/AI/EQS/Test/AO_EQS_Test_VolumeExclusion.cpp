@@ -4,7 +4,6 @@
 #include "AI/Area/AO_Area_SpawnRestriction.h"
 #include "EnvironmentQuery/Items/EnvQueryItemType.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 UAO_EQS_Test_VolumeExclusion::UAO_EQS_Test_VolumeExclusion()
 {

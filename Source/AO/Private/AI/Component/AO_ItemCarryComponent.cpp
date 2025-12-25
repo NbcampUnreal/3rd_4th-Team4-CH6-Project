@@ -7,7 +7,6 @@
 #include "Item/AO_MasterItem.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
-#include "AO_Log.h"
 
 UAO_ItemCarryComponent::UAO_ItemCarryComponent()
 {
@@ -49,13 +48,11 @@ bool UAO_ItemCarryComponent::TryPickupItem(AAO_MasterItem* Item)
 
 	if (IsCarryingItem())
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("Already carrying an item"));
 		return false;
 	}
 
 	if (!CanPickupItem(Item))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("Cannot pickup item: %s"), *Item->GetName());
 		return false;
 	}
 
@@ -64,7 +61,6 @@ bool UAO_ItemCarryComponent::TryPickupItem(AAO_MasterItem* Item)
 	{
 		if (!Subsystem->TryReserveItem(Item, GetOwner()))
 		{
-			AO_LOG(LogKSJ, Warning, TEXT("Item already reserved by another AI"));
 			return false;
 		}
 	}
@@ -79,7 +75,6 @@ bool UAO_ItemCarryComponent::TryPickupItem(AAO_MasterItem* Item)
 			CarriedItem = Item;
 			OnItemPickedUp.Broadcast(Item);
 
-			AO_LOG(LogKSJ, Log, TEXT("Item Picked Up: %s"), *Item->GetName());
 			return true;
 		}
 	}
@@ -132,8 +127,6 @@ void UAO_ItemCarryComponent::DropItem()
 
 	CarriedItem = nullptr;
 	OnItemDropped.Broadcast(DroppedItem);
-
-	AO_LOG(LogKSJ, Log, TEXT("Item Dropped: %s"), *DroppedItem->GetName());
 }
 
 void UAO_ItemCarryComponent::ForceDropItem()
