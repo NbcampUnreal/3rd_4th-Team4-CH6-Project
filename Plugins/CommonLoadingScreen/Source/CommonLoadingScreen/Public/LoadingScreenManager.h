@@ -130,4 +130,6 @@ public:
 	/* JM : 로딩하려는 맵 이름 저장 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AO")
 	FString PendingMapName;
+
+	bool bAOLoadingRequested = false;
 };
