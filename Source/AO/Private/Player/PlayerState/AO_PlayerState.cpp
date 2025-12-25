@@ -152,14 +152,6 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
 {
 	CharacterCustomizingData = CustomizingData;
-	AO_LOG(LogKSH, Log, TEXT("PS - CustomizingData: MeshType: %d,"
-				   "HairOptionData: ParameterName: %s, OptionName: %s,"
-				   "ClothOptionData: ParameterName: %s, OptionName: %s"),
-				   CharacterCustomizingData.CharacterMeshType,
-				   *CharacterCustomizingData.HairOptionData.ParameterName,
-				   *CharacterCustomizingData.HairOptionData.OptionName,
-				   *CharacterCustomizingData.ClothOptionData.ParameterName,
-				   *CharacterCustomizingData.ClothOptionData.OptionName);
 }
 
 /* ==================== 이름 복제 ==================== */
