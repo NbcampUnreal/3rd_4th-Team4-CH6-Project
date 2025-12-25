@@ -38,6 +38,9 @@ void AAO_PlayerController_Lobby::BeginPlay()
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	GetWorldTimerManager().ClearTimer(FadeTimerHandle);
+	
 	Super::EndPlay(EndPlayReason);
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -173,13 +176,6 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 	                                FadeTime, false);
 
 	AO_LOG(LogKSH, Log, TEXT("OpenWardrobe End"));
-
-	// TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>();
-	//
-	// if (DelegateManager)
-	// {
-	// 	DelegateManager->Broadcast_OnOpenCustomizing();
-	// }
 }
 
 void AAO_PlayerController_Lobby::CloseWardrobe()
