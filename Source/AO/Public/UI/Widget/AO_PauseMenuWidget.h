@@ -13,7 +13,9 @@ class AO_API UAO_PauseMenuWidget : public UUserWidget
 
 public:
 	virtual void NativeConstruct() override;
-	void NativeOnInitialized();
+	virtual void NativeOnInitialized() override;
+	
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAO_OnPauseMenuRequestSettings);

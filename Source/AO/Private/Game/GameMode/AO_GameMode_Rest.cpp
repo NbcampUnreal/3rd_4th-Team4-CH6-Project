@@ -57,7 +57,9 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 		{
 			const FString LobbyPath = LobbyMap.ToString() + TEXT("?listen");
 			AO_GI->ResetRun();
-			World->ServerTravel(LobbyPath);
+			// World->ServerTravel(LobbyPath);
+			// JM : voice crash 막기 위해 확인 후 레벨이동 시작
+			RequestSynchronizedServerTravel(LobbyPath);
 		}
 		else
 		{
@@ -75,5 +77,7 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 
 	const FString Path = NextStageMap.ToString() + TEXT("?listen");
 	AO_LOG(LogJSH, Log, TEXT("RestExit: Travel to %s"), *Path);
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : Voice crash 막기 위해 확인 후 레벨이동 시작
+	RequestSynchronizedServerTravel(Path);
 }

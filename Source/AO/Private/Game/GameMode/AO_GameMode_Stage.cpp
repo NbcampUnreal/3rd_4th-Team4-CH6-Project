@@ -159,7 +159,9 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	}
 
 	const FString Path = TargetMapName.ToString() + TEXT("?listen");
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : crash 
+	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
@@ -207,7 +209,9 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 	const FString Path = LobbyMapName.ToString() + TEXT("?listen");
 	AO_LOG(LogJSH, Log, TEXT("StageFail: Travel to %s"), *Path);
 
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : crash 방지
+	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::TriggerStageFailByTrainFuel()

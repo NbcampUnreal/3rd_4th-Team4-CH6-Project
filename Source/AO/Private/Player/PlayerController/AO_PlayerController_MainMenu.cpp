@@ -44,6 +44,9 @@ void AAO_PlayerController_MainMenu::BeginPlay()
 
 	AO_LOG(LogJSH, Log, TEXT("BeginPlay: UIOnly input mode applied, mouse cursor enabled"));
 
+	
+	/* UIStackManager에서 Push/Pop으로 생성/제거
 	// JM 리펙토링 : AO_PlayerController로 생성 로직 이동
 	CreateSettingsWidgetInstance(10, ESlateVisibility::Hidden);
+	*/
 }

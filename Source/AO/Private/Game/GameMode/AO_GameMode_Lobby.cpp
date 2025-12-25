@@ -336,5 +336,7 @@ void AAO_GameMode_Lobby::TravelToStage()
 	const FString Path = StageMapName.ToString() + TEXT("?listen");
 	AO_LOG(LogJSH, Log, TEXT("Lobby: TravelToStage → %s"), *Path);
 
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : 레벨 이동 시, voice crash 종료 후 이동하도록 함
+	RequestSynchronizedServerTravel(Path);
 }

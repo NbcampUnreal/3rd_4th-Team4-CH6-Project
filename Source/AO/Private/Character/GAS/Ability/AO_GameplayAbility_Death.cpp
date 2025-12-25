@@ -44,7 +44,7 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 		checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
 
 		Character->GetCharacterMovement()->DisableMovement();
-		Character->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		// Character->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		
 		if (BlockAbilitiesEffectClass)
 		{

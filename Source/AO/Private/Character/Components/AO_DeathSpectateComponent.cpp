@@ -32,14 +32,25 @@ void UAO_DeathSpectateComponent::BeginPlay()
 		BindDeathDelegate();
 	}
 
-	if (OwnerCharacter->IsLocallyControlled() && bStreamEnabled)
+	if (bStreamEnabled)
 	{
-		StartCameraSyncTimer();
+		if (APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController()))
+		{
+			if (PC->IsLocalController() && PC->GetNetMode() != NM_DedicatedServer)
+			{
+				StartCameraSyncTimer();
+			}
+		}
 	}
 }
 
 void UAO_DeathSpectateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (OwnerActor && OwnerActor->HasAuthority())
+	{
+		NotifySpectators_TargetInvalidated();
+	}
+	
 	StopCameraSyncTimer();
 
 	if (UWorld* World = GetWorld())
@@ -97,6 +108,8 @@ void UAO_DeathSpectateComponent::AddSpectator(APlayerController* SpectatorPC)
 	{
 		return;
 	}
+
+	AO_LOG(LogKH, Log, TEXT("Test"));
 
 	const int32 PrevNum = SpectatorSet.Num();
 	SpectatorSet.Add(SpectatorPC);
@@ -167,7 +180,7 @@ void UAO_DeathSpectateComponent::NotifySpectators_TargetInvalidated()
 		}
 	}
 
-	for (const TWeakObjectPtr<APlayerController>& PC : SpectatorSet)
+	for (const TWeakObjectPtr<APlayerController>& PC : Spectators)
 	{
 		AAO_PlayerController_Stage* SpectatorPC = Cast<AAO_PlayerController_Stage>(PC.Get());
 		if (!SpectatorPC)
@@ -248,6 +261,8 @@ void UAO_DeathSpectateComponent::StartCameraSyncTimer()
 	UWorld* World = GetWorld();
 	checkf(World, TEXT("Failed to get World"));
 
+	AO_LOG(LogKH, Log, TEXT("Test"));
+	
 	if (World->GetTimerManager().IsTimerActive(TimerHandle_CameraSync))
 	{
 		return;
@@ -257,7 +272,7 @@ void UAO_DeathSpectateComponent::StartCameraSyncTimer()
 		TimerHandle_CameraSync,
 		this,
 		&UAO_DeathSpectateComponent::SendCameraViewToServer,
-		0.05f,
+		0.033f,
 		true);
 }
 
@@ -301,10 +316,15 @@ void UAO_DeathSpectateComponent::OnRep_StreamEnabled()
 {
 	check(OwnerCharacter);
 
-	if (!OwnerCharacter->IsLocallyControlled())
+	if (APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController()))
 	{
-		return;
+		if (!PC->IsLocalController())
+		{
+			return;
+		}
 	}
+
+	AO_LOG(LogKH, Log, TEXT("Test"));
 
 	if (bStreamEnabled)
 	{
