@@ -82,9 +82,12 @@ void AAO_PressurePlate::ResetToInitialState()
 	CurrentProgress = 0.0f;
 	StopProgressTimer();
     
-	if (LinkedReactionActor)
+	for (AAO_PuzzleReactionActor* ReactionActor : LinkedReactionActors)
 	{
-		LinkedReactionActor->SetProgress(0.0f);
+		if (ReactionActor)
+		{
+			ReactionActor->SetProgress(0.0f);
+		}
 	}
 }
 
@@ -248,9 +251,12 @@ void AAO_PressurePlate::UpdateProgress()
 	}
     
 	// Reaction Actor에 진행도 전달
-	if (LinkedReactionActor)
+	for (AAO_PuzzleReactionActor* ReactionActor : LinkedReactionActors)
 	{
-		LinkedReactionActor->SetProgress(CurrentProgress);
+		if (ReactionActor)
+		{
+			ReactionActor->SetProgress(CurrentProgress);
+		}
 	}
 
 	// 목표에 도달하면 타이머 정지

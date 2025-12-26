@@ -69,6 +69,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Abilities")
     TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="Reaction|Attached Actors")
+	TArray<TObjectPtr<AActor>> AttachedActors;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Reaction")
     EPuzzleReactionMode ReactionMode = EPuzzleReactionMode::OneTime;
 
@@ -108,4 +111,8 @@ protected:
 private:
     FVector InitialLocation;
     FRotator InitialRotation;
+
+	TMap<TObjectPtr<AActor>, FTransform> AttachedActorOffsets;
+
+	void UpdateAttachedActors();
 };
