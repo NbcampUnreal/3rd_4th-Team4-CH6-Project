@@ -1,9 +1,13 @@
 #include "Item/VendingMachine/AO_VendingMachine.h"
+
+#include "EngineUtils.h"
 #include "Engine/DataTable.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Item/AO_MasterItem.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "Kismet/GameplayStatics.h"
+
+DEFINE_LOG_CATEGORY(LogShop);
 
 AAO_VendingMachine::AAO_VendingMachine()
 {
@@ -21,8 +25,6 @@ AAO_VendingMachine::AAO_VendingMachine()
 	{
 		InteractableComp->OnInteractionSuccess.AddDynamic(this, &AAO_VendingMachine::HandleInteractionSuccess);
 	}
-	
-	Cash = 20;
 }
 
 void AAO_VendingMachine::BeginPlay()
@@ -31,10 +33,25 @@ void AAO_VendingMachine::BeginPlay()
 
 	if (HasAuthority())
 	{
+		// ShopManager가 미지정이면 자동 검색
+		if (!ShopManager)
+		{
+			for (TActorIterator<AAO_ShopManager> It(GetWorld()); It; ++It)
+			{
+				ShopManager = *It;
+				UE_LOG(LogTemp, Warning, TEXT("[VM] Found ShopManager on server."));
+				break;
+			}
+		}
+
+		if (!ShopManager)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[VM] FAILED to find ShopManager"));
+		}
+
 		ApplyItemData();
 	}
 }
-
 void AAO_VendingMachine::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -91,15 +108,40 @@ void AAO_VendingMachine::ApplyItemData()
 
 void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
 {
-	if (Cash > ItemPrice)
-	{
-		Cash -= ItemPrice;
-		
-		FVector SpawnLocation = StaticMesh->GetComponentLocation() + GetActorForwardVector()* 40.f;
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+	UE_LOG(LogShop, Warning, TEXT("[VM] HandleInteractionSuccess Called. Authority=%s"),
+		HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
 
-		AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+	if (!HasAuthority())
+	{
+		UE_LOG(LogShop, Warning, TEXT("[VM] NO AUTHORITY → EXIT"));
+		return;
+	}
+
+	if (!ShopManager)
+	{
+		UE_LOG(LogShop, Error, TEXT("[VM] ShopManager is NULL!"));
+		return;
+	}
+
+	UE_LOG(LogShop, Warning, TEXT("[VM] Request Buy Item. Price=%d"), ItemPrice);
+
+	ShopManager->Server_BuyItem(ItemPrice, this);
+}
+
+
+void AAO_VendingMachine::SpawnVendingItem()
+{
+	UE_LOG(LogShop, Warning, TEXT("[VM] SpawnVendingItem Executed"));
+
+	FVector SpawnLocation = StaticMesh->GetComponentLocation()
+		+ GetActorForwardVector() * 40.f;
+
+	UE_LOG(LogShop, Warning, TEXT("[VM] Spawn Location = %s"), *SpawnLocation.ToString());
+
+	FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
+	AAO_MasterItem* DropItem =
+		GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
 			DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
 			SpawnTransform,
 			nullptr,
@@ -107,11 +149,10 @@ void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
 			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
 		);
 
-		if (DropItem)
-		{
-			DropItem->ItemID = MechineItemID;
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-		}
+	if (DropItem)
+	{
+		DropItem->ItemID = MechineItemID;
+		UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
 	}
 }
 
@@ -119,3 +160,17 @@ void AAO_VendingMachine::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
+
+void AAO_VendingMachine::Server_RequestBuy_Implementation(AActor* Interactor)
+{
+	if (!HasAuthority())
+		return;
+
+	if (!ShopManager)
+		return;
+
+	UE_LOG(LogShop, Warning, TEXT("[VM] Server_RequestBuy"));
+
+	ShopManager->Server_BuyItem(ItemPrice, this);
+}
+
