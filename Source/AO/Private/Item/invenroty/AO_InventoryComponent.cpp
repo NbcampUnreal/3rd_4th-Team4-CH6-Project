@@ -1,174 +1,167 @@
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "AbilitySystemComponent.h"
+#include "Item/invenroty/AO_InventorySubsystem.h"
+#include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
+#include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
-#include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
+#include "Item/invenroty/AO_InventoryListener.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 
 UAO_InventoryComponent::UAO_InventoryComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicatedByDefault(true);
-	
-	Slots.SetNum(5);
-	for (FInventorySlot& Slot : Slots)
-	{
-		Slot = FInventorySlot();
-	}
+    PrimaryComponentTick.bCanEverTick = false;
+    SetIsReplicatedByDefault(true);
+    
+    Slots.SetNum(5);
+    for (FInventorySlot& Slot : Slots)
+    {
+       Slot = FInventorySlot();
+    }
 
-	SelectedSlotIndex = 1;
-	EmptySlotList = {1, 2, 3, 4};
+    SelectedSlotIndex = 1;
+    EmptySlotList = {1, 2, 3, 4};
+
+	bDroppedOnDeath = false;
+}
+
+void UAO_InventoryComponent::BeginPlay()
+{
+	Super::BeginPlay();
+		
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn) return;
+
+	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController());
+	if (!PC || !PC->IsLocalController())
+		return;
+
+	if (ULocalPlayer* LP = PC->GetLocalPlayer())
+	{
+		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
+		{
+			Subsystem->RegisterInventory(this);
+		}
+	}
+}
+
+void UAO_InventoryComponent::RegisterToSubsystem()
+{
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	if (!Pawn) return;
+
+	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+	if (!PC || !PC->IsLocalController())
+		return;
+
+	if (ULocalPlayer* LP = PC->GetLocalPlayer())
+	{
+		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Register Inventory to Subsystem"));
+			Subsystem->RegisterInventory(this);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("LocalPlayer is null"));
+	}
 }
 
 void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
 {
-	if (!PlayerInputComponent)
-	{
-		return;
-	}
+	if (Slots.Num() == 0) return;
 
-	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-	if (!EIC)
-	{
-		return;
-	}
-	if (IA_Select_inventory_Slot)
-	{
-		EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &UAO_InventoryComponent::SelectInventorySlot);
-	}
-	if (IA_UseItem)
-	{
-		EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnLeftClick);
-	}
-	if (IA_DropItem)
-	{
-		EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnRightClick);	
-	}
+    if (!PlayerInputComponent) return;
+    UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+    if (!EIC) return;
+
+    if (IA_Select_inventory_Slot) EIC->BindAction(IA_Select_inventory_Slot, ETriggerEvent::Started, this, &UAO_InventoryComponent::SelectInventorySlot);
+    if (IA_UseItem) EIC->BindAction(IA_UseItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnLeftClick);
+    if (IA_DropItem) EIC->BindAction(IA_DropItem, ETriggerEvent::Started, this, &UAO_InventoryComponent::OnRightClick); 
 }
 
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
 {
-	if (!IsValidSlotIndex(NewIndex))
-	{
-		//UE_LOG(LogTemp, Warning, TEXT("SERVER: Invalid slot index %d"), NewIndex);
-		return;
-	}
+	if (Slots.Num() == 0) return;
 
-	SelectedSlotIndex = NewIndex;
-	
-	if (OnInventoryUpdated.IsBound())
-	{
-		OnInventoryUpdated.Broadcast(Slots);
-	}
-
-	//UE_LOG(LogTemp, Verbose, TEXT("SERVER: SelectedSlotIndex set to %d"), SelectedSlotIndex);
+    if (!IsValidSlotIndex(NewIndex)) return;
+    SelectedSlotIndex = NewIndex;
+    
+    NotifyListeners();
+    if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }
 
 void UAO_InventoryComponent::OnLeftClick()
 {
-	if (GetOwnerRole() < ROLE_Authority)
-	{
-		UseInventoryItem_Server();
-	}
-	else
-	{
-		UseInventoryItem_Server_Implementation();
-	}
+    if (GetOwnerRole() < ROLE_Authority) UseInventoryItem_Server();
+    else UseInventoryItem_Server_Implementation();
 }
 
 void UAO_InventoryComponent::OnRightClick()
 {
-	if (GetOwnerRole() < ROLE_Authority)
-	{
-		DropInventoryItem_Server();
-	}
-	else
-	{
-		DropInventoryItem_Server_Implementation();
-	}
+    if (GetOwnerRole() < ROLE_Authority) DropInventoryItem_Server();
+    else DropInventoryItem_Server_Implementation();
 }
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
-	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-	if (GetOwnerRole() != ROLE_Authority) return;
-	
-	FInventorySlot OldSlot = Slots[SelectedSlotIndex];
-	
-	if (OldSlot.ItemID != "empty")
-	{
-		if (EmptySlotList.Num()>0)
-		{
-			int32 findEmptyNum = EmptySlotList[0];
-			EmptySlotList.Remove(findEmptyNum);
-			
-			Slots[findEmptyNum] = IncomingItem;
-			Slots[findEmptyNum].ItemType = IncomingItem.ItemType;
-			Slots[findEmptyNum].FuelAmount = IncomingItem.FuelAmount;
-			OnInventoryUpdated.Broadcast(Slots);
-		}
-		else
-		{			
-			Slots[SelectedSlotIndex] = IncomingItem;
-			Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
-			Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
-			OnInventoryUpdated.Broadcast(Slots);
+    if (!IsValidSlotIndex(SelectedSlotIndex) || GetOwnerRole() != ROLE_Authority) return;
+    
+    FInventorySlot OldSlot = Slots[SelectedSlotIndex];
+    if (OldSlot.ItemID != "empty")
+    {
+       if (EmptySlotList.Num() > 0)
+       {
+          int32 findEmptyNum = EmptySlotList[0];
+          EmptySlotList.Remove(findEmptyNum);
+          Slots[findEmptyNum] = IncomingItem;
+       }
+       else
+       {        
+          Slots[SelectedSlotIndex] = IncomingItem;
+          EmptySlotList.Remove(SelectedSlotIndex);
+          
+       	FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
+       	FRotator SpawnRotation = FRotator::ZeroRotator;
+       	FTransform SpawnTransform(SpawnRotation, SpawnLocation);
 
-			EmptySlotList.Remove(SelectedSlotIndex);
-			
-			FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-			FRotator SpawnRotation = FRotator::ZeroRotator;
-			FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+       	AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+			   DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+			   SpawnTransform,
+			   nullptr,
+			   nullptr,
+			   ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		   );
 
-			AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-				DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
-				SpawnTransform,
-				nullptr,
-				nullptr,
-				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-			);
-
-			if (DropItem)
-			{
-				DropItem->ItemID = OldSlot.ItemID;
-				UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-			}
-		}
-	}
-	else
-	{
-		Slots[SelectedSlotIndex] = IncomingItem;
-		Slots[SelectedSlotIndex].ItemType = IncomingItem.ItemType;
-		Slots[SelectedSlotIndex].FuelAmount = IncomingItem.FuelAmount;
-		OnInventoryUpdated.Broadcast(Slots);
-		
-		EmptySlotList.Remove(SelectedSlotIndex);
-		AAO_MasterItem* WorldItem = Cast<AAO_MasterItem>(Instigator);
-		if (WorldItem)
-		{
-			WorldItem->Destroy();
-		}
-	}
-	
-	/*
-	FString DebugMessage;
-	for (int32 Index : EmptySlotList)
-	{
-		DebugMessage += FString::Printf(TEXT("%d "), Index);
-	}
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, DebugMessage);
-	*/
+       	if (DropItem)
+       	{
+       		DropItem->ItemID = OldSlot.ItemID;
+       		UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+       	}
+       }
+    }
+    else
+    {
+       Slots[SelectedSlotIndex] = IncomingItem;
+       EmptySlotList.Remove(SelectedSlotIndex);
+       if (Instigator) Instigator->Destroy();
+    }
+    
+    NotifyListeners();
+    OnInventoryUpdated.Broadcast(Slots);
 }
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
 	{
-		/*
-		 GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "consume"); 
-		 */
-		
 		static const FString Context00(TEXT("Inventory Item Use"));
 		float AddAmount = 0.0f;
 		const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
@@ -274,8 +267,6 @@ void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 		{
 			DropItem->ItemID = CurrentSlot.ItemID;
 			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-		
-			// DropItem->FuelAmount = CurrentSlot.FuelAmount;
 		}
 		ClearSlot();
 	}
@@ -283,48 +274,151 @@ void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 
 void UAO_InventoryComponent::OnRep_Slots()
 {
-	//UE_LOG(LogTemp, Verbose, TEXT("CLIENT: OnRep_Slots called (Owner: %s)"), *GetOwner()->GetName());
-	
-	if (OnInventoryUpdated.IsBound())
-	{
-		OnInventoryUpdated.Broadcast(Slots);
-	}
+    NotifyListeners();
+    if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }
 
 void UAO_InventoryComponent::OnRep_SelectedIndex()
 {
-	/*UE_LOG(LogTemp, Verbose, TEXT("CLIENT: SelectedSlotIndex updated to: %d (Owner: %s)"),
-		   SelectedSlotIndex,
-		   *GetOwner()->GetName());*/
+    NotifyListeners();
+}
+
+void UAO_InventoryComponent::BindInvenCompListener(UObject* Listener)
+{
+    if (!IsValid(Listener) || !Listener->GetClass()->ImplementsInterface(UAO_InventoryListener::StaticClass())) return;
+
+    InvenCompListeners.AddUnique(Listener);
+	
+    IAO_InventoryListener::Execute_OnSelectChanged(Listener, SelectedSlotIndex);
+    IAO_InventoryListener::Execute_OnSlotChanged(Listener, Slots);
+}
+
+void UAO_InventoryComponent::NotifyListeners()
+{
+    for (int32 i = InvenCompListeners.Num() - 1; i >= 0; --i)
+    {
+        if (InvenCompListeners[i].IsValid())
+        {
+            IAO_InventoryListener::Execute_OnSelectChanged(InvenCompListeners[i].Get(), SelectedSlotIndex);
+            IAO_InventoryListener::Execute_OnSlotChanged(InvenCompListeners[i].Get(), Slots);
+        }
+        else
+        {
+            InvenCompListeners.RemoveAt(i);
+        }
+    }
 }
 
 void UAO_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UAO_InventoryComponent, Slots);
-	DOREPLIFETIME(UAO_InventoryComponent, SelectedSlotIndex);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(UAO_InventoryComponent, Slots);
+    DOREPLIFETIME(UAO_InventoryComponent, SelectedSlotIndex);
 }
 
 void UAO_InventoryComponent::ClearSlot()
 {
-	Slots[SelectedSlotIndex] = FInventorySlot();
-	
-	if (OnInventoryUpdated.IsBound())
-	{
-		OnInventoryUpdated.Broadcast(Slots);
-	}
-	EmptySlotList.Add(SelectedSlotIndex);
+    Slots[SelectedSlotIndex] = FInventorySlot();
+    EmptySlotList.Add(SelectedSlotIndex);
+    NotifyListeners();
+    if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }
 
 //ms_inventory key binding
 void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("INPUT BINDING SUCCESS! Raw Slot Value (Float): %f"), Value.Get<float>());
+    int32 SlotIndex = FMath::RoundToInt(Value.Get<float>()); 
+    ServerSetSelectedSlot(SlotIndex);
+    OnSelectSlotUpdated.Broadcast(SlotIndex);
+}
+
+void UAO_InventoryComponent::CharDead()
+{
+	if (bDroppedOnDeath)
+		return;
+
+	bDroppedOnDeath = true;
 	
-	float SlotIndexAsFloat = Value.Get<float>();
-	int32 SlotIndex = FMath::RoundToInt(SlotIndexAsFloat); 
-	
-	ServerSetSelectedSlot(SlotIndex);
-	OnSelectSlotUpdated.Broadcast(SlotIndex);
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+
+	for (int32 i = 0; i < Slots.Num(); i++)
+	{
+		if (!IsValidSlotIndex(i))
+			continue;
+
+		const FInventorySlot& CurrentSlot = Slots[i];
+
+		if (CurrentSlot.ItemID == "empty")
+			continue;
+		
+		FVector SpawnLocation =
+		GetOwner()->GetActorLocation() +
+		GetOwner()->GetActorForwardVector() * 50.f +
+		FVector(0.f, i * 20.f, 0.f);
+
+		FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
+		FActorSpawnParameters Params;
+		Params.Owner = GetOwner();
+		Params.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		AAO_MasterItem* DropItem =
+			GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+				DroppableItemClass,
+				SpawnTransform,
+				GetOwner(),
+				nullptr,
+				Params.SpawnCollisionHandlingOverride
+			);
+
+		if (DropItem)
+		{
+			DropItem->ItemID = CurrentSlot.ItemID;
+			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+
+			Slots[i].ItemID = "empty";
+		}
+	}
+}
+
+void UAO_InventoryComponent::StoreToPlayerState()
+{
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+
+	if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+	{
+		if (APlayerState* PS = Character->GetPlayerState())
+		{
+			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
+			{
+				AO_PS->PersistentInventory = Slots;
+			}
+		}
+	}
+}
+
+void UAO_InventoryComponent::ApplySlotsFromSave(
+	const TArray<FInventorySlot>& NewSlots)
+{
+	if (NewSlots.Num() == 0)
+	{
+		return;
+	}
+
+	Slots = NewSlots;
+	EmptySlotList.Empty();
+
+	for (int32 i = 0; i < Slots.Num(); ++i)
+	{
+		if (Slots[i].ItemID == "empty")
+			EmptySlotList.Add(i);
+	}
+
+	NotifyListeners();
+
+	if (OnInventoryUpdated.IsBound())
+		OnInventoryUpdated.Broadcast(Slots);
 }
