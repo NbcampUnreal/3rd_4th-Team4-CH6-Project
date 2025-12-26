@@ -232,11 +232,11 @@ void UAO_DeathSpectateComponent::ClientRPC_HandleDeathView_Implementation()
 {
 	check(OwnerCharacter);
 
-	if (USpringArmComponent* Arm = OwnerCharacter->GetSpringArm())
-	{
-		Arm->TargetArmLength += OwnerCharacter->DeathCameraArmOffset;
-		Arm->SocketOffset = FVector::ZeroVector;
-	}
+	//if (USpringArmComponent* Arm = OwnerCharacter->GetSpringArm())
+	//{
+	//	Arm->TargetArmLength += OwnerCharacter->DeathCameraArmOffset;
+	//	Arm->SocketOffset = FVector::ZeroVector;
+	//}
 
 	if (AAO_PlayerController_Stage* PC = Cast<AAO_PlayerController_Stage>(OwnerCharacter->GetController()))
 	{

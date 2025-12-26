@@ -523,8 +523,6 @@ void AAO_PlayerController_InGameBase::InitCameraManager(APawn* InPawn)
 	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(InPawn);
 	checkf(PlayerCharacter, TEXT("Character not found"));
 
-	AO_LOG(LogKH, Log, TEXT("Called InitCameraManager"));
-
 	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
 	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
 
