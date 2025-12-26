@@ -363,6 +363,7 @@ void UAO_UIStackManager::ApplyFallbackPolicy(APlayerController* PC)
 		// 캐릭터 조작은 막기
 		PC->SetIgnoreLookInput(true);
 		PC->SetIgnoreMoveInput(true);
+		//TODO: 앉기 점프 등 확인 요망
 
 		UWidgetBlueprintLibrary::SetFocusToGameViewport();
 		PC->FlushPressedKeys();
