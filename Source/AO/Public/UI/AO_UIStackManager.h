@@ -100,6 +100,7 @@ public:
 	void PopByClass(APlayerController* PC, TSubclassOf<UUserWidget> WidgetClass);
 
 	// Pause 토글 (ESC 단일 경로)
+	UFUNCTION(BlueprintCallable, Category = "AO|UIStack|Pause")
 	void TryTogglePauseMenu(APlayerController* PC);
 
 public:
