@@ -1,16 +1,51 @@
+// AO_GA_AIAttackBase.cpp
+
 #include "AI/GAS/Ability/AO_GA_AIAttackBase.h"
+#include "AI/Base/AO_AICharacterBase.h"
+#include "Character/Combat/AO_MeleeHitEventPayload.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 UAO_GA_AIAttackBase::UAO_GA_AIAttackBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+
+	KnockdownHitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Knockdown"));
+	DefaultHitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Light"));
+}
+
+bool UAO_GA_AIAttackBase::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	AAO_AICharacterBase* AIChar = Cast<AAO_AICharacterBase>(ActorInfo->AvatarActor.Get());
+	if (!AIChar)
+	{
+		return false;
+	}
+
+	// 기절 상태면 불가
+	if (AIChar->IsStunned())
+	{
+		return false;
+	}
+
+	// 이미 공격 중이면 불가
+	if (AIChar->IsAttacking())
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UAO_GA_AIAttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -21,156 +56,213 @@ void UAO_GA_AIAttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
-    // 히트 이벤트 대기 (몽타주 Notify에서 Event.Combat.Confirm을 보내야 함)
-    UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-        this,
-        FGameplayTag::RequestGameplayTag(FName("Event.Combat.Confirm")),
-        nullptr,
-        false,
-        false
-    );
-    if (WaitEventTask)
-    {
-        WaitEventTask->EventReceived.AddDynamic(this, &UAO_GA_AIAttackBase::OnHitConfirmEvent);
-        WaitEventTask->ReadyForActivation();
-    }
-
-    UAnimMontage* MontageToPlay = GetMontageToPlay();
-	if (MontageToPlay)
+	AAO_AICharacterBase* AIChar = Cast<AAO_AICharacterBase>(ActorInfo->AvatarActor.Get());
+	if (!AIChar)
 	{
-		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this,
-			NAME_None,
-			MontageToPlay
-		);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-		Task->OnBlendOut.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCompleted);
-		Task->OnCompleted.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCompleted);
-		Task->OnInterrupted.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCancelled);
-		Task->OnCancelled.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCancelled);
+	// 1. 공격 설정 가져오기
+	CurrentAttackConfig = AIChar->GetCurrentAttackConfig();
 
-		Task->ReadyForActivation();
+	if (!CurrentAttackConfig.AttackMontage)
+	{
+		// 몽타주가 없으면 즉시 종료
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	// 2. 공격 상태 설정
+	AIChar->SetIsAttacking(true);
+
+	// 3. 히트 이벤트 대기 Task (AnimNotify)
+	UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		FGameplayTag::RequestGameplayTag(FName("Event.Combat.Confirm")),
+		nullptr,
+		false,
+		false
+	);
+
+	if (WaitEventTask)
+	{
+		WaitEventTask->EventReceived.AddDynamic(this, &UAO_GA_AIAttackBase::OnHitConfirmEvent);
+		WaitEventTask->ReadyForActivation();
+	}
+
+	// 4. 몽타주 재생 Task
+	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+		this,
+		NAME_None,
+		CurrentAttackConfig.AttackMontage
+	);
+
+	if (MontageTask)
+	{
+		MontageTask->OnCompleted.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCompleted);
+		MontageTask->OnCancelled.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCancelled);
+		MontageTask->OnInterrupted.AddDynamic(this, &UAO_GA_AIAttackBase::OnMontageCancelled);
+		MontageTask->ReadyForActivation();
 	}
 	else
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 	}
 }
 
 void UAO_GA_AIAttackBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
+	// 공격 상태 해제
+	if (AAO_AICharacterBase* AIChar = Cast<AAO_AICharacterBase>(ActorInfo->AvatarActor.Get()))
+	{
+		AIChar->SetIsAttacking(false);
+	}
 
-UAnimMontage* UAO_GA_AIAttackBase::GetMontageToPlay() const
-{
-    return AttackMontage;
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UAO_GA_AIAttackBase::OnHitConfirmEvent(FGameplayEventData Payload)
 {
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor) return;
+	AAO_AICharacterBase* AIChar = Cast<AAO_AICharacterBase>(GetAvatarActorFromActorInfo());
+	if (!AIChar) return;
 
-    FVector Start = AvatarActor->GetActorLocation();
-    FVector End = Start + (AvatarActor->GetActorForwardVector() * TraceDistance);
-    
-    TArray<FHitResult> HitResults;
-    TArray<AActor*> IgnoreActors;
-    IgnoreActors.Add(AvatarActor);
+	FVector TraceStart;
+	FVector TraceEnd;
+	float TraceRadius = CurrentAttackConfig.AttackRadius;
 
-    bool bHit = UKismetSystemLibrary::SphereTraceMulti(
-        GetWorld(),
-        Start,
-        End,
-        TraceRadius,
-        UEngineTypes::ConvertToTraceType(ECC_Pawn),
-        false,
-        IgnoreActors,
-        bShowDebugTrace ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
-        HitResults,
-        true,
-        FLinearColor::Red,
-        FLinearColor::Green,
-        1.0f
-    );
+	// 1. Payload에서 Trace 정보 가져오기 시도
+	const UAO_MeleeHitEventPayload* HitPayload = Cast<UAO_MeleeHitEventPayload>(Payload.OptionalObject);
+	if (HitPayload)
+	{
+		TraceStart = HitPayload->Params.TraceStart;
+		TraceEnd = HitPayload->Params.TraceEnd;
+	}
+	else
+	{
+		// 2. Fallback: Payload 없으면 정면으로 Trace
+		TraceStart = AIChar->GetActorLocation();
+		TraceEnd = TraceStart + (AIChar->GetActorForwardVector() * CurrentAttackConfig.AttackDistance);
+	}
 
-    if (bHit)
-    {
-        // 중복 피격 방지
-        TSet<AActor*> HitActors;
+	// Sphere Trace 수행
+	TArray<FHitResult> HitResults;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(AIChar);
 
-        for (const FHitResult& Hit : HitResults)
-        {
-            AActor* HitActor = Hit.GetActor();
-            if (HitActor && !HitActors.Contains(HitActor))
-            {
-                // 플레이어만 타격 (필요 시 팀 체크 추가 가능)
-                if (Cast<AAO_PlayerCharacter>(HitActor))
-                {
-                    HitActors.Add(HitActor);
-                    OnTargetHit(HitActor, AvatarActor);
-                }
-            }
-        }
-    }
+	bool bHit = UKismetSystemLibrary::SphereTraceMulti(
+		GetWorld(),
+		TraceStart,
+		TraceEnd,
+		TraceRadius,
+		UEngineTypes::ConvertToTraceType(TraceChannel),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration, // 디버깅용 (필요 시 None으로 변경)
+		HitResults,
+		true,
+		FLinearColor::Red,
+		FLinearColor::Green,
+		1.f
+	);
+
+	if (bHit)
+	{
+		TSet<AActor*> ProcessedActors;
+
+		for (const FHitResult& Hit : HitResults)
+		{
+			AActor* HitActor = Hit.GetActor();
+			if (!HitActor || ProcessedActors.Contains(HitActor)) continue;
+
+			// 플레이어만 타격 (필요 시 조건 확장 가능)
+			if (Cast<AAO_PlayerCharacter>(HitActor))
+			{
+				ProcessedActors.Add(HitActor);
+				ApplyDamageAndKnockback(HitActor, AIChar, CurrentAttackConfig);
+			}
+		}
+	}
+}
+
+void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* InstigatorActor, const FEnemyAttackConfig& Config)
+{
+	if (!TargetActor || !InstigatorActor) return;
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+
+	if (!SourceASC || !TargetASC) return;
+
+	// 무적 확인
+	if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"))))
+	{
+		return;
+	}
+
+	// 1. 데미지 적용
+	if (Config.DamageEffectClass)
+	{
+		FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+		Context.AddInstigator(InstigatorActor, InstigatorActor);
+
+		FGameplayEffectSpecHandle DamageSpec = SourceASC->MakeOutgoingSpec(Config.DamageEffectClass, 1.f, Context);
+		if (DamageSpec.IsValid())
+		{
+			// SetByCaller로 데미지 전달
+			const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
+			DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, Config.Damage);
+			SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
+		}
+	}
+
+	// 2. 넉백 적용
+	ACharacter* TargetChar = Cast<ACharacter>(TargetActor);
+	if (TargetChar && Config.KnockbackStrength > 0.f)
+	{
+		FVector KnockbackDir = (TargetActor->GetActorLocation() - InstigatorActor->GetActorLocation()).GetSafeNormal();
+		KnockbackDir.Z = 0.2f; // 약간 위로
+		KnockbackDir.Normalize();
+
+		if (UCharacterMovementComponent* CMC = TargetChar->GetCharacterMovement())
+		{
+			CMC->SetMovementMode(MOVE_Falling);
+		}
+		TargetChar->LaunchCharacter(KnockbackDir * Config.KnockbackStrength, true, true);
+	}
+
+	// 3. Hit React 이벤트 전송
+	SendHitReactEvent(TargetActor, InstigatorActor, Config.Damage);
+
+	// 4. 자식 클래스 오버라이드 콜백
+	OnTargetHit(TargetActor, InstigatorActor);
 }
 
 void UAO_GA_AIAttackBase::OnTargetHit(AActor* TargetActor, AActor* InstigatorActor)
 {
-    if (!TargetActor || !InstigatorActor) return;
+	// 기본 구현 없음
+}
 
-    UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+void UAO_GA_AIAttackBase::SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor, float Damage)
+{
+	if (!TargetActor) return;
 
-    // 1. 데미지 GE 적용
-    if (DamageEffectClass && SourceASC && TargetASC)
-    {
-        // 무적 확인 등은 여기서 생략 (필요 시 추가)
-        FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
-        Context.AddInstigator(InstigatorActor, InstigatorActor);
+	// 데미지 크기나 설정에 따라 태그 결정 (여기서는 넉백 강도가 높으면 Knockdown으로 간주하는 등 로직 추가 가능)
+	// 단순화를 위해 Config에 따라 결정하거나 기본값 사용
+	
+	FGameplayTag HitTag = DefaultHitReactTag;
+	if (CurrentAttackConfig.KnockbackStrength >= 400.f) // 임시 기준: 넉백이 강하면 넉다운
+	{
+		HitTag = KnockdownHitReactTag;
+	}
 
-        FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
-        if (SpecHandle.IsValid())
-        {
-            // SetByCaller로 데미지 전달
-            FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
-            SpecHandle.Data.Get()->SetSetByCallerMagnitude(DamageTag, DamageAmount);
-            
-            SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-        }
-    }
+	FGameplayEventData EventData;
+	EventData.EventTag = HitTag;
+	EventData.Instigator = InstigatorActor;
+	EventData.Target = TargetActor;
+	EventData.EventMagnitude = Damage;
 
-    // 2. 넉백 적용
-    if (KnockbackStrength > 0.f)
-    {
-        ACharacter* TargetChar = Cast<ACharacter>(TargetActor);
-        if (TargetChar)
-        {
-            if (UCharacterMovementComponent* MoveComp = TargetChar->GetCharacterMovement())
-            {
-                MoveComp->SetMovementMode(MOVE_Falling);
-            }
-            
-            FVector KnockbackDir = InstigatorActor->GetActorForwardVector();
-            KnockbackDir.Z = KnockbackUpForce;
-            KnockbackDir.Normalize();
-            
-            TargetChar->LaunchCharacter(KnockbackDir * KnockbackStrength, true, true);
-        }
-    }
-
-    // 3. HitReact 이벤트 전송 (넉다운, 경직 등)
-    if (HitReactTag.IsValid())
-    {
-        FGameplayEventData EventData;
-        EventData.EventTag = HitReactTag;
-        EventData.Instigator = InstigatorActor;
-        EventData.Target = TargetActor;
-        EventData.EventMagnitude = DamageAmount;
-
-        UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetActor, HitReactTag, EventData);
-    }
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetActor, HitTag, EventData);
 }
 
 void UAO_GA_AIAttackBase::OnMontageCompleted()
@@ -182,4 +274,3 @@ void UAO_GA_AIAttackBase::OnMontageCancelled()
 {
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
-

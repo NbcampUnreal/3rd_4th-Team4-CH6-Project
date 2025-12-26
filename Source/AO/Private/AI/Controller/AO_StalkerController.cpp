@@ -213,3 +213,36 @@ FVector AAO_StalkerController::FindRetreatLocation()
 	return NavLocation.Location;
 }
 
+void AAO_StalkerController::OnAttackFinished()
+{
+	bIsRetreating = true;
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(RetreatTimerHandle, this, &AAO_StalkerController::OnRetreatTimerExpired, RetreatDuration, false);
+	}
+}
+
+void AAO_StalkerController::OnRetreatTimerExpired()
+{
+	bIsRetreating = false;
+}
+
+bool AAO_StalkerController::IsPlayerLookingAtMe(AActor* TargetActor, float ToleranceDegrees) const
+{
+	APawn* MyPawn = GetPawn();
+	if (!MyPawn || !TargetActor)
+	{
+		return false;
+	}
+
+	FVector ToStalker = (MyPawn->GetActorLocation() - TargetActor->GetActorLocation()).GetSafeNormal();
+	FVector TargetForward = TargetActor->GetActorForwardVector();
+
+	// 내적 계산
+	float Dot = FVector::DotProduct(TargetForward, ToStalker);
+	float Threshold = FMath::Cos(FMath::DegreesToRadians(ToleranceDegrees));
+
+	// 내적값이 임계값보다 크면 보고 있는 것
+	return Dot > Threshold;
+}

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "AI/AO_AITypes.h"
 #include "AO_AICharacterBase.generated.h"
 
 class UAbilitySystemComponent;
@@ -52,6 +53,21 @@ public:
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "AO|AI|Debug")
 	void TestStunEnd();
 
+	// --- 공통 공격 인터페이스 ---
+	
+	// 현재 수행해야 할 공격 설정 반환 (자식 클래스에서 오버라이드 필수)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AO|AI|Combat")
+	FEnemyAttackConfig GetCurrentAttackConfig() const;
+	virtual FEnemyAttackConfig GetCurrentAttackConfig_Implementation() const;
+
+	// 공격 상태 설정
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Combat")
+	virtual void SetIsAttacking(bool bAttacking);
+
+	// 공격 중인지 확인
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Combat")
+	virtual bool IsAttacking() const { return bIsAttacking; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -89,4 +105,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Movement")
 	float AlertMovementSpeed = 500.f;
+
+	// 공격 중 상태 플래그
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AO|AI|Combat")
+	bool bIsAttacking = false;
 };

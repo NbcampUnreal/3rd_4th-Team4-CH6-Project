@@ -79,10 +79,18 @@ protected:
 	// Mesh의 초기 RelativeRotation (복구용)
 	UPROPERTY()
 	FRotator InitialMeshRotation;
+
+	// Mesh의 초기 RelativeLocation (천장 오프셋 복구용)
+	UPROPERTY()
+	FVector InitialMeshRelativeLocation = FVector::ZeroVector;
 	
 	// 초기 Rotation 저장 여부
 	UPROPERTY()
 	bool bInitialRotationSaved = false;
+
+	// 초기 Location 저장 여부
+	UPROPERTY()
+	bool bInitialLocationSaved = false;
 
 	// 자동 전환 체크 타이머
 	UPROPERTY()

@@ -84,9 +84,15 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 					InitialMeshRotation = MeshComp->GetRelativeRotation();
 					bInitialRotationSaved = true;
 				}
+				// 초기 Location 저장 (한 번만)
+				if (!bInitialLocationSaved)
+				{
+					InitialMeshRelativeLocation = MeshComp->GetRelativeLocation();
+					bInitialLocationSaved = true;
+				}
 			}
 
-			// 천장 모드 진입 시 즉시 천장 위치로 이동 (회전도 함께 조정됨)
+			// 천장 모드 진입 시 즉시 천장 위치로 "보이도록" 보정 (회전/오프셋)
 			UpdateCeilingPosition(0.f, true); // 즉시 적용
 		}
 		else
@@ -95,37 +101,18 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 			MoveComp->GravityScale = 1.f;
 			MoveComp->SetMovementMode(MOVE_Walking);
 			
-			// Mesh 회전 복구
+			// Mesh 회전/위치 복구
 			if (MeshComp && bInitialRotationSaved)
 			{
 				MeshComp->SetRelativeRotation(InitialMeshRotation);
 			}
+			if (MeshComp && bInitialLocationSaved)
+			{
+				MeshComp->SetRelativeLocation(InitialMeshRelativeLocation);
+			}
 
 			// 자동 전환 체크 타이머 리셋
 			AutoTransitionCheckTimer = 0.f;
-
-			// 천장에서 바닥으로 떨어질 때 바닥 NavMesh로 위치 조정
-			if (OwnerCharacter)
-			{
-				UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
-				if (NavSys)
-				{
-					FNavLocation NavLocation;
-					FVector CurrentLoc = OwnerCharacter->GetActorLocation();
-					// 현재 위치에서 아래로 충분히 내려서 바닥 NavMesh 찾기
-					FVector ProjectionStart = CurrentLoc;
-					ProjectionStart.Z -= CeilingTraceDistance * 2.f;
-					FVector ProjectionExtent(500.f, 500.f, CeilingTraceDistance * 2.f);
-					
-					if (NavSys->ProjectPointToNavigation(ProjectionStart, NavLocation, ProjectionExtent))
-					{
-						// 바닥 NavMesh 위치로 이동 (Z만 조정, X, Y는 유지)
-						FVector NewLocation = OwnerCharacter->GetActorLocation();
-						NewLocation.Z = NavLocation.Location.Z;
-						OwnerCharacter->SetActorLocation(NewLocation, false, nullptr, ETeleportType::TeleportPhysics);
-					}
-				}
-			}
 		}
 	}
 }
@@ -218,36 +205,37 @@ void UAO_CeilingMoveComponent::UpdateCeilingPosition(float DeltaTime, bool bImme
 
 	if (bHit)
 	{
-		// 천장에 붙이기 - 캡슐 상단이 천장에 붙도록 계산
-		FVector TargetLoc = Hit.Location;
-		TargetLoc.Z -= (CapsuleHalfHeight + CeilingOffset);
+		// 핵심: NavMesh는 바닥에만 있으므로, Actor(캡슐)는 바닥 NavMesh를 따라 움직여야 한다.
+		// 천장 모드에서는 Actor를 천장으로 "텔레포트"하지 않고, Mesh만 위로 오프셋하여
+		// 시각적으로 천장에 붙어 보이게 만든다. (MoveTo/PathFollowing 안정화 목적)
 
-		// NavMesh 프로젝션된 X, Y를 사용하고 Z만 천장 높이로 조정
-		FVector NewLocation = FVector(NavMeshLocation.X, NavMeshLocation.Y, TargetLoc.Z);
-		
-		float NewZ;
-		if (bImmediate)
+		USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+		if (!MeshComp || !bInitialLocationSaved)
 		{
-			// 즉시 적용 (천장 모드 진입 시)
-			NewZ = TargetLoc.Z;
+			return;
 		}
-		else
+
+		// 천장에 붙어 보일 목표 Z (Actor를 옮길 경우의 목표 Z)
+		const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
+		const float DesiredMeshOffsetZ = DesiredActorZ - CurrentLoc.Z; // Actor는 그대로이므로 Mesh만 올림
+
+		float NewOffsetZ = DesiredMeshOffsetZ;
+		if (!bImmediate)
 		{
-			// 부드러운 보정 (Interp 속도 증가)
-			float InterpSpeed = 30.f;
-			NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetLoc.Z, DeltaTime, InterpSpeed);
+			// 부드러운 보정
+			const float InterpSpeed = 30.f;
+			const float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+			NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, DesiredMeshOffsetZ, DeltaTime, InterpSpeed);
 		}
-		
-		NewLocation.Z = NewZ;
-		
-		// 기울어진 천장에 맞춰 캡슐 회전 조정
+
+		// 기울어진 천장에 맞춰 Mesh 회전 조정
 		UpdateCapsuleRotationToCeiling(Hit.Normal);
+
+		// Mesh 위치 오프셋 적용 (X/Y는 유지)
+		FVector NewRelLoc = InitialMeshRelativeLocation;
+		NewRelLoc.Z += NewOffsetZ;
+		MeshComp->SetRelativeLocation(NewRelLoc);
 		
-		// Sweep을 사용하여 충돌 체크 (벽에 부딪히는 것 방지)
-		FHitResult SweepHit;
-		bool bMoved = OwnerCharacter->SetActorLocation(NewLocation, true, &SweepHit, ETeleportType::None);
-		
-		// 벽에 부딪혔으면 위치는 유지 (Controller가 경로를 재계산할 것)
 	}
 	else
 	{

@@ -12,7 +12,7 @@ UAO_GA_Werewolf_Attack::UAO_GA_Werewolf_Attack()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
 	
 	// 기본 HitReact 태그를 Heavy로 설정
-	HitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Heavy"));
+	DefaultHitReactTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Heavy"));
 }
 
 void UAO_GA_Werewolf_Attack::OnTargetHit(AActor* TargetActor, AActor* InstigatorActor)
@@ -32,7 +32,7 @@ void UAO_GA_Werewolf_Attack::OnTargetHit(AActor* TargetActor, AActor* Instigator
 			EventData.EventTag = HeavyHitReactTag;
 			EventData.Instigator = InstigatorActor;
 			EventData.Target = TargetActor;
-			EventData.EventMagnitude = DamageAmount;
+			EventData.EventMagnitude = CurrentAttackConfig.Damage;
 			
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(TargetActor, HeavyHitReactTag, EventData);
 		}

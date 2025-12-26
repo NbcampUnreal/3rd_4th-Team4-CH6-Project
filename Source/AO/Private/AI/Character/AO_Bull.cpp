@@ -30,6 +30,21 @@ AAO_Bull::AAO_Bull()
 
 	// AI Controller 설정
 	AIControllerClass = AAO_BullController::StaticClass();
+
+	// 근접 공격 기본값 설정
+	MeleeAttackConfig.Damage = 20.f;
+	MeleeAttackConfig.KnockbackStrength = 300.f;
+	MeleeAttackConfig.AttackRadius = 100.f;
+	MeleeAttackConfig.AttackDistance = 150.f;
+	MeleeAttackConfig.AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Combat.Melee"));
+}
+
+FEnemyAttackConfig AAO_Bull::GetCurrentAttackConfig_Implementation() const
+{
+	// 돌진 공격은 별도 GA(AO_GA_Bull_Charge)에서 처리하지만,
+	// 만약 추후 통합한다면 여기서 분기 처리 가능.
+	// 현재는 "일반 근접 공격" 요청 시 MeleeAttackConfig 반환.
+	return MeleeAttackConfig;
 }
 
 void AAO_Bull::BeginPlay()

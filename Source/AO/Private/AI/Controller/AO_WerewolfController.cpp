@@ -66,7 +66,9 @@ void AAO_WerewolfController::HandleHowlReceived(AActor* TargetActor)
 	if (!TargetPlayer) return;
 
 	bHasHowledOrJoined = true;
-	SetChaseTarget(TargetPlayer);
+	
+	// 단순히 타겟만 설정하는 것이 아니라, 추격 모드를 강제 시작
+	StartChase(TargetPlayer);
 
 	// Howl을 들었을 때의 로직 (StateTree에서 'HowlReceived' Condition이 true가 되어 Surround로 진입)
 	// Surround 모드로 전환은 PackCoordComp에서 자동으로 처리됨

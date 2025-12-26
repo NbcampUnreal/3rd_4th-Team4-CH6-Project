@@ -11,7 +11,7 @@
 UAO_GA_Werewolf_Howl::UAO_GA_Werewolf_Howl()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly; 
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated; 
 }
 
 void UAO_GA_Werewolf_Howl::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

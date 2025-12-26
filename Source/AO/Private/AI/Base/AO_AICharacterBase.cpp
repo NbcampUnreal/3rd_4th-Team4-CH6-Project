@@ -122,6 +122,17 @@ void AAO_AICharacterBase::TestStunEnd()
 	AbilitySystemComponent->CancelAbilities(&StunAbilityTags);
 }
 
+FEnemyAttackConfig AAO_AICharacterBase::GetCurrentAttackConfig_Implementation() const
+{
+	// 기본 구현은 빈 설정 반환
+	return FEnemyAttackConfig();
+}
+
+void AAO_AICharacterBase::SetIsAttacking(bool bAttacking)
+{
+	bIsAttacking = bAttacking;
+}
+
 void AAO_AICharacterBase::InitializeAbilitySystem()
 {
 	// GAS 초기화 - AbilitySystemComponent가 반드시 존재해야 함

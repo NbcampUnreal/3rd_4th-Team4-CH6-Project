@@ -36,6 +36,9 @@ public:
 	UFUNCTION()
 	void OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	// 공통 공격 인터페이스 오버라이드
+	virtual FEnemyAttackConfig GetCurrentAttackConfig_Implementation() const override;
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -67,5 +70,9 @@ protected:
 	// 데미지 Effect 클래스 (OnChargeOverlap에서 사용)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Bull|Combat")
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	// 근접 공격 설정 (신규 시스템)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Bull|Combat")
+	FEnemyAttackConfig MeleeAttackConfig;
 };
 
