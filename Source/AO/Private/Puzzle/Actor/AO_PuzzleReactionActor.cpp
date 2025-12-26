@@ -35,6 +35,21 @@ void AAO_PuzzleReactionActor::BeginPlay()
         InitialRotation = MeshComponent->GetRelativeRotation();
     }
 
+	AttachedActorOffsets.Empty();
+	if (MeshComponent)
+	{
+		FTransform MeshWorldTransform = MeshComponent->GetComponentTransform();
+        
+		for (AActor* Actor : AttachedActors)
+		{
+			if (!Actor) continue;
+            
+			// MeshComponent 기준 상대 Transform 저장
+			FTransform RelativeTransform = Actor->GetActorTransform().GetRelativeTransform(MeshWorldTransform);
+			AttachedActorOffsets.Add(Actor, RelativeTransform);
+		}
+	}
+
     if (HasAuthority() && AbilitySystemComponent)
     {
         AbilitySystemComponent->InitAbilityActorInfo(this, this);
@@ -214,6 +229,8 @@ void AAO_PuzzleReactionActor::UpdateTransform()
     MeshComponent->SetRelativeLocation(NewLocation);
     MeshComponent->SetRelativeRotation(NewRotation);
 
+	UpdateAttachedActors();
+
     // 목표에 도달했는지 체크
     bool bReachedTarget = FVector::Dist(NewLocation, DesiredLocation) < 0.1f && 
                           IsRotatorNearlyEqual(NewRotation, DesiredRotation, 0.5f);
@@ -286,4 +303,30 @@ bool AAO_PuzzleReactionActor::IsRotatorNearlyEqual(const FRotator& A, const FRot
     return FMath::Abs(FRotator::NormalizeAxis(A.Pitch - B.Pitch)) <= Tolerance &&
            FMath::Abs(FRotator::NormalizeAxis(A.Yaw - B.Yaw)) <= Tolerance &&
            FMath::Abs(FRotator::NormalizeAxis(A.Roll - B.Roll)) <= Tolerance;
+}
+
+void AAO_PuzzleReactionActor::UpdateAttachedActors()
+{
+	if (!MeshComponent)
+	{
+		return;
+	}
+    
+	// MeshComponent의 World Transform 기준으로 계산
+	FTransform MeshWorldTransform = MeshComponent->GetComponentTransform();
+    
+	for (const TPair<TObjectPtr<AActor>, FTransform>& Pair : AttachedActorOffsets)
+	{
+		AActor* AttachedActor = Pair.Key;
+		if (!AttachedActor)
+		{
+			continue;
+		}
+        
+		const FTransform& RelativeOffset = Pair.Value;
+        
+		FTransform NewWorldTransform = RelativeOffset * MeshWorldTransform;
+        
+		AttachedActor->SetActorTransform(NewWorldTransform);
+	}
 }

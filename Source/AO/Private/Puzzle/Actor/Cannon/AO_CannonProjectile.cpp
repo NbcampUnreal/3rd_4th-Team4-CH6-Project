@@ -10,6 +10,7 @@
 #include "AO_Log.h"
 #include "AI/Base/AO_AICharacterBase.h"
 #include "Puzzle/Actor/Cannon/AO_CannonProjectilePool.h"
+#include "Puzzle/Destructible/AO_DestructibleCacheActor.h"
 
 AAO_CannonProjectile::AAO_CannonProjectile()
 {
@@ -35,7 +36,8 @@ AAO_CannonProjectile::AAO_CannonProjectile()
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->ProjectileGravityScale = 0.5f;
 
-    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));     // TODO: 성준님꺼 PR 받아서 태그 확인해봐야 함(JM 작성)
+    StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));
+	DestructionTriggerTag = FGameplayTag::RequestGameplayTag(FName("Effect.Destruction.Triggered"));
 }
 
 void AAO_CannonProjectile::BeginPlay()
@@ -120,38 +122,43 @@ void AAO_CannonProjectile::Explode(const FVector& Location)
         Location,
         Location,
         FQuat::Identity,
-        ECC_Pawn,
+        ECC_WorldDynamic,
         FCollisionShape::MakeSphere(ExplosionRadius),
         QueryParams
     );
 
-    for (const FHitResult& HitResult : HitResults)
-    {
-        TObjectPtr<AActor> HitActor = HitResult.GetActor();
-        if (!HitActor)
-        {
-            continue;
-        }
+	for (const FHitResult& HitResult : HitResults)
+	{
+		TObjectPtr<AActor> HitActor = HitResult.GetActor();
+		if (!HitActor)
+		{
+			continue;
+		}
 
-        // Enemy에게만 Stun 게임플레이 이벤트
-    	TObjectPtr<AAO_AICharacterBase> Enemy = Cast<AAO_AICharacterBase>(HitActor);
-        if (!Enemy)
-        {
-            continue;
-        }
-    	
-    	if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Enemy))
-    	{
-    		if (TObjectPtr<UAbilitySystemComponent> ASC = ASI->GetAbilitySystemComponent())
-    		{
-    			FGameplayEventData EventData;
-    			EventData.Instigator = GetInstigator();
-    			EventData.Target = Enemy;
-
-    			ASC->HandleGameplayEvent(StunEventTag, &EventData);
-    		}
-    	}
-    }
+		// ASC가 있는 액터 처리
+		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(HitActor))
+		{
+			if (TObjectPtr<UAbilitySystemComponent> ASC = ASI->GetAbilitySystemComponent())
+			{
+				// Enemy Stun 처리
+				TObjectPtr<AAO_AICharacterBase> Enemy = Cast<AAO_AICharacterBase>(HitActor);
+				if (Enemy && StunEventTag.IsValid())
+				{
+					FGameplayEventData EventData;
+					EventData.Instigator = GetInstigator();
+					EventData.Target = Enemy;
+					ASC->HandleGameplayEvent(StunEventTag, &EventData);
+				}
+                
+				// DestructibleCacheActor 파괴 처리
+				TObjectPtr<AAO_DestructibleCacheActor> DestructibleActor = Cast<AAO_DestructibleCacheActor>(HitActor);
+				if (DestructibleActor && DestructionTriggerTag.IsValid())
+				{
+					ASC->AddLooseGameplayTag(DestructionTriggerTag);
+				}
+			}
+		}
+	}
 
     MulticastExplode(Location);
     ReturnToPool();
