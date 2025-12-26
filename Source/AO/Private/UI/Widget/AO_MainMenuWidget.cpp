@@ -12,46 +12,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "AO/AO_Log.h"
 
-void UAO_MainMenuWidget::NativeConstruct()
-{
-	Super::NativeConstruct();
-
-	if (Btn_Host)
-	{
-		Btn_Host->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Host);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Host is null"));
-	}
-
-	if (Btn_Join)
-	{
-		Btn_Join->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Join);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Join is null"));
-	}
-
-	if (Btn_Settings)
-	{
-		Btn_Settings->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Settings);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Settings is null"));
-	}
-
-	if (Btn_Quit)
-	{
-		Btn_Quit->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Quit);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Quit is null"));
-	}
-}
 
 void UAO_MainMenuWidget::OnClicked_Host()
 {
