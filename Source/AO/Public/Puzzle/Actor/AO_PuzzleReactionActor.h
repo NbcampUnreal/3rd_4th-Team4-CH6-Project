@@ -38,8 +38,8 @@ public:
     UFUNCTION(BlueprintCallable, Category="Reaction")
     void SetProgress(float Progress);
 
-	void ActivateReaction();
-	void DeactivateReaction();
+    virtual void ActivateReaction();
+	virtual void DeactivateReaction();
 
 protected:
     virtual void BeginPlay() override;
@@ -47,10 +47,10 @@ protected:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UFUNCTION()
-    void OnRep_IsActivated();
+    virtual void OnRep_IsActivated();
 
     UFUNCTION()
-    void OnRep_TargetProgress();
+    virtual void OnRep_TargetProgress();
 
 private:
     void OnTriggerTagChanged(const FGameplayTag Tag, int32 NewCount);
@@ -68,6 +68,9 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Abilities")
     TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="Reaction|Attached Actors")
+	TArray<TObjectPtr<AActor>> AttachedActors;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Reaction")
     EPuzzleReactionMode ReactionMode = EPuzzleReactionMode::OneTime;
@@ -103,8 +106,13 @@ protected:
     UPROPERTY(ReplicatedUsing=OnRep_TargetProgress, BlueprintReadOnly, Category="Reaction")
     float TargetProgress = 0.0f;
 
+	FTimerHandle TransformTimerHandle;
+
 private:
     FVector InitialLocation;
     FRotator InitialRotation;
-    FTimerHandle TransformTimerHandle;
+
+	TMap<TObjectPtr<AActor>, FTransform> AttachedActorOffsets;
+
+	void UpdateAttachedActors();
 };
