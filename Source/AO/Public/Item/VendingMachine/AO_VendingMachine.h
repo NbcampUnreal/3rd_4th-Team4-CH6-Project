@@ -1,9 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AO_ShopManager.h"
 #include "GameFramework/Actor.h"
 #include "Item/AO_MasterItem.h"
 #include "AO_VendingMachine.generated.h"
+
+
+DECLARE_LOG_CATEGORY_EXTERN(LogShop, Log, All);
 
 UCLASS()
 class AO_API AAO_VendingMachine : public AActor
@@ -14,6 +18,9 @@ public:
 	AAO_VendingMachine();
 
 protected:
+	UPROPERTY(EditInstanceOnly, Category="Shop")
+	AAO_ShopManager* ShopManager;
+	
 	virtual void BeginPlay() override;
 	void OnConstruction(const FTransform& Transform);
 	
@@ -36,6 +43,10 @@ protected:
 	UFUNCTION()
 	void HandleInteractionSuccess(AActor* Interactor);
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestBuy(AActor* Interactor);
+
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
@@ -45,4 +56,7 @@ protected:
 	
 	int32 Cash;
 	int32 ItemPrice;
+
+public:
+	void SpawnVendingItem();
 };
