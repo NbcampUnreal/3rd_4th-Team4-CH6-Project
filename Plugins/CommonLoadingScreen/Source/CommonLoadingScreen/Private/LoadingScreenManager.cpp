@@ -220,6 +220,7 @@ void ULoadingScreenManager::HandlePostLoadMap(UWorld* World)
 	if ((World != nullptr) && (World->GetGameInstance() == GetGameInstance()))
 	{
 		bCurrentlyInLoadMap = false;
+		bAOLoadingRequested = false;		// JM : 로딩 화면을 강제로 띄우기 위한 변수
 	}
 }
 
@@ -261,6 +262,12 @@ bool ULoadingScreenManager::CheckForAnyNeedToShowLoadingScreen()
 	DebugReasonForShowingOrHidingLoadingScreen = TEXT("Reason for Showing/Hiding LoadingScreen is unknown!");
 
 	const UGameInstance* LocalGameInstance = GetGameInstance();
+	
+	if (bAOLoadingRequested)	// JM : 로딩화면 강제로 띄우는 로직
+	{
+		DebugReasonForShowingOrHidingLoadingScreen = FString(TEXT("Custom Loading Requested From AO Project"));
+		return true;
+	}
 
 	if (LoadingScreenCVars::ForceLoadingScreenVisible)
 	{
@@ -366,6 +373,14 @@ bool ULoadingScreenManager::CheckForAnyNeedToShowLoadingScreen()
 				// Ask the PC itself if it needs a loading screen
 				if (ILoadingProcessInterface::ShouldShowLoadingScreen(PC, /*out*/ DebugReasonForShowingOrHidingLoadingScreen))
 				{
+					return true;
+				}
+
+				// JM : PS 준비 안되었으면 로딩 띄우기
+				if (PC->PlayerState == nullptr)
+				{
+					DebugReasonForShowingOrHidingLoadingScreen = FString::Printf(TEXT("PlayerState(%s) is not replicated"), *PC->GetName());
+					UE_LOG(LogTemp, Warning, TEXT("PlayerState(%s) is not replicated"), *PC->GetName());
 					return true;
 				}
 

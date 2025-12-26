@@ -31,7 +31,7 @@ protected:
 	TMap<TWeakObjectPtr<AActor>, FActiveGameplayEffectHandle> ActiveHandles;
 	
 	UFUNCTION()
-	void OnBeginOverlap(
+	virtual void OnBeginOverlap(
 		UPrimitiveComponent* OverlappedComp,
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp,
@@ -40,7 +40,7 @@ protected:
 		const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnEndOverlap(
+	virtual void OnEndOverlap(
 		UPrimitiveComponent* OverlappedComp,
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp,

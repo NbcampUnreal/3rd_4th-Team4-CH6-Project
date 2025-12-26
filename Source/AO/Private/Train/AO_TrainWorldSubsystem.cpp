@@ -1,42 +1,19 @@
 #include "Train/AO_TrainWorldSubsystem.h"
-#include "AbilitySystemComponent.h"
+#include "Train/AO_newTrain.h"
 
-void UAO_TrainWorldSubsystem::RegisterTrainASC(UAbilitySystemComponent* InASC)
+void UAO_TrainWorldSubsystem::RegisterTrain(AAO_newTrain* InTrain)
 {
-	if (!InASC)
-	{
-		return;
-	}
+	if (!InTrain) return;
 
-	CachedTrainASC = InASC;
+	CachedTrain = InTrain;
 
-	UE_LOG(LogTemp, Warning, TEXT("TrainWorldSubsystem: ASC Registered"));
+	UE_LOG(LogTemp, Warning, TEXT("Subsystem: Train Registered"));
 
-	OnTrainASCRegistered.Broadcast(CachedTrainASC);
+	OnTrainRegistered.Broadcast(InTrain);
 }
 
-UAbilitySystemComponent* UAO_TrainWorldSubsystem::GetTrainASC() const
-{
-	return CachedTrainASC;
-}
 
-void UAO_TrainWorldSubsystem::BindAndNotifyTrainASC(UObject* Listener)
+AAO_newTrain* UAO_TrainWorldSubsystem::GetTrain() const
 {
-	if (!Listener)
-	{
-		return;
-	}
-
-	if (CachedTrainASC)
-	{
-		OnTrainASCRegistered.Broadcast(CachedTrainASC);
-	}
-}
-
-void UAO_TrainWorldSubsystem::NotifyIfTrainASCReady()
-{
-	if (CachedTrainASC)
-	{
-		OnTrainASCRegistered.Broadcast(CachedTrainASC);
-	}
+	return CachedTrain.Get();
 }

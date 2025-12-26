@@ -67,6 +67,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon")
     FGameplayTag StunEventTag;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cannon")
+	FGameplayTag DestructionTriggerTag;
+
 private:
     UPROPERTY()
     TObjectPtr<class UAO_CannonProjectilePool> OwnerPool;

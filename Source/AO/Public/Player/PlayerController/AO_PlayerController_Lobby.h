@@ -6,6 +6,8 @@
 #include "AO_PlayerController_InGameBase.h"
 #include "AO_PlayerController_Lobby.generated.h"
 
+class ATargetPoint;
+class AAO_CustomizingCharacter;
 /**
  * 
  */
@@ -54,7 +56,30 @@ public:
 	UFUNCTION()
 	void OpenWardrobe();
 
+	UFUNCTION(BlueprintCallable, Category = "Customizing")
+	void CloseWardrobe();
+
+	void FadeIn();
+	void FadeOut();
+
+	void OnFadeInFinishedOpenUI();
+	void OnFadeInFinishedCloseUI();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customizing")
 	TObjectPtr<UAO_UserWidget> CustomizingWidget = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customizing")
+	float FadeTime = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customizing")
+	TSubclassOf<AAO_CustomizingCharacter> CustomizingDummyClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Customizing")
+	TObjectPtr<AAO_CustomizingCharacter> CustomizingDummy = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = nullptr;
+	
+	FTimerHandle FadeTimerHandle;
 };

@@ -4,11 +4,11 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "AO_TrainWorldSubsystem.generated.h"
 
-class UAbilitySystemComponent;
+class AAO_newTrain;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-	FOnTrainASCRegistered,
-	UAbilitySystemComponent*, TrainASC
+	FOnTrainRegistered,
+	AAO_newTrain*, Train
 );
 
 UCLASS()
@@ -17,21 +17,15 @@ class UAO_TrainWorldSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	void RegisterTrainASC(UAbilitySystemComponent* InASC);
-	
-	UFUNCTION(BlueprintCallable, Category="Train")
-	UAbilitySystemComponent* GetTrainASC() const;
-	
-	UFUNCTION(BlueprintCallable, Category="Train")
-	void BindAndNotifyTrainASC(UObject* Listener);
+	void RegisterTrain(AAO_newTrain* InTrain);
 
-	UPROPERTY(BlueprintAssignable, Category="Train")
-	FOnTrainASCRegistered OnTrainASCRegistered;
+	UFUNCTION(BlueprintCallable)
+	AAO_newTrain* GetTrain() const;
 
-	UFUNCTION(BlueprintCallable, Category="Train")
-	void NotifyIfTrainASCReady();
+	UPROPERTY(BlueprintAssignable)
+	FOnTrainRegistered OnTrainRegistered;
 
 private:
 	UPROPERTY()
-	UAbilitySystemComponent* CachedTrainASC = nullptr;
+	TObjectPtr<AAO_newTrain> CachedTrain;
 };

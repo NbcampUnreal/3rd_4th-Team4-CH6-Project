@@ -59,12 +59,12 @@ public:
 		meta=(EditCondition="bIsToggleable", EditConditionHides))
 	FAO_InteractionEffectSettings DeactivateEffect;
 
+	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
+	void OnInteractionSuccess_BP(AActor* Interactor);
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
-	
-	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
-	void OnInteractionSuccess_BP(AActor* Interactor);
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Interaction")
 	void OnInteractionSuccessMulticast_BP(AActor* Interactor);

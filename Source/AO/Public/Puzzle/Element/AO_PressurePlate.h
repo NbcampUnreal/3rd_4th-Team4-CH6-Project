@@ -59,7 +59,7 @@ protected:
 	float PressDepth = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PressurePlate|Reaction")
-	TObjectPtr<AAO_PuzzleReactionActor> LinkedReactionActor;
+	TArray<TObjectPtr<AAO_PuzzleReactionActor>> LinkedReactionActors;
 
 	// 진행도 변화 속도
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PressurePlate|Reaction", meta=(ClampMin="0.1"))

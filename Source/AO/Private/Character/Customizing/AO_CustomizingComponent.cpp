@@ -12,8 +12,7 @@
 
 UAO_CustomizingComponent::UAO_CustomizingComponent()
 {
-	CurrentOptionData.ParameterName = TEXT("");
-	CurrentOptionData.OptionName = TEXT("");
+	PrimaryComponentTick.bCanEverTick = false;
 
 	CustomizingData.CharacterMeshType = ECharacterMesh::Elsa;
 
@@ -24,79 +23,32 @@ UAO_CustomizingComponent::UAO_CustomizingComponent()
 	CustomizingData.ClothOptionData.OptionName = TEXT("Glacier");
 }
 
-void UAO_CustomizingComponent::ServerRPC_ChangeCharacter_Implementation(ECharacterMesh MeshType)
+void UAO_CustomizingComponent::ServerRPC_ChangeCustomizing_Implementation(const FCustomizingData& NewCustomizingData)
 {
-	CurrentMeshType = MeshType;
-	ChangeCharacterMesh();
+	CustomizingData = NewCustomizingData;
+	ApplyCustomizingData();
 }
 
-void UAO_CustomizingComponent::ServerRPC_ChangeCustomizingOption_Implementation(FParameterOptionName NewOptionData)
+TObjectPtr<UCustomizableObjectInstance> UAO_CustomizingComponent::GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const
 {
-	CurrentOptionData = NewOptionData;
-	ChangeOption();
-}
-
-UCustomizableObjectInstance* UAO_CustomizingComponent::GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const
-{
-	return CustomizableObjectInstanceMap[MeshType];
-}
-
-ECharacterMesh UAO_CustomizingComponent::GetCurrentMeshType() const
-{
-	return CurrentMeshType;
-}
-
-void UAO_CustomizingComponent::SaveCustomizingDataToPlayerState()
-{
-	TObjectPtr<UCustomizableObjectInstance> Instance = GetCustomizableObjectInstanceFromMap(CurrentMeshType);
-	checkf(Instance, TEXT("Instance is invalid"));
-	
-	CustomizingData.CharacterMeshType = CurrentMeshType;
-	CustomizingData.HairOptionData.OptionName = Instance->GetIntParameterSelectedOption(CustomizingData.HairOptionData.ParameterName);
-	CustomizingData.ClothOptionData.OptionName = Instance->GetIntParameterSelectedOption(CustomizingData.ClothOptionData.ParameterName);
-
-	TObjectPtr<AAO_PlayerState> PlayerState = Cast<AAO_PlayerState>(PlayerCharacter->GetPlayerState());
-	checkf(PlayerState, TEXT("PlayerState is invalid"));
-	
-	PlayerState->CharacterCustomizingData = CustomizingData;
-	PlayerState->ServerRPC_SetCharacterCustomizingData(CustomizingData);
-	PrintPSCustomizingData();
-}
-
-void UAO_CustomizingComponent::PrintCustomizableObjectInstanceMap()
-{
-	for (const TPair<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>>& Pair : CustomizableObjectInstanceMap)
+	if (CustomizableObjectInstanceMap.Contains(MeshType))
 	{
-		AO_LOG_NET(LogKSH, Log, TEXT("MeshType: %d, Instance: %s"), Pair.Key, *Pair.Value->GetName());
+		return CustomizableObjectInstanceMap[MeshType];
 	}
+    
+	return nullptr;
 }
 
-void UAO_CustomizingComponent::PrintPSCustomizingData()
+const FCustomizingData& UAO_CustomizingComponent::GetCustomizingData() const
 {
-	TObjectPtr<AAO_PlayerState> PlayerState = Cast<AAO_PlayerState>(PlayerCharacter->GetPlayerState());
-
-	if (PlayerState)
-	{
-		AO_LOG(LogKSH, Log, TEXT("PS - CustomizingData: MeshType: %d,"
-			       "HairOptionData: ParameterName: %s, OptionName: %s,"
-			       "ClothOptionData: ParameterName: %s, OptionName: %s"),
-		       PlayerState->CharacterCustomizingData.CharacterMeshType,
-		       *PlayerState->CharacterCustomizingData.HairOptionData.ParameterName,
-		       *PlayerState->CharacterCustomizingData.HairOptionData.OptionName,
-		       *PlayerState->CharacterCustomizingData.ClothOptionData.ParameterName,
-		       *PlayerState->CharacterCustomizingData.ClothOptionData.OptionName);
-	}
-	else
-	{
-		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UAO_CustomizingComponent::PrintPSCustomizingData);
-	}
+	return CustomizingData;
 }
 
 void UAO_CustomizingComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(GetOwner());
+	TObjectPtr<AAO_PlayerCharacter> Character = Cast<AAO_PlayerCharacter>(GetOwner());
 	checkf(Character, TEXT("Character is invalid"));
 
 	PlayerCharacter = Character;
@@ -106,7 +58,6 @@ void UAO_CustomizingComponent::BeginPlay()
 		CustomizableObjectInstanceMap.Add(Pair.Key, Pair.Value->CreateInstance());
 	}
 
-	PrintPSCustomizingData();
 	LoadCustomizingDataFromPlayerState();
 }
 
@@ -114,53 +65,28 @@ void UAO_CustomizingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UAO_CustomizingComponent, CurrentMeshType);
-	DOREPLIFETIME(UAO_CustomizingComponent, CurrentOptionData);
+	DOREPLIFETIME(UAO_CustomizingComponent, CustomizingData);
 }
 
-void UAO_CustomizingComponent::OnRep_CurrentMeshType()
+void UAO_CustomizingComponent::OnRep_CustomizingData()
 {
-	ChangeCharacterMesh();
+	ApplyCustomizingData();
 }
 
-void UAO_CustomizingComponent::ChangeCharacterMesh()
+void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* Instance)
 {
-	AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh called on %s (HasAuthority: %d, IsLocallyControlled: %d)"), 
-	*GetName(), PlayerCharacter->HasAuthority(), PlayerCharacter->IsLocallyControlled());
-
-	TObjectPtr<UCustomizableObjectInstance> Instance = GetCustomizableObjectInstanceFromMap(CurrentMeshType);
-	checkf(Instance, TEXT("Instance is invalid"));
-
 	if (PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance() != Instance)
 	{
 		PlayerCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
 		PlayerCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
-		AO_LOG(LogKSH, Log, TEXT("ChangeCharacterMesh: Mesh update requested - Instance: %s"), *Instance->GetName());
 	}
-	else
-	{
-		AO_LOG(LogKSH, Log, TEXT("Already this Character Mesh - "
-				   "CurrentMesh : %s, ChangeMesh : %s"),
-			   *PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance()->GetName(),
-			   *Instance->GetName());
-	}
-	
-	PrintCustomizableObjectInstanceMap();
 }
 
-void UAO_CustomizingComponent::OnRep_CurrentOptionData()
+void UAO_CustomizingComponent::ChangeOption(UCustomizableObjectInstance* Instance, const FParameterOptionName& NewOptionData)
 {
-	ChangeOption();
-}
-
-void UAO_CustomizingComponent::ChangeOption()
-{
-	TObjectPtr<UCustomizableObjectInstance> Instance = GetCustomizableObjectInstanceFromMap(CurrentMeshType);
-	checkf(Instance, TEXT("Instance is invalid"));
-
-	Instance->SetIntParameterSelectedOption(CurrentOptionData.ParameterName, CurrentOptionData.OptionName);
+	Instance->SetIntParameterSelectedOption(NewOptionData.ParameterName, NewOptionData.OptionName);
 	Instance->UpdateSkeletalMeshAsync();
 }
 
@@ -186,26 +112,19 @@ void UAO_CustomizingComponent::ApplyCustomizingData()
 		AO_LOG(LogKSH, Warning, TEXT("ApplyCustomizingData failed: CustomizableObjectInstanceMap is empty"));
 		return;
 	}
-
-	if (CustomizingData.CharacterMeshType != CurrentMeshType)
-	{
-		CurrentMeshType = CustomizingData.CharacterMeshType;
-	}
 	
-	ChangeCharacterMesh();
-
-	TObjectPtr<UCustomizableObjectInstance> Instance = GetCustomizableObjectInstanceFromMap(CurrentMeshType);
+	TObjectPtr<UCustomizableObjectInstance> Instance = GetCustomizableObjectInstanceFromMap(CustomizingData.CharacterMeshType);
 	checkf(Instance, TEXT("Instance is invalid"));
+	
+	ChangeCharacterMesh(Instance);
 
 	if (!CustomizingData.HairOptionData.OptionName.IsEmpty())
 	{
-		Instance->SetIntParameterSelectedOption(CustomizingData.HairOptionData.ParameterName, CustomizingData.HairOptionData.OptionName);
+		ChangeOption(Instance, CustomizingData.HairOptionData);
 	}
 
 	if (!CustomizingData.ClothOptionData.OptionName.IsEmpty())
 	{
-		Instance->SetIntParameterSelectedOption(CustomizingData.ClothOptionData.ParameterName, CustomizingData.ClothOptionData.OptionName);
+		ChangeOption(Instance, CustomizingData.ClothOptionData);
 	}
-
-	Instance->UpdateSkeletalMeshAsync();
 }

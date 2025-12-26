@@ -28,7 +28,6 @@ protected:
 	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
-	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 	virtual void Tick(float DeltaTime) override;	// JM : 보이스 챗 크래쉬 방지 확인용
 
 protected:

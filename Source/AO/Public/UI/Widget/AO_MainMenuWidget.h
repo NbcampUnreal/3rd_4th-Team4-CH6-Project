@@ -17,16 +17,7 @@ class AO_API UAO_MainMenuWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-public:
-	virtual void NativeConstruct() override;
-
 protected:
-	/* === BindWidget === */
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Host = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Join = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Settings = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Quit = nullptr;
-
 	/* === Class Slots (에디터에서 지정) === */
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_HostDialogWidget> HostDialogClass;
@@ -35,8 +26,15 @@ protected:
 	TSubclassOf<UAO_LobbyListWidget> LobbyListWidgetClass;
 
 	/* === Click Handlers === */
-	UFUNCTION() void OnClicked_Host();
-	UFUNCTION() void OnClicked_Join();
-	UFUNCTION() void OnClicked_Settings();
-	UFUNCTION() void OnClicked_Quit();
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Host();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Join();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Settings();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|UI")
+	void OnClicked_Quit();
 };

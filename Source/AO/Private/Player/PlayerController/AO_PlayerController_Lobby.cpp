@@ -2,10 +2,15 @@
 
 
 #include "Player/PlayerController/AO_PlayerController_Lobby.h"
+
 #include "Game/GameMode/AO_GameMode_Lobby.h"
 #include "AO/AO_Log.h"
+#include "Character/AO_PlayerCharacter.h"
+#include "Character/Customizing/AO_CustomizingCharacter.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Engine/GameInstance.h"
+#include "Engine/TargetPoint.h"
+#include "Kismet/GameplayStatics.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_PlayerController_Lobby::AAO_PlayerController_Lobby()
@@ -26,11 +31,16 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	bShowMouseCursor = false;
 
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
+
+	PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
 }
 
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	GetWorldTimerManager().ClearTimer(FadeTimerHandle);
+	
 	Super::EndPlay(EndPlayReason);
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -148,6 +158,75 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 	AO_LOG(LogJSH, Log,
 		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
 		*GetName());
+	
+	FadeIn();
 
-	CustomizingWidget->AddToViewport();
+	TObjectPtr<ATargetPoint> SpawnPoint = Cast<ATargetPoint>(UGameplayStatics::GetActorOfClass(GetWorld(), ATargetPoint::StaticClass()));
+
+	if (SpawnPoint)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		CustomizingDummy = GetWorld()->SpawnActor<AAO_CustomizingCharacter>
+		(CustomizingDummyClass, SpawnPoint->GetActorLocation(), SpawnPoint->GetActorRotation(), Params);
+	}
+
+	GetWorldTimerManager().SetTimer(FadeTimerHandle, this, &AAO_PlayerController_Lobby::OnFadeInFinishedOpenUI,
+	                                FadeTime, false);
+
+	AO_LOG(LogKSH, Log, TEXT("OpenWardrobe End"));
+}
+
+void AAO_PlayerController_Lobby::CloseWardrobe()
+{
+	FadeIn();
+
+	GetWorldTimerManager().SetTimer(FadeTimerHandle, this, &AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI,
+									FadeTime, false);
+}
+
+void AAO_PlayerController_Lobby::FadeIn()
+{
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(0.0f, 1.0f, FadeTime,
+		                                     FLinearColor::Black, false, true);
+	}
+}
+
+void AAO_PlayerController_Lobby::FadeOut()
+{
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(1.0f, 0.0f, FadeTime,
+		                                     FLinearColor::Black, false, true);
+	}
+}
+
+void AAO_PlayerController_Lobby::OnFadeInFinishedOpenUI()
+{
+	if (CustomizingDummy)
+	{
+		SetViewTarget(CustomizingDummy);
+
+		CustomizingWidget->AddToViewport();
+	}
+	
+	FadeOut();
+}
+
+void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
+{
+	if (CustomizingDummy)
+	{
+		SetViewTarget(PlayerCharacter);
+		
+		CustomizingWidget->RemoveFromParent();
+		
+		CustomizingDummy->Destroy();
+		CustomizingDummy = nullptr;
+	}
+	
+	FadeOut();
 }
