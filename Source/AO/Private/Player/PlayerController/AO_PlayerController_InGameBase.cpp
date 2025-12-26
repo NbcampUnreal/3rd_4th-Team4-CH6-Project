@@ -54,6 +54,7 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
+		ApplyInGameInputDefaults();
 		if (UGameInstance* GI = GetGameInstance())
 		{
 			if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
@@ -106,6 +107,22 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 			}
 		}
 	}
+}
+
+void AAO_PlayerController_InGameBase::ApplyInGameInputDefaults()
+{
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+
+	bShowMouseCursor = false;
+	bEnableClickEvents = false;
+	bEnableMouseOverEvents = false;
+
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	FlushPressedKeys();
 }
 
 UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget()
@@ -425,11 +442,22 @@ void AAO_PlayerController_InGameBase::CleanupAudioResource()
 
 void AAO_PlayerController_InGameBase::HandleUIOpen()
 {
+	AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): Called"));
+
 	if (UGameInstance* GI = GetGameInstance())
 	{
 		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
 		{
-			// “열기”만 담당. 닫기는 UI_Close로 UI가 처리.
+			if (UAO_UserWidget* TopWidget = UIStack->GetTopUserWidget())
+			{
+				AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget=%s -> OnEscapeCloseRequested()"),
+					*TopWidget->GetName());
+
+				TopWidget->OnEscapeCloseRequested();
+				return;
+			}
+
+			AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget is null -> TryTogglePauseMenu"));
 			UIStack->TryTogglePauseMenu(this);
 		}
 	}
@@ -500,6 +528,7 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 	}
 
 	AO_LOG(LogJSH, Warning, TEXT("UIStackManager not found. Resume ignored."));
+	ApplyInGameInputDefaults();
 }
 
 UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const
