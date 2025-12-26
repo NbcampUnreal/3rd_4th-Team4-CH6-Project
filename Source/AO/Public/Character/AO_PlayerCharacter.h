@@ -217,15 +217,11 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "AO|VoiceChat")
 	TObjectPtr<USoundAttenuation> SA_VoiceChat = nullptr;
 
-private:
-//ms: inventory component input
-	void SelectInventorySlot(const FInputActionValue& Value);
-	void UseInvenrotyItem();
-	void DropInvenrotyItem();
-
 //세훈: Customizable Object Instance
-public:
 	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
 	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }
+
+//ms : 사망시 delegate로 불리는 함수
+	void HandlePlayerDeath();
 };
