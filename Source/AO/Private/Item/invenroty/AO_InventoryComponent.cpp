@@ -324,6 +324,7 @@ void UAO_InventoryComponent::ClearSlot()
     if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }
 
+//ms_inventory key binding
 void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 {
     int32 SlotIndex = FMath::RoundToInt(Value.Get<float>()); 
