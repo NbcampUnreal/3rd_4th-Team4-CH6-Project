@@ -4,14 +4,13 @@
 #include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "AO_Log.h"
-
-#include "Train/AO_Train.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "EngineUtils.h"
 #include "Game/GameState/AO_GameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Train/AO_newTrain.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
@@ -100,9 +99,9 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	}
 
 	// 현재 스테이지의 열차에서 연료 값 가져오기
-	AAO_Train* Train = nullptr;
+	AAO_newTrain* Train = nullptr;
 
-	for(TActorIterator<AAO_Train> It(World); It; ++It)
+	for(TActorIterator<AAO_newTrain> It(World); It; ++It)
 	{
 		Train = *It;
 		break; // 첫 번째 Train만 사용
@@ -160,7 +159,9 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	}
 
 	const FString Path = TargetMapName.ToString() + TEXT("?listen");
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : crash 
+	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
@@ -208,7 +209,9 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 	const FString Path = LobbyMapName.ToString() + TEXT("?listen");
 	AO_LOG(LogJSH, Log, TEXT("StageFail: Travel to %s"), *Path);
 
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : crash 방지
+	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::TriggerStageFailByTrainFuel()

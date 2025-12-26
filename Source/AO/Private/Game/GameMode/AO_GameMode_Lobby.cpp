@@ -269,10 +269,6 @@ void AAO_GameMode_Lobby::RequestStartFrom(AController* Controller)
 		return;
 	}
 
-	// JM : 레벨 이동 전에 보이스 채팅 비활성화 (Crash 발생 방지) - 이게 UX 안좋을것 같은데... 달리 방법이...
-	// 근데 자꾸 크래쉬 발생해서 넣긴 했음...
-	StopVoiceChatForAllClients();
-
 	if (UWorld* World = GetWorld())
 	{
 		if (UGameInstance* GI = World->GetGameInstance())
@@ -340,5 +336,7 @@ void AAO_GameMode_Lobby::TravelToStage()
 	const FString Path = StageMapName.ToString() + TEXT("?listen");
 	AO_LOG(LogJSH, Log, TEXT("Lobby: TravelToStage → %s"), *Path);
 
-	World->ServerTravel(Path);
+	// World->ServerTravel(Path);
+	// JM : 레벨 이동 시, voice crash 종료 후 이동하도록 함
+	RequestSynchronizedServerTravel(Path);
 }

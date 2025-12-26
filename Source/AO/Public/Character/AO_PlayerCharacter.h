@@ -33,6 +33,7 @@ class UAO_InspectionComponent;
 class UAO_InteractableComponent;
 class UAO_FoleyAudioBank;
 class UCustomizableSkeletalComponent;
+class UAIPerceptionStimuliSourceComponent;
 
 USTRUCT(BlueprintType)
 struct FCharacterInputState
@@ -133,6 +134,8 @@ protected:
 	TObjectPtr<UCustomizableSkeletalComponent> HeadComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_CustomizingComponent> CustomizingComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAIPerceptionStimuliSourceComponent> AIPerceptionStimuliSource;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Input")
 	TObjectPtr<UInputMappingContext> IMC_Player;
@@ -208,7 +211,13 @@ private:
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
+	void InitVoiceChat();
 	
+public:
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "AO|VoiceChat")
+	TObjectPtr<USoundAttenuation> SA_VoiceChat = nullptr;
+
+private:
 //ms: inventory component input
 	void SelectInventorySlot(const FInputActionValue& Value);
 	void UseInvenrotyItem();
@@ -216,8 +225,7 @@ private:
 
 //세훈: Customizable Object Instance
 public:
-	UFUNCTION(NetMulticast, Reliable)
-	void ChangeCharacterMesh(UCustomizableObjectInstance* ChangeMesh);
-	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const;
-	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const;
+	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
+	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
+	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }
 };

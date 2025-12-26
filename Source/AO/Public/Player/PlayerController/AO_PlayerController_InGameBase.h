@@ -14,7 +14,7 @@ class UAO_PauseMenuWidget;
 class UAO_OnlineSessionSubsystem;
 
 /**
- * 
+ *
  */
 UCLASS()
 class AO_API AAO_PlayerController_InGameBase : public AAO_PlayerController
@@ -25,12 +25,16 @@ public:
 	AAO_PlayerController_InGameBase();
 
 protected:
-	virtual void OnPossess(APawn* InPawn) override;
-	virtual void OnRep_Pawn() override;
+	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+	virtual void Tick(float DeltaTime) override;	// JM : 보이스 챗 크래쉬 방지 확인용
 
 protected:
+	UPROPERTY(Transient)
+	TObjectPtr<UAO_PauseMenuWidget> PauseMenuWidgetInstance = nullptr;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UAO_CameraManagerComponent> CameraManagerComponent;
 	
@@ -40,8 +44,10 @@ protected:
 	UPROPERTY()
 	UAO_PauseMenuWidget* PauseMenu;
 
-	UPROPERTY()
-	bool bPauseMenuVisible;
+public:
+	TSubclassOf<UAO_PauseMenuWidget> GetPauseMenuWidgetClass() const { return PauseMenuClass; }
+	
+	UAO_PauseMenuWidget* GetOrCreatePauseMenuWidget();
 
 // JM : Voice Chat
 public:
@@ -69,8 +75,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|Test")
 	void Test_Alive();
 
+	UFUNCTION(Client, Reliable)
+	void Client_PrepareForTravel(const FString& URL);
+
+	UFUNCTION(Server, Reliable)
+	void Server_NotifyReadyForTravel();
+
 protected:
-	void TogglePauseMenu();
+	void CleanupAudioResource();
+
+protected:
+	void HandleUIOpen();
 
 	// 위젯 델리게이트 콜백
 	UFUNCTION()
@@ -85,13 +100,15 @@ protected:
 	UFUNCTION()
 	void OnPauseMenu_RequestResume();
 
-	// 내부 헬퍼
-	void ShowPauseMenu();
-	void HidePauseMenu();
-
 	UAO_OnlineSessionSubsystem* GetOnlineSessionSub() const;
 
 private:
 	// 카메라 관리자 초기화
-	void InitCameraManager();
+	void InitCameraManager(APawn* InPawn);
+	
+	/** 모든 보이스 자원이 정리되었는지 확인 */
+	bool IsVoiceFullyCleanedUp();
+
+private:
+	bool bIsCheckingVoiceCleanup = false;
 };

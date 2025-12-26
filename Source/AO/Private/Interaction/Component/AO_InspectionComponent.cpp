@@ -17,8 +17,10 @@
 #include "Animation/AnimInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
+#include "Puzzle/Actor/Cannon/AO_CannonElement.h"
 #include "Puzzle/Element/AO_InspectionPuzzle.h"
 #include "Puzzle/Element/AO_OverwatchInspectionPuzzle.h"
+#include "UI/AO_UIStackManager.h"
 
 UAO_InspectionComponent::UAO_InspectionComponent()
 {
@@ -82,6 +84,23 @@ void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (TObjectPtr<UWorld> World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(HoverTraceTimerHandle);
+	}
+	
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	UGameInstance* GI = World->GetGameInstance();
+	if (GI == nullptr)
+	{
+		return;
+	}
+
+	if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+	{
+		UIStack->UnlockPauseMenu();
 	}
     
 	// 하이라이트 해제
@@ -366,6 +385,15 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
 	{
 		OverwatchPuzzle->HighlightAllExternalMeshes();
 	}
+	
+	//JSH : 일시정지 설정창 락
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->LockPauseMenu();
+		}
+	}
 
     // 마우스 커서 표시, GameAndUI 모드로 전환
     PC->bShowMouseCursor = true;
@@ -379,6 +407,11 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
 	{
 		StartHoverTrace();
 	}
+
+	if (TObjectPtr<AAO_CannonElement> Cannon = Cast<AAO_CannonElement>(CurrentInspectedActor))
+	{
+		Cannon->OnInspectionStarted();
+	}
 }
 
 // Inspection 나가기 처리 (카메라 복원, UI 설정)
@@ -388,6 +421,11 @@ void UAO_InspectionComponent::ClientExitInspection()
     {
         return;
     }
+
+	if (TObjectPtr<AAO_CannonElement> Cannon = Cast<AAO_CannonElement>(CurrentInspectedActor))
+	{
+		Cannon->OnInspectionEnded();
+	}
 
 	// Hover trace 중지 및 하이라이트 해제
 	StopHoverTrace();
@@ -408,6 +446,15 @@ void UAO_InspectionComponent::ClientExitInspection()
 		if (InspectionInputContext)
 		{
 			InputSubsystem->RemoveMappingContext(InspectionInputContext);
+		}
+	}
+	
+	//JSH : 일시정지 설정창 언락
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->UnlockPauseMenu();
 		}
 	}
 
@@ -528,68 +575,83 @@ void UAO_InspectionComponent::OnCameraMoveInput(const FInputActionInstance& Inst
     }
 
     float DeltaTime = World->GetDeltaSeconds();
-    FVector CurrentLocation = InspectionCameraActor->GetActorLocation();
-    FVector NewLocation = CurrentLocation;
+	
+	// Planar 이동 (기존 OverWatch 카메라)
+	if (CurrentCameraSettings.MovementType == EInspectionMovementType::Planar)
+	{
+		if (!InspectionCameraActor)
+		{
+			return;
+		}
 
-    // 이동 타입에 따른 처리
-    if (CurrentCameraSettings.MovementType == EInspectionMovementType::Planar)
-    {
-    	// 카메라 Yaw 기준으로 이동 방향 계산 (Pitch는 무시하고 XY 평면에서만 이동)
-    	FRotator CameraRotation = InspectionCameraActor->GetActorRotation();
-    	FRotator YawRotation(0.f, CameraRotation.Yaw, 0.f);
+		FRotator CameraRotation = InspectionCameraActor->GetActorRotation();
+		FRotator YawRotation(0.f, CameraRotation.Yaw, 0.f);
         
-    	FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-    	FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
         
-    	// W/S = Forward 방향, A/D = Right 방향
-    	FVector MoveDelta = (ForwardDirection * InputValue.Y + RightDirection * InputValue.X) 
+		FVector CurrentLocation = InspectionCameraActor->GetActorLocation();
+		FVector MoveDelta = (ForwardDirection * InputValue.Y + RightDirection * InputValue.X) 
 						  * CurrentCameraSettings.MovementSpeed * DeltaTime;
         
-    	NewLocation = ClampCameraPosition(CurrentLocation + MoveDelta);
-    }
+		FVector NewLocation = ClampCameraPosition(CurrentLocation + MoveDelta);
+		InspectionCameraActor->SetActorLocation(NewLocation);
+	}
+	else if (CurrentInspectedActor)
+	{
+		TObjectPtr<AActor> Owner = GetOwner();
+		if (!Owner)
+		{
+			return;
+		}
 
-    InspectionCameraActor->SetActorLocation(NewLocation);
+		IAO_Interface_InspectionCameraProvider* Provider = 
+			Cast<IAO_Interface_InspectionCameraProvider>(CurrentInspectedActor);
+        
+		if (!Provider)
+		{
+			return;
+		}
+
+		// 클라이언트는 로컬 예측
+		if (!Owner->HasAuthority())
+		{
+			Provider->OnInspectionInputLocal(InputValue, DeltaTime);
+			ServerNotifyInspectionInput(InputValue, DeltaTime);
+		}
+		else
+		{
+			// 서버 처리
+			Provider->OnInspectionInput(InputValue, DeltaTime);
+		}
+	}
 }
 
 void UAO_InspectionComponent::OnSpacebarPressed()
 {
-	if (!bIsInspecting)
+	if (!bIsInspecting || !CurrentInspectedActor)
 	{
 		return;
 	}
 
-	if (!CurrentInspectedActor)
+	TObjectPtr<AActor> InOwner = GetOwner();
+	if (!InOwner)
 	{
 		return;
 	}
 
-	TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor);
-	if (!OverwatchPuzzle)
+	if (!InOwner->HasAuthority())
 	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Current actor is not OverwatchPuzzle: %s"), *CurrentInspectedActor->GetName());
-		return;
-	}
-
-	if (!OverwatchPuzzle->bUseSpacebar)
-	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] OverwatchPuzzle.bUseSpacebar is false"));
-		return;
-	}
-
-	TObjectPtr<AActor> Owner = GetOwner();
-	if (!Owner)
-	{
-		AO_LOG(LogHSJ, Warning, TEXT("[Spacebar] Owner is null"));
-		return;
-	}
-
-	if (!Owner->HasAuthority())
-	{
-		ServerNotifySpacebarPressed();
+		ServerNotifyInspectionAction();
 	}
 	else
 	{
-		OverwatchPuzzle->ActiveAllLinkedElements();
+		// 서버면 바로 처리
+		if (IAO_Interface_InspectionCameraProvider* Provider = 
+			Cast<IAO_Interface_InspectionCameraProvider>(CurrentInspectedActor))
+		{
+			Provider->OnInspectionAction();
+		}
 	}
 }
 
@@ -969,4 +1031,32 @@ bool UAO_InspectionComponent::IsSpacebarMode() const
 	}
 
 	return false;
+}
+
+void UAO_InspectionComponent::ServerNotifyInspectionAction_Implementation()
+{
+	if (!bIsInspecting || !CurrentInspectedActor)
+	{
+		return;
+	}
+
+	if (IAO_Interface_InspectionCameraProvider* Provider = 
+		Cast<IAO_Interface_InspectionCameraProvider>(CurrentInspectedActor))
+	{
+		Provider->OnInspectionAction();
+	}
+}
+
+void UAO_InspectionComponent::ServerNotifyInspectionInput_Implementation(FVector2D InputValue, float DeltaTime)
+{
+	if (!bIsInspecting || !CurrentInspectedActor)
+	{
+		return;
+	}
+
+	if (IAO_Interface_InspectionCameraProvider* Provider = 
+		Cast<IAO_Interface_InspectionCameraProvider>(CurrentInspectedActor))
+	{
+		Provider->OnInspectionInput(InputValue, DeltaTime);
+	}
 }

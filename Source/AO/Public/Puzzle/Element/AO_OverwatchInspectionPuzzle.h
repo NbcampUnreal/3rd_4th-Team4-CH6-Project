@@ -52,6 +52,8 @@ public:
     virtual FAO_InspectionCameraSettings GetInspectionCameraSettings() const override;
     virtual bool IsValidClickTarget(AActor* HitActor, UPrimitiveComponent* Component) const override;
 
+	virtual void OnInspectionAction() override;
+
 	UFUNCTION(BlueprintCallable, Category = "Overwatch")
 	void ActiveAllLinkedElements();
 

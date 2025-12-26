@@ -25,7 +25,6 @@ AAO_PassiveContainer::AAO_PassiveContainer()
 	{
 		InteractableComp->OnInteractionSuccess.AddDynamic(this, &AAO_PassiveContainer::HandleInteractionSuccess);
 	}
-	
 }
 
 void AAO_PassiveContainer::BeginPlay()
@@ -92,8 +91,24 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 	{
 	//UE_LOG(LogTemp, Error, TEXT("Failed to find data for ItemID: %s"), *Slot.ItemID.ToString());
 	}
-	
-	const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive")); 
+
+	FGameplayTag ActivationEventTag;
+
+	if (ItemData->ItemID == FName("p.item02"))
+	{
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.Stamina"));
+	}
+	else if (ItemData->ItemID == FName("p.item03"))
+	{
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.MoveSpeed"));
+	}
+	else
+	{
+		ActivationEventTag = FGameplayTag::RequestGameplayTag(
+			TEXT("Event.Interaction.AddPassive.MaxHP"));
+	}
     
 	FGameplayEventData EventData;
 	EventData.EventTag = ActivationEventTag;
