@@ -21,6 +21,7 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "LoadingScreenManager.h"
 #include "VoipListenerSynthComponent.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 
@@ -377,6 +378,15 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
 {
 	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
+
+	if (ULoadingScreenManager* LoadingScreenManager = GetGameInstance()->GetSubsystem<ULoadingScreenManager>())
+	{
+		LoadingScreenManager->bAOLoadingRequested = true;
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Can't Get Loading Screen Manager"));
+	}
 	
 	CleanupAudioResource();
 	bIsCheckingVoiceCleanup = true;
