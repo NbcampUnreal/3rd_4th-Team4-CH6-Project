@@ -12,15 +12,8 @@ void UAO_InventorySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		if (APlayerController* PC = LP->GetPlayerController(nullptr))
 		{
-			PC->OnPossessedPawnChanged.AddDynamic(
-				this,
-				&UAO_InventorySubsystem::HandlePossessedPawnChanged
-			);
-			
 			if (!PC->IsLocalController())
-			{
 				return;
-			}
 
 			PC->OnPossessedPawnChanged.AddDynamic(
 				this,
@@ -33,14 +26,12 @@ void UAO_InventorySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UAO_InventorySubsystem::HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
 {
 	CachedInvenComp = nullptr;
-
 	if (!NewPawn) return;
 
-	if (UAO_InventoryComponent* Comp =
-	NewPawn->FindComponentByClass<UAO_InventoryComponent>())
+	if (UAO_InventoryComponent* Comp = NewPawn->FindComponentByClass<UAO_InventoryComponent>())
 	{
-		Comp->RegisterToSubsystem();   // 컴포넌트 → 서브시스템
-		RegisterInventory(Comp);       // 서브시스템 → UI Broadcast
+		Comp->RegisterToSubsystem();
+		RegisterInventory(Comp);
 	}
 }
 

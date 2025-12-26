@@ -139,6 +139,7 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 			}
 			Inv->NotifyListeners();
 		}
+		Inv->RegisterToSubsystem();
 	}
 	//ms
 }
