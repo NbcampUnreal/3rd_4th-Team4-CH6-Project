@@ -10,6 +10,7 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Engine/GameInstance.h"
 #include "Engine/TargetPoint.h"
+#include "Interaction/Interactables/AO_LobbyInteractable.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
@@ -158,6 +159,8 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 	AO_LOG(LogJSH, Log,
 		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
 		*GetName());
+
+	CustomizingInteractable->AddDisabledPlayer(PlayerCharacter);
 	
 	FadeIn();
 
@@ -227,6 +230,8 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy->Destroy();
 		CustomizingDummy = nullptr;
 	}
+
+	CustomizingInteractable->RemoveDisabledPlayer(PlayerCharacter);
 	
 	FadeOut();
 }

@@ -115,6 +115,8 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
         return;
     }
 
+    PC->CustomizingInteractable = this;
+
     const bool bIsHost = IsLobbyHostController(PC);
 
     switch (InteractType)
