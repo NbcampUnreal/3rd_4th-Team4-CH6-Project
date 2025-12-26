@@ -6,6 +6,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/EngineTypes.h"
+#include "GameFramework/PlayerController.h"
 #include "AO_UIStackManager.generated.h"
 
 class UAO_DelegateManager;
@@ -13,7 +14,6 @@ class UAO_UserWidget;
 class AAO_PlayerController;
 class AAO_PlayerController_InGameBase;
 class UAO_PauseMenuWidget;
-class APlayerController;
 
 UENUM(BlueprintType)
 enum class EAOUIStackInputMode : uint8
@@ -72,9 +72,33 @@ struct FAOUIInputSnapshot
 
 public:
 	EAOUIStackInputMode InputMode = EAOUIStackInputMode::GameOnly;
+
 	bool bShowMouseCursor = false;
+	bool bEnableClickEvents = false;
+	bool bEnableMouseOverEvents = false;
+	bool bIgnoreLookInput = false;
+	bool bIgnoreMoveInput = false;
+
 	EMouseLockMode MouseLockMode = EMouseLockMode::DoNotLock;
 	bool bHideCursorDuringCapture = false;
+
+	FAOUIInputSnapshot()
+	{
+	}
+
+	FAOUIInputSnapshot(APlayerController* PC)
+	{
+		if (PC == nullptr)
+		{
+			return;
+		}
+
+		bShowMouseCursor = PC->bShowMouseCursor;
+		bEnableClickEvents = PC->bEnableClickEvents;
+		bEnableMouseOverEvents = PC->bEnableMouseOverEvents;
+		bIgnoreLookInput = PC->IsLookInputIgnored();
+		bIgnoreMoveInput = PC->IsMoveInputIgnored();
+	}
 };
 
 UCLASS()
@@ -99,8 +123,17 @@ public:
 	// 특정 Class Pop
 	void PopByClass(APlayerController* PC, TSubclassOf<UUserWidget> WidgetClass);
 
-	// Pause 토글 (ESC 단일 경로)
+	// Top 이 특정 클래스일 때만 Pop
+	void PopIfTopIsClass(APlayerController* PC, TSubclassOf<UUserWidget> WidgetClass);
+
+	// Pause 토글 (P / ESC 단일 경로)
 	void TryTogglePauseMenu(APlayerController* PC);
+
+	// 현재 스택 최상단 UserWidget 조회
+	UAO_UserWidget* GetTopUserWidget() const;
+
+	// 최상단이 PauseMenu 인지 여부
+	bool IsTopPauseMenu() const;
 
 public:
 	// 메뉴 락
@@ -117,6 +150,7 @@ private:
 	APlayerController* GetLocalPlayerController() const;
 
 	int32 FindIndexByClass(TSubclassOf<UUserWidget> WidgetClass) const;
+
 	void ApplyTopPolicy(APlayerController* PC);
 	void ApplyFallbackPolicy(APlayerController* PC);
 
@@ -133,11 +167,9 @@ private:
 	UPROPERTY()
 	TArray<FAOUIStackEntry> Stack;
 
-private:
 	// ZOrder 정책
 	static constexpr int32 StackBaseZOrder = 100;
 
-private:
 	// PC별 "UIStack 사용 이전 입력 상태"
 	UPROPERTY()
 	TMap<TWeakObjectPtr<APlayerController>, FAOUIInputSnapshot> BaselineInputByPC;
@@ -146,7 +178,7 @@ private:
 	UPROPERTY()
 	TMap<TWeakObjectPtr<APlayerController>, FAOUIInputSnapshot> LastAppliedInputByPC;
 
-private:
+	// Pause 메뉴 락 카운트
 	UPROPERTY()
 	int32 PauseMenuLockCount = 0;
 

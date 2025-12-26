@@ -405,11 +405,22 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 
 void AAO_PlayerController_InGameBase::HandleUIOpen()
 {
+	AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): Called"));
+
 	if (UGameInstance* GI = GetGameInstance())
 	{
 		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
 		{
-			// “열기”만 담당. 닫기는 UI_Close로 UI가 처리.
+			if (UAO_UserWidget* TopWidget = UIStack->GetTopUserWidget())
+			{
+				AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget=%s -> OnEscapeCloseRequested()"),
+					*TopWidget->GetName());
+
+				TopWidget->OnEscapeCloseRequested();
+				return;
+			}
+
+			AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget is null -> TryTogglePauseMenu"));
 			UIStack->TryTogglePauseMenu(this);
 		}
 	}
@@ -475,7 +486,6 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
 		{
 			UIStack->PopTop(this);
-			ApplyInGameInputDefaults();
 			return;
 		}
 	}

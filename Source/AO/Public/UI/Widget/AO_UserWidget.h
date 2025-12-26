@@ -17,6 +17,10 @@ class AO_API UAO_UserWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	UFUNCTION(BlueprintImplementableEvent, Category = "AO|UI")
+	void OnEscapeCloseRequested();
+	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
 	float HoverOpacity = 1.0f;
