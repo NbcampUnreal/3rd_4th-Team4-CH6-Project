@@ -527,7 +527,7 @@ void ULoadingScreenManager::ShowLoadingScreen()
 		LoadingScreenVisibilityChanged.Broadcast(/*bIsVisible=*/ true);
 
 		// Create the loading screen widget
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, FString::Printf(TEXT("pending map name : %s"), *PendingMapName), false);
+		// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, FString::Printf(TEXT("pending map name : %s"), *PendingMapName), false);
 		FSoftClassPath WidgetPath = Settings->GetLoadingScreenWidgetPathForMap(PendingMapName);		// JM : 추가
 		TSubclassOf<UUserWidget> LoadingScreenWidgetClass = WidgetPath.TryLoadClass<UUserWidget>();	// JM : 추가
 		// TSubclassOf<UUserWidget> LoadingScreenWidgetClass = Settings->LoadingScreenWidget.TryLoadClass<UUserWidget>();	// JM 원본내용 삭제
