@@ -37,6 +37,9 @@ public:
 	// 파괴 트리거
 	UFUNCTION(BlueprintCallable, Category="Destruction")
 	void TriggerDestruction();
+
+	UFUNCTION(BlueprintPure, Category="Destruction")
+	bool IsDestroyed() const { return bIsDestroyed; }
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction")
 	TObjectPtr<UGeometryCollectionComponent> GeoComp;

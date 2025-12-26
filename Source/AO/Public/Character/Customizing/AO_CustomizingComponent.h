@@ -49,26 +49,14 @@ class AO_API UAO_CustomizingComponent : public UActorComponent
 
 public:	
 	UAO_CustomizingComponent();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_ChangeCustomizing(const FCustomizingData& NewCustomizingData);
+	
+	TObjectPtr<UCustomizableObjectInstance> GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const;
 
-	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
-	void ServerRPC_ChangeCharacter(ECharacterMesh MeshType);
-	
-	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Customizing")
-	void ServerRPC_ChangeCustomizingOption(FParameterOptionName NewOptionData);
-	
-	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	UCustomizableObjectInstance* GetCustomizableObjectInstanceFromMap(ECharacterMesh MeshType) const;
-	
-	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	ECharacterMesh GetCurrentMeshType() const;
+	const FCustomizingData& GetCustomizingData() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	void SaveCustomizingDataToPlayerState();
-	void LoadCustomizingDataFromPlayerState();
-	
-	void PrintCustomizableObjectInstanceMap();
-	void PrintPSCustomizingData();
-	
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -82,21 +70,16 @@ private:
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentMeshType)
-	ECharacterMesh CurrentMeshType = ECharacterMesh::Elsa;
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentOptionData)
-	FParameterOptionName CurrentOptionData;
-
+	UPROPERTY(ReplicatedUsing = OnRep_CustomizingData)
 	FCustomizingData CustomizingData;
-
-	UFUNCTION()
-	void OnRep_CurrentMeshType();
-	UFUNCTION()
-	void OnRep_CurrentOptionData();
 	
-	void ChangeCharacterMesh();
-	void ChangeOption();
+	UFUNCTION()
+	void OnRep_CustomizingData();
+	
+	void ChangeCharacterMesh(UCustomizableObjectInstance* Instance);
+	void ChangeOption(UCustomizableObjectInstance* Instance, const FParameterOptionName& NewOptionData);
+
+	void LoadCustomizingDataFromPlayerState();
 	
 	void ApplyCustomizingData();
-	
 };

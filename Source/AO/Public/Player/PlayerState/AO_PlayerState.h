@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Item/invenroty/AO_InventoryComponent.h"
 #include "AO_PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
@@ -98,4 +99,10 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetCharacterCustomizingData(const FCustomizingData& CustomizingData);
+
+// ms : 레벨이동시 인벤토리 저장
+	UPROPERTY(Replicated)
+	TArray<FInventorySlot> PersistentInventory;
+
+	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
 };
