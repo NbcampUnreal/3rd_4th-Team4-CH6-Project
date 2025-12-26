@@ -123,6 +123,8 @@ public:
 	// 특정 Class Pop
 	void PopByClass(APlayerController* PC, TSubclassOf<UUserWidget> WidgetClass);
 
+	// Pause 토글 (ESC 단일 경로)
+	UFUNCTION(BlueprintCallable, Category = "AO|UIStack|Pause")
 	// Top 이 특정 클래스일 때만 Pop
 	void PopIfTopIsClass(APlayerController* PC, TSubclassOf<UUserWidget> WidgetClass);
 
