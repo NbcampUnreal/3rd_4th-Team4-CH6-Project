@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Game/GameMode/AO_GameMode_InGameBase.h"
+#include "Player/PlayerController/AO_PlayerController_Rest.h"
 #include "AO_GameMode_Rest.generated.h"
 
 UCLASS()
@@ -16,6 +17,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
 
 public:
 	// 휴게공간에서 "다음으로 진행" 상호작용 시 호출

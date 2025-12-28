@@ -9,8 +9,8 @@ namespace AO_MapRoutes
 	static constexpr const TCHAR* STAGE_MAPS[] =
 	{
 		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main"),
-		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main"),
-		TEXT("/Game/AVaOut/Maps/MeadowLevel/LV_Meadow_Main")
+		TEXT("/Game/AVaOut/Maps/LavaLevel/LV_Lava_Main"),
+		TEXT("/Game/AVaOut/Maps/IceLevel/LV_Ice_Main")
 	};
 
 	static constexpr int32 STAGE_MAP_COUNT = UE_ARRAY_COUNT(STAGE_MAPS);
