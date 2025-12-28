@@ -112,14 +112,13 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 	}
 
 	FInputModeGameAndUI InputMode;
-	//InputMode.SetWidgetToFocus(DeathWidget->TakeWidget());
-	//InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetWidgetToFocus(DeathWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
-
-	//DeathWidget->SetIsEnabled(true);
-	//DeathWidget->SetIsFocusable(true);
-	//DeathWidget->SetUserFocus(this);
 	bShowMouseCursor = true;
+
+	GetPawn()->DisableInput(this);
 }
 
 void AAO_PlayerController_Stage::RequestSpectate()
@@ -148,15 +147,14 @@ void AAO_PlayerController_Stage::RequestSpectate()
 	}
 
 	FInputModeGameAndUI InputMode;
-	//InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
-	//InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
-
-	//SpectateWidget->SetIsEnabled(true);
-	//SpectateWidget->SetIsFocusable(true);
-	//SpectateWidget->SetUserFocus(this);
 	bShowMouseCursor = true;
 
+	GetPawn()->DisableInput(this);
+	
 	ServerRPC_RequestSpectate();
 }
 
