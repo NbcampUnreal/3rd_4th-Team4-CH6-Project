@@ -34,6 +34,11 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 
 	PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+
+	if (IsLocalController())
+	{
+		CustomizingInteractable = Cast<AAO_LobbyInteractable>(UGameplayStatics::GetActorOfClass(GetWorld(), AAO_LobbyInteractable::StaticClass()));
+	}
 }
 
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -160,7 +165,10 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
 		*GetName());
 
-	CustomizingInteractable->AddDisabledPlayer(PlayerCharacter);
+	if (CustomizingInteractable)
+	{
+		CustomizingInteractable->AddDisabledPlayer(PlayerCharacter);
+	}
 	
 	FadeIn();
 
@@ -231,7 +239,10 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy = nullptr;
 	}
 
-	CustomizingInteractable->RemoveDisabledPlayer(PlayerCharacter);
+	if (CustomizingInteractable)
+	{
+		CustomizingInteractable->RemoveDisabledPlayer(PlayerCharacter);
+	}
 	
 	FadeOut();
 }

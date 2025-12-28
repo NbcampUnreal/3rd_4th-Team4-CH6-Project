@@ -66,9 +66,6 @@ public:
 	void OnFadeInFinishedOpenUI();
 	void OnFadeInFinishedCloseUI();
 
-	UPROPERTY()
-	TObjectPtr<AAO_LobbyInteractable> CustomizingInteractable = nullptr;
-
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customizing")
 	TObjectPtr<UAO_UserWidget> CustomizingWidget = nullptr;
@@ -84,6 +81,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<AAO_LobbyInteractable> CustomizingInteractable = nullptr;
 	
 	FTimerHandle FadeTimerHandle;
 };

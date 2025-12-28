@@ -52,13 +52,14 @@ void UAO_DummyCustomComponent::SaveCustomizingData()
 	PlayerState->ServerRPC_SetCharacterCustomizingData(CustomizingData);
 }
 
-void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType)
+void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh)
 {
 	CustomizingData.CharacterMeshType = NewMeshType;
+	CustomizingData.CharacterSkeletalMesh = NewMesh;
 	
 	TObjectPtr<UCustomizableObjectInstance> Instance = GetCurrentCustomizableObjectInstanceFromMap();
 	checkf(Instance, TEXT("Instance is invalid"));
-
+	
 	ChangeCharacterMesh(Instance);
 }
 
@@ -100,6 +101,7 @@ void UAO_DummyCustomComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 		CustomizingCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
 		CustomizingCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
 		CustomizingCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
+		CustomizingCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
 	}
 }
 

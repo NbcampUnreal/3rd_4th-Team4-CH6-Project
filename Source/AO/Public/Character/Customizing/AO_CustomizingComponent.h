@@ -27,6 +27,8 @@ enum class ECharacterMesh : uint8
 {
 	Elsa UMETA(DisplayName = "Elsa"),
 	Anka UMETA(DisplayName = "Anka"),
+	Bruce UMETA(DisplayName = "Bruce"),
+	Cameron UMETA(DisplayName = "Cameron"),
 };
 
 USTRUCT(BlueprintType)
@@ -36,6 +38,8 @@ struct FCustomizingData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ECharacterMesh CharacterMeshType = ECharacterMesh::Elsa;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USkeletalMesh* CharacterSkeletalMesh = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FParameterOptionName HairOptionData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -70,7 +74,7 @@ private:
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_CustomizingData)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Customizing", meta = (AllowPrivateAccess = "true"), ReplicatedUsing = OnRep_CustomizingData)
 	FCustomizingData CustomizingData;
 	
 	UFUNCTION()

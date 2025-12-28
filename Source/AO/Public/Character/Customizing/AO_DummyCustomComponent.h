@@ -28,7 +28,7 @@ public:
 	void SaveCustomizingData();
 
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	void ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType);
+	void ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh);
 
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
 	void ChangeOptionInBlueprint(const FParameterOptionName& NewOptionData);
@@ -45,6 +45,7 @@ private:
 	UPROPERTY()
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObjectInstance>> CustomizableObjectInstanceMap;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Customizing", meta = (AllowPrivateAccess = "true"))
 	FCustomizingData CustomizingData;
 	
 	void ChangeCharacterMesh(UCustomizableObjectInstance* Instance);

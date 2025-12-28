@@ -81,6 +81,7 @@ void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 		PlayerCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
 		PlayerCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
+		PlayerCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
 	}
 }
 
