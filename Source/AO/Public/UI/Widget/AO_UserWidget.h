@@ -12,6 +12,26 @@
  * 2. WBP_Base_{category} 를 통해 최상위 부모의 기능을 하위 WBP에서 모두 공유하여 사용
  *  - WBP_Base_Modal : 팝업/모달 류 WBP는 해당 클래스를 상속받아서 일괄적으로 Open/Close 애니메이션이 적용되도록 함
  */
+
+USTRUCT(BlueprintType)
+struct FAO_SoundRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<USoundBase> SoundAsset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float VolumeMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PitchMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Description;
+};
+
 UCLASS()
 class AO_API UAO_UserWidget : public UUserWidget
 {
@@ -20,6 +40,10 @@ class AO_API UAO_UserWidget : public UUserWidget
 public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "AO|UI")
 	void OnEscapeCloseRequested();
+
+	// 블루프린트의 PlayUISound를 대체할 함수
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void PlayUISoundFromDataTable(FName RowName, UDataTable* SoundDataTable);
 	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
