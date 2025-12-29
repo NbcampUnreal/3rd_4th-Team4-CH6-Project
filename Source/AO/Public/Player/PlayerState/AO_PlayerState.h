@@ -9,6 +9,7 @@
 #include "AO_PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameReady, const FText&);
 
 UCLASS()
 class AO_API AAO_PlayerState : public APlayerState
@@ -53,6 +54,9 @@ public:
 	// 레디 상태가 복제될 때 호출
 	UFUNCTION()
 	void OnRep_LobbyIsReady();
+
+	// 플레이어 이름 준비 완료되면 델리게이트 호출
+	FOnPlayerNameReady OnPlayerNameReady;
 
 protected:
 	// 레디 상태 (변경 시 OnRep_LobbyIsReady 호출)
