@@ -2,42 +2,46 @@
 
 #include "UI/Widget/AO_UserWidget.h"
 
-#include "Engine/GameInstance.h"
-#include "InputCoreTypes.h"
-#include "UI/AO_UIStackManager.h"
-#include "UI/AO_UIActionKeySubsystem.h"
+#include "AO_Log.h"
+#include "Kismet/GameplayStatics.h"
 
-FReply UAO_UserWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+void UAO_UserWidget::PlayUISoundFromDataTable(FName RowName, UDataTable* SoundDataTable)
 {
-	// Super 먼저 호출하면, 자식이 이미 처리해버려서 여기까지 안 올 때가 있어
-	// 그래서 공통 “닫기 키”는 먼저 처리하는 쪽이 안정적임
-	if (bCloseOnEscape)
+	if (!SoundDataTable)
 	{
-		if (APlayerController* PC = GetOwningPlayer())
-		{
-			if (UGameInstance* GI = PC->GetGameInstance())
-			{
-				if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
-				{
-					if (Keys->IsUICloseKey(InKeyEvent.GetKey()))
-					{
-						RequestCloseByEscape();
-
-						if (bConsumeEscape)
-						{
-							return FReply::Handled();
-						}
-					}
-				}
-			}
-		}
+		AO_LOG(LogJM, Warning, TEXT("SoundDataTable is Null!"));
+		return;
 	}
 
-	return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
-}
+	// 1. Get Data Table Row (블루프린트의 'Get Data Table Row' 노드)
+	static const FString ContextString(TEXT("Sound Context"));
+	FAO_SoundRow* FoundRow = SoundDataTable->FindRow<FAO_SoundRow>(RowName, ContextString);
 
-void UAO_UserWidget::RequestCloseByEscape()
-{
-	// BP에서 추가 처리가 필요하면 이벤트로도 받을 수 있게 열어둠
-	OnEscapeCloseRequested();
+	if (FoundRow)
+	{
+		// 2. Row Found 시점: Play Sound 2D 실행
+		if (FoundRow->SoundAsset)
+		{
+			// IsUISound 체크박스 설정과 동일하게 하려면 5번째 인자에 true 전달
+			UGameplayStatics::PlaySound2D(
+				GetWorld(), 
+				FoundRow->SoundAsset, 
+				FoundRow->VolumeMultiplier, 
+				FoundRow->PitchMultiplier, 
+				0.0f,    // Start Time
+				nullptr, // Concurrency Settings
+				nullptr, // Owning Actor
+				true     // Is UISound (블루프린트에서 체크되어 있던 부분)
+			);
+		}
+	}
+	else
+	{
+		// 3. Row Not Found 시점: Print Text 실행
+		AO_LOG(LogJM, Warning, TEXT("Row Not Found! (%s)"), *RowName.ToString());
+        
+		// 화면에 직접 출력하고 싶을 경우
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, 
+			FString::Printf(TEXT("Row Not Found! (%s)"), *RowName.ToString()));
+	}
 }

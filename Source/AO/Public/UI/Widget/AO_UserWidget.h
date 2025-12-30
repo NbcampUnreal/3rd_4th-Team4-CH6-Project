@@ -12,34 +12,43 @@
  * 2. WBP_Base_{category} 를 통해 최상위 부모의 기능을 하위 WBP에서 모두 공유하여 사용
  *  - WBP_Base_Modal : 팝업/모달 류 WBP는 해당 클래스를 상속받아서 일괄적으로 Open/Close 애니메이션이 적용되도록 함
  */
+
+USTRUCT(BlueprintType)
+struct FAO_SoundRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<USoundBase> SoundAsset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float VolumeMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PitchMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Description;
+};
+
 UCLASS()
 class AO_API UAO_UserWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	// ESC로 닫기 로직이 발동했을 때, BP에서 추가 처리하고 싶으면 여기 이벤트를 사용
-	UFUNCTION(BlueprintImplementableEvent, Category="AO|UI")
+	UFUNCTION(BlueprintImplementableEvent, Category = "AO|UI")
 	void OnEscapeCloseRequested();
 
+	// 블루프린트의 PlayUISound를 대체할 함수
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void PlayUISoundFromDataTable(FName RowName, UDataTable* SoundDataTable);
+	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
 	float HoverOpacity = 1.0f;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Widget Config")
 	float UnHoverOpacity = 0.5f;
-
-	// 이 위젯이 "ESC로 닫혀야 하는 모달/메뉴"라면 true로 켜서 사용 (기본 false)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AO|UI|Close")
-	bool bCloseOnEscape = false;
-
-	// ESC를 처리했을 때 입력을 먹을지(Handled) 여부
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AO|UI|Close")
-	bool bConsumeEscape = true;
-
-protected:
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
-
-private:
-	void RequestCloseByEscape();
 };

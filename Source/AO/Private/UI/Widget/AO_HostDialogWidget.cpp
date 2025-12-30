@@ -19,24 +19,6 @@ void UAO_HostDialogWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if(Btn_Create && !Btn_Create->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Create))
-	{
-		Btn_Create->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Create);
-	}
-	else if(!Btn_Create)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Create is null"));
-	}
-
-	if(Btn_Cancel && !Btn_Cancel->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Cancel))
-	{
-		Btn_Cancel->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Cancel);
-	}
-	else if(!Btn_Cancel)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Cancel is null"));
-	}
-
 	if(Btn_Backdrop && !Btn_Backdrop->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Backdrop))
 	{
 		Btn_Backdrop->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Backdrop);

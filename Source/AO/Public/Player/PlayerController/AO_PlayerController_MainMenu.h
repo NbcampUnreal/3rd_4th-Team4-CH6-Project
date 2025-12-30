@@ -25,4 +25,8 @@ protected:
 
 private:
 	UPROPERTY() UAO_MainMenuWidget* MainMenu = nullptr;
+	
+public:
+	void SetupInputComponent();
+	void HandleUIOpen();
 };

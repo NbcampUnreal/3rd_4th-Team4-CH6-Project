@@ -47,7 +47,6 @@ void AAO_newTrain::BeginPlay()
 		{
 			Subsystem->RegisterTrain(this);
 			//UE_LOG(LogTemp, Warning, TEXT("Train BeginPlay & RegisterTrain called"));
-
 		}
 	}
 }

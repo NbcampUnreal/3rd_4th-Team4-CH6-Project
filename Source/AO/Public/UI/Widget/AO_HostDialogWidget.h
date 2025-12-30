@@ -6,6 +6,7 @@
 
 class UButton;
 class UEditableTextBox;
+class UUserWidget;
 
 /** 방 이름/비밀번호를 입력받아 HostSessionEx를 호출하는 마우스 중심 팝업 다이얼로그 */
 UCLASS()
@@ -19,12 +20,12 @@ public:
 protected:
 	UPROPERTY(meta=(BindWidget)) UEditableTextBox* Txt_RoomName = nullptr;
 	UPROPERTY(meta=(BindWidget)) UEditableTextBox* Txt_Password = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Create = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Cancel = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Create = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Cancel = nullptr;
 	UPROPERTY(meta=(BindWidget)) UButton* Btn_Backdrop = nullptr;
 
-	UFUNCTION() void OnClicked_Create();
-	UFUNCTION() void OnClicked_Cancel();
+	UFUNCTION(BlueprintCallable) void OnClicked_Create();
+	UFUNCTION(BlueprintCallable) void OnClicked_Cancel();
 	UFUNCTION() void OnClicked_Backdrop();
 
 	/* 입력 변화 콜백 (실시간 버튼 상태 갱신) */
