@@ -59,6 +59,9 @@ public:
 		meta=(EditCondition="bIsToggleable", EditConditionHides))
 	FAO_InteractionEffectSettings DeactivateEffect;
 
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
+	TArray<TObjectPtr<AActor>> DisabledPlayers;
+
 	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
 	void OnInteractionSuccess_BP(AActor* Interactor);
 
@@ -131,9 +134,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Reaction")
 	TArray<TObjectPtr<AAO_PuzzleReactionActor>> LinkedReactionActors;
-
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
-	TArray<TObjectPtr<AActor>> DisabledPlayers;
 
 private:
 	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);

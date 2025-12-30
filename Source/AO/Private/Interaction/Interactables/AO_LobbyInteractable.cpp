@@ -206,6 +206,12 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
                 *GetNameSafe(PC),
                 PC->IsLocalController() ? 1 : 0);
 
+            if (Interactor)
+            {
+                AddDisabledPlayer(Interactor);
+            }
+            PC->CustomizingInteractable = this;
+
             PC->Server_RequestWardrobe();
             break;
         }

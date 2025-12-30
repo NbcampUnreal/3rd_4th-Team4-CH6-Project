@@ -34,11 +34,6 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 
 	PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
-
-	if (IsLocalController())
-	{
-		CustomizingInteractable = Cast<AAO_LobbyInteractable>(UGameplayStatics::GetActorOfClass(GetWorld(), AAO_LobbyInteractable::StaticClass()));
-	}
 }
 
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -96,7 +91,7 @@ void AAO_PlayerController_Lobby::Server_RequestWardrobe_Implementation()
 		*GetName(),
 		HasAuthority() ? 1 : 0,
 		IsLocalController() ? 1 : 0);
-
+	
 	Client_OpenWardrobe();
 }
 
@@ -164,11 +159,6 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 	AO_LOG(LogJSH, Log,
 		TEXT("OpenWardrobe: Open wardrobe UI (TODO) | PC=%s"),
 		*GetName());
-
-	if (CustomizingInteractable)
-	{
-		CustomizingInteractable->AddDisabledPlayer(PlayerCharacter);
-	}
 	
 	FadeIn();
 
@@ -195,6 +185,24 @@ void AAO_PlayerController_Lobby::CloseWardrobe()
 
 	GetWorldTimerManager().SetTimer(FadeTimerHandle, this, &AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI,
 									FadeTime, false);
+}
+
+void AAO_PlayerController_Lobby::Server_CloseWardrobe_Implementation()
+{
+	if (!CustomizingInteractable)
+	{
+		AO_LOG(LogJSH, Error, TEXT("CustomizingInteractable is NULL"));
+		return;
+	}
+
+	AAO_PlayerCharacter* Interactor = Cast<AAO_PlayerCharacter>(GetPawn());
+	if (!Interactor)
+	{
+		AO_LOG(LogJSH, Error, TEXT("Character is NULL"));
+		return;
+	}
+
+	CustomizingInteractable->RemoveDisabledPlayer(Interactor);
 }
 
 void AAO_PlayerController_Lobby::FadeIn()
@@ -239,10 +247,7 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy = nullptr;
 	}
 
-	if (CustomizingInteractable)
-	{
-		CustomizingInteractable->RemoveDisabledPlayer(PlayerCharacter);
-	}
+	Server_CloseWardrobe();
 	
 	FadeOut();
 }
