@@ -99,9 +99,11 @@ void UAO_DummyCustomComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 	{
 		CustomizingCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		CustomizingCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
-		CustomizingCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
-		CustomizingCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
-		CustomizingCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
+
+		FInstanceUpdateDelegate UpdateCallback;
+		UpdateCallback.BindUFunction(this, "OnMeshUpdateFinished");
+		
+		CustomizingCharacter->GetBodyComponent()->UpdateSkeletalMeshAsyncResult(UpdateCallback);
 	}
 }
 
@@ -133,4 +135,10 @@ void UAO_DummyCustomComponent::ApplyCustomizingData()
 	{
 		ChangeOption(Instance, CustomizingData.ClothOptionData);
 	}
+}
+
+void UAO_DummyCustomComponent::OnMeshUpdateFinished(const FUpdateContext& Context)
+{
+	CustomizingCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
+	AO_LOG(LogKSH, Log, TEXT("Mesh update finished"));
 }

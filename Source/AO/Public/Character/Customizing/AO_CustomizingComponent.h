@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "AO_CustomizingComponent.generated.h"
 
+struct FUpdateContext;
 class AAO_PlayerState;
 class AAO_PlayerCharacter;
 class UCustomizableObject;
@@ -86,4 +87,7 @@ private:
 	void LoadCustomizingDataFromPlayerState();
 	
 	void ApplyCustomizingData();
+
+	UFUNCTION()
+	void OnMeshUpdateFinished(const FUpdateContext& Context);
 };

@@ -7,6 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "AO_DummyCustomComponent.generated.h"
 
+struct FUpdateContext;
 class AAO_CustomizingCharacter;
 class AAO_PlayerState;
 class UCustomizableObject;
@@ -52,4 +53,7 @@ private:
 	void ChangeOption(UCustomizableObjectInstance* Instance, const FParameterOptionName& NewOptionData);
 	
 	void ApplyCustomizingData();
+
+	UFUNCTION()
+	void OnMeshUpdateFinished(const FUpdateContext& Context);
 };
