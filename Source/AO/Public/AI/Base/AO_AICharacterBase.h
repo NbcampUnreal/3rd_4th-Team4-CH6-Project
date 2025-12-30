@@ -28,6 +28,9 @@ class AO_API AAO_AICharacterBase : public ACharacter, public IAbilitySystemInter
 public:
 	AAO_AICharacterBase();
 
+	// Tick 오버라이드 (디버그용)
+	virtual void Tick(float DeltaTime) override;
+
 	// IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 

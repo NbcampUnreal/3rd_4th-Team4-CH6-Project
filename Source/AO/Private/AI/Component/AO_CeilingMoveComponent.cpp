@@ -35,6 +35,12 @@ void UAO_CeilingMoveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	// 서버에서만 실행되어야 함 (위치 조정은 서버에서만)
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
 	if (bIsCeilingMode)
 	{
 		UpdateCeilingPosition(DeltaTime);

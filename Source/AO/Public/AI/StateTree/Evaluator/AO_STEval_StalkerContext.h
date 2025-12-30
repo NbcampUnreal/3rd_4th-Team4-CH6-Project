@@ -55,3 +55,4 @@ protected:
 	void UpdateStalkerContextData(FStateTreeExecutionContext& Context, FAO_STEval_StalkerCtx_InstanceData& InstanceData) const;
 };
 
+

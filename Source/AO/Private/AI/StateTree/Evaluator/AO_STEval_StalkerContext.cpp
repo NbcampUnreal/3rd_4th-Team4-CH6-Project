@@ -75,3 +75,4 @@ void FAO_STEval_StalkerContext::UpdateStalkerContextData(FStateTreeExecutionCont
 	}
 }
 
+

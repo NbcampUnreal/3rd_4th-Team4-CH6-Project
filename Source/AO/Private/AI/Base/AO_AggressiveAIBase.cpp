@@ -9,6 +9,10 @@ AAO_AggressiveAIBase::AAO_AggressiveAIBase()
 	// 베이스 클래스의 기본 속도를 RoamSpeed로 설정
 	DefaultMovementSpeed = RoamSpeed;
 	AlertMovementSpeed = ChaseSpeed;
+	
+	// AI Controller 자동 Possess 설정 - 클라이언트에서도 일관된 동작을 위해 필수
+	// Crab은 이 설정이 있어서 정상 동작하지만, AggressiveAI 계열은 없어서 문제 발생
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AAO_AggressiveAIBase::BeginPlay()
@@ -71,6 +75,12 @@ void AAO_AggressiveAIBase::SetSearchMode(bool bSearching)
 
 void AAO_AggressiveAIBase::UpdateMovementSpeed()
 {
+	// 서버에서만 실행되어야 함
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	UCharacterMovementComponent* MovementComp = GetCharacterMovement();
 	if (!MovementComp)
 	{
