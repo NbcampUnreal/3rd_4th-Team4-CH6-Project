@@ -3,6 +3,9 @@
 #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AO_Log.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 AAO_DestructibleCacheActor::AAO_DestructibleCacheActor()
@@ -13,6 +16,9 @@ AAO_DestructibleCacheActor::AAO_DestructibleCacheActor()
 	RootComponent = GeoComp;
 	GeoComp->SetSimulatePhysics(false);
 	GeoComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	VFXSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("VFXSpawnPoint"));
+	VFXSpawnPoint->SetupAttachment(RootComponent);
 
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
@@ -117,12 +123,68 @@ void AAO_DestructibleCacheActor::OnRep_IsDestroyed()
 	}
 }
 
+void AAO_DestructibleCacheActor::MulticastPlayDestructionEffects_Implementation()
+{
+	if (!VFXSpawnPoint)
+	{
+		return;
+	}
+
+	FVector SpawnLocation = VFXSpawnPoint->GetComponentLocation();
+	FRotator SpawnRotation = VFXSpawnPoint->GetComponentRotation();
+
+	if (DestructionNiagaraVFX)
+	{
+		UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this,
+			DestructionNiagaraVFX,
+			SpawnLocation,
+			SpawnRotation,
+			VFXScale,
+			true,
+			true,
+			ENCPoolMethod::None,
+			true
+		);
+	}
+
+	if (DestructionCascadeVFX)
+	{
+		UParticleSystemComponent* ParticleComp = UGameplayStatics::SpawnEmitterAtLocation(
+			this,
+			DestructionCascadeVFX,
+			SpawnLocation,
+			SpawnRotation,
+			VFXScale,
+			true,
+			EPSCPoolMethod::None,
+			true
+		);
+	}
+
+	if (DestructionSFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			DestructionSFX,
+			SpawnLocation,
+			SFXVolume,
+			SFXPitch
+		);
+	}
+}
+
 void AAO_DestructibleCacheActor::ExecuteDestruction()
 {
 	checkf(GeoComp, TEXT("GeoComp is null in ExecuteDestruction"));
 
 	// 카오스 캐시 매니저의 Trigger 모드 실행 (녹화된 파괴 재생)
 	TriggerComponent(GeoComp);
+
+	if (HasAuthority())
+	{
+		MulticastPlayDestructionEffects();
+	}
 
 	// 삭제 타이머 설정
 	if (HasAuthority() && DestroyDelay > 0.0f)
