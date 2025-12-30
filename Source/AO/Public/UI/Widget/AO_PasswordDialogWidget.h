@@ -36,11 +36,11 @@ public:
 protected:
 	/** UMG와 동일 이름으로 바인딩 */
 	UPROPERTY(meta=(BindWidget)) UEditableTextBox* Txt_Password = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton*        Btn_Ok        = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton*        Btn_Back      = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget*        Btn_Ok        = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget*        Btn_Back      = nullptr;
 
-	UFUNCTION() void OnClicked_Ok();
-	UFUNCTION() void OnClicked_Back();
+	UFUNCTION(BlueprintCallable) void OnClicked_Ok();
+	UFUNCTION(BlueprintCallable) void OnClicked_Back();
 
 private:
 	UPROPERTY() TWeakObjectPtr<UAO_LobbyListWidget> ParentList;

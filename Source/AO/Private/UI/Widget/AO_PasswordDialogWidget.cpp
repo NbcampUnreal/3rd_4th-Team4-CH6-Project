@@ -14,24 +14,6 @@ void UAO_PasswordDialogWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if(Btn_Ok && !Btn_Ok->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Ok))
-	{
-		Btn_Ok->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Ok);
-	}
-	else if(!Btn_Ok)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Ok is null"));
-	}
-
-	if(Btn_Back && !Btn_Back->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Back))
-	{
-		Btn_Back->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Back);
-	}
-	else if(!Btn_Back)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Back is null"));
-	}
-
 	// 팝업 포커스/입력 준비
 	SetIsFocusable(true);
 	if(Txt_Password)
