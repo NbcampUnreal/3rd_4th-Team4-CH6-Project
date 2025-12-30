@@ -37,8 +37,8 @@ public:
 
 protected:
 	/* ---------- 기본 UI ---------- */
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Refresh = nullptr;
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Close   = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Refresh = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Close   = nullptr;
 	UPROPERTY(meta=(BindWidget)) UScrollBox* Scroll_SessionList = nullptr;
 	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_InfoMessage = nullptr;
 
@@ -52,19 +52,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="AO|UI")
 	TSubclassOf<UAO_MainMenuWidget> MainMenuClass;
 
-	UFUNCTION() void OnClicked_Refresh();
-	UFUNCTION() void OnClicked_Close();
+	UFUNCTION(BlueprintCallable) void OnClicked_Refresh();
+	UFUNCTION(BlueprintCallable) void OnClicked_Close();
 	UFUNCTION() void OnFindSessionsComplete(bool bSuccessful);
 
 	/* ---------- 검색/페이지 ---------- */
 	UPROPERTY(meta=(BindWidgetOptional)) UEditableTextBox* Edt_Search = nullptr;
-	UPROPERTY(meta=(BindWidgetOptional)) UButton* Btn_Prev = nullptr;
-	UPROPERTY(meta=(BindWidgetOptional)) UButton* Btn_Next = nullptr;
+	UPROPERTY(meta=(BindWidgetOptional)) UUserWidget* Btn_Prev = nullptr;
+	UPROPERTY(meta=(BindWidgetOptional)) UUserWidget* Btn_Next = nullptr;
 	UPROPERTY(meta=(BindWidgetOptional)) UTextBlock* Txt_PageInfo = nullptr;
 
 	UFUNCTION() void OnSearchTextCommitted(const FText& Text, ETextCommit::Type CommitMethod);
-	UFUNCTION() void OnClicked_PrevPage();
-	UFUNCTION() void OnClicked_NextPage();
+	UFUNCTION(BlueprintCallable) void OnClicked_PrevPage();
+	UFUNCTION(BlueprintCallable) void OnClicked_NextPage();
 
 	void RebuildList();
 

@@ -36,24 +36,6 @@ void UAO_LobbyListWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if(Btn_Refresh)
-	{
-		Btn_Refresh->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Refresh);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Refresh is null"));
-	}
-
-	if(Btn_Close)
-	{
-		Btn_Close->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Close);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Close is null"));
-	}
-
 	if(Edt_Search)
 	{
 		Edt_Search->OnTextCommitted.AddDynamic(this, &ThisClass::OnSearchTextCommitted);
@@ -61,24 +43,6 @@ void UAO_LobbyListWidget::NativeConstruct()
 	else
 	{
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Edt_Search is null"));
-	}
-
-	if(Btn_Prev)
-	{
-		Btn_Prev->OnClicked.AddDynamic(this, &ThisClass::OnClicked_PrevPage);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Prev is null"));
-	}
-
-	if(Btn_Next)
-	{
-		Btn_Next->OnClicked.AddDynamic(this, &ThisClass::OnClicked_NextPage);
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Next is null"));
 	}
 
 	if(Txt_InfoMessage)
