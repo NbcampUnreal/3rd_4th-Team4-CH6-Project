@@ -26,7 +26,6 @@ void AAO_newTrain::BeginPlay()
 		UAO_Fuel_AttributeSet::GetFuelAttribute()
 	).AddUObject(this, &AAO_newTrain::HandleFuelAttributeChanged);
 	
-	
 	if (HasAuthority())
 	{
 		const_cast<UAO_Fuel_AttributeSet*>(FuelAttributeSet)->InitFromGameInstance();
@@ -46,11 +45,9 @@ void AAO_newTrain::BeginPlay()
 			World->GetSubsystem<UAO_TrainWorldSubsystem>())
 		{
 			Subsystem->RegisterTrain(this);
-			//UE_LOG(LogTemp, Warning, TEXT("Train BeginPlay & RegisterTrain called"));
 		}
 	}
 }
-
 
 UAbilitySystemComponent* AAO_newTrain::GetAbilitySystemComponent() const
 {
@@ -89,21 +86,15 @@ void AAO_newTrain::OnInteractionSuccess(AActor* Interactor)
 	}
 
 	UAO_InventoryComponent* Inventory = Interactor->FindComponentByClass<UAO_InventoryComponent>();
+	
 	if (!Inventory) return;
-
-	if (!Inventory->Slots.IsValidIndex(Inventory->SelectedSlotIndex))
-	{
-		return;
-	}
-
+	if (!Inventory->Slots.IsValidIndex(Inventory->SelectedSlotIndex)) return;
+	
 	FInventorySlot& Slot = Inventory->Slots[Inventory->SelectedSlotIndex];
 
 	float FuelFromItem = Slot.FuelAmount;
 
-	if (FuelFromItem <= 0.f)
-	{
-		return;
-	}
+	if (FuelFromItem <= 0.f) return;
 	
 	const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddFuel")); 
     
@@ -146,8 +137,6 @@ void AAO_newTrain::HandleFuelAttributeChanged(const FOnAttributeChangeData& Data
 		{
 			UObject* Listener = ListenerPtr.Get();
 			IAO_TrainFuelListener::Execute_OnFuelChanged(Listener, NewFuel);
-			//UE_LOG(LogTemp, Warning, TEXT("Fuel Changed: %f"), Data.NewValue);
-
 		}
 	}
 }
@@ -156,10 +145,7 @@ void AAO_newTrain::BindFuel(UObject* Listener)
 {
 	if (!ASC || !Listener) return;
 
-	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))
-	{
-		return;
-	}
+	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))	return;
 
 	FuelListeners.AddUnique(Listener);
 	
@@ -167,19 +153,13 @@ void AAO_newTrain::BindFuel(UObject* Listener)
 		ASC->GetNumericAttribute(UAO_Fuel_AttributeSet::GetFuelAttribute());
 
 	IAO_TrainFuelListener::Execute_OnFuelChanged(Listener, CurrentFuel);
-	//UE_LOG(LogTemp, Warning, TEXT("BindFuel: Initial Fuel = %f"), CurrentFuel);
 }
 
 void AAO_newTrain::BindFuelListener(UObject* Listener)
 {
 	if (!IsValid(Listener)) return;
 
-	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))
-	{
-		return;
-	}
+	if (!Listener->GetClass()->ImplementsInterface(UAO_TrainFuelListener::StaticClass()))	return;
 
 	BindFuel(Listener);
-	//UE_LOG(LogTemp, Warning, TEXT("BindFuelListener called"));
-
 }

@@ -60,17 +60,8 @@ void UAO_InventoryComponent::RegisterToSubsystem()
 	{
 		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Register Inventory to Subsystem"));
 			Subsystem->RegisterInventory(this);
 		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("LocalPlayer is null"));
 	}
 }
 
@@ -196,8 +187,6 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 	}
 	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Weapon");
-
 		FHitResult Hit;
 		FVector Start = GetOwner()->GetActorLocation();
 		FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
@@ -228,8 +217,6 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 				);
 			}
 			DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
-
-			// effect
 		}
 
 	}
@@ -324,7 +311,6 @@ void UAO_InventoryComponent::ClearSlot()
     if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }
 
-//ms_inventory key binding
 void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 {
     int32 SlotIndex = FMath::RoundToInt(Value.Get<float>()); 
