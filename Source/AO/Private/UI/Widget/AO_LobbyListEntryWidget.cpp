@@ -8,15 +8,6 @@
 void UAO_LobbyListEntryWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	if (Btn_Join && !Btn_Join->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_Join))
-	{
-		Btn_Join->OnClicked.AddDynamic(this, &ThisClass::OnClicked_Join);
-	}
-	else if (!Btn_Join)
-	{
-		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Join is null"));
-	}
 }
 
 void UAO_LobbyListEntryWidget::Setup(int32 InIndex, const FString& InTitle, int32 InOpenSlots, int32 InMaxSlots, bool bInNeedsPassword)
