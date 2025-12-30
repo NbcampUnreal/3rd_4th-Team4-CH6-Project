@@ -138,4 +138,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "AO|Events")
 	FOnSettingsApplied OnSettingsApplied;		// 설정이 성공적으로 적용되고 저장되었을 때 호출되는 델리게이트
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AO|Setting")
+	bool bIsSettingsInitialized = false;
 };
