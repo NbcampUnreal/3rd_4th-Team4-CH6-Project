@@ -1,4 +1,4 @@
-// AO_KidnapComponent.h
+//KSJ : AO_KidnapComponent
 
 #pragma once
 

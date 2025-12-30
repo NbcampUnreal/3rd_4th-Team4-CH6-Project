@@ -1,4 +1,4 @@
-// AO_STCond_HasWeapon.cpp
+//KSJ : AO_STCond_HasWeapon
 
 #include "AI/StateTree/Condition/AO_STCond_HasWeapon.h"
 #include "AI/Character/AO_Troll.h"

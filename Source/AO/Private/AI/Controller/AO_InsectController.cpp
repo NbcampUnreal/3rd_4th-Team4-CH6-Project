@@ -1,4 +1,4 @@
-// AO_InsectController.cpp
+//KSJ : AO_InsectController
 
 #include "AI/Controller/AO_InsectController.h"
 #include "AI/Character/AO_Insect.h"

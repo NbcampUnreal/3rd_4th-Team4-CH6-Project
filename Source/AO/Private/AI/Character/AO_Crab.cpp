@@ -1,4 +1,4 @@
-// AO_Crab.cpp
+//KSJ : AO_Crab
 
 #include "AI/Character/AO_Crab.h"
 #include "AI/Component/AO_ItemCarryComponent.h"

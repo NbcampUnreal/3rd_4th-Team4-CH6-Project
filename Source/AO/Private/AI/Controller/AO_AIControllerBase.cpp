@@ -1,4 +1,4 @@
-// AO_AIControllerBase.cpp
+//KSJ : AO_AIControllerBase
 
 #include "AI/Controller/AO_AIControllerBase.h"
 #include "AI/Base/AO_AICharacterBase.h"

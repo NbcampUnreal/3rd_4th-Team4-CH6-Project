@@ -1,4 +1,4 @@
-// AO_Area_SpawnIntensive.cpp
+//KSJ : AO_Area_SpawnIntensive
 
 #include "AI/Area/AO_Area_SpawnIntensive.h"
 #include "AI/Base/AO_AICharacterBase.h"

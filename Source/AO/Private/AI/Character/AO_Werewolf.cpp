@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_Werewolf
 
 
 #include "AI/Character/AO_Werewolf.h"

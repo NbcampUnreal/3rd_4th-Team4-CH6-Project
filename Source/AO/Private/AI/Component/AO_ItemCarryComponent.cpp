@@ -1,4 +1,4 @@
-// AO_ItemCarryComponent.cpp
+//KSJ : AO_ItemCarryComponent
 
 #include "AI/Component/AO_ItemCarryComponent.h"
 #include "AI/Subsystem/AO_AISubsystem.h"

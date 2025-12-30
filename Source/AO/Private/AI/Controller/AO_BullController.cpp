@@ -1,4 +1,4 @@
-// AO_BullController.cpp
+//KSJ : AO_BullController
 
 #include "AI/Controller/AO_BullController.h"
 #include "AI/Character/AO_Bull.h"

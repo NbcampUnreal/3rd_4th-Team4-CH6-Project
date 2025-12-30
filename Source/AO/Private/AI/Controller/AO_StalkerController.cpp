@@ -1,4 +1,4 @@
-// AO_StalkerController.cpp
+//KSJ : AO_StalkerController
 
 #include "AI/Controller/AO_StalkerController.h"
 #include "AI/Character/AO_Stalker.h"

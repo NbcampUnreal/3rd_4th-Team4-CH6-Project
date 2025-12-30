@@ -1,4 +1,4 @@
-// AO_TrollWeapon.cpp
+//KSJ : AO_TrollWeapon
 
 #include "AI/Item/AO_TrollWeapon.h"
 #include "AI/Character/AO_Troll.h"

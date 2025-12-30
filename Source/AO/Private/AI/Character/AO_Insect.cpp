@@ -1,4 +1,4 @@
-// AO_Insect.cpp
+//KSJ : AO_Insect
 
 #include "AI/Character/AO_Insect.h"
 #include "AI/Component/AO_KidnapComponent.h"

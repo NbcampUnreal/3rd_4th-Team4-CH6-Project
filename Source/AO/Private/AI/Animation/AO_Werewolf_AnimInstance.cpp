@@ -1,3 +1,5 @@
+//KSJ : AO_Werewolf_AnimInstance
+
 #include "AI/Animation/AO_Werewolf_AnimInstance.h"
 #include "AI/Character/AO_Werewolf.h"
 #include "GameFramework/CharacterMovementComponent.h"

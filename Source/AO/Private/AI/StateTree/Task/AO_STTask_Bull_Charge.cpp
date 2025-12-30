@@ -1,4 +1,4 @@
-// AO_STTask_Bull_Charge.cpp
+//KSJ : AO_STTask_Bull_Charge
 
 #include "AI/StateTree/Task/AO_STTask_Bull_Charge.h"
 #include "AI/Controller/AO_BullController.h"

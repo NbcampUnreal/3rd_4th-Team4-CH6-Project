@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_STTask_Wolf_Surround
 
 
 #include "AI/StateTree/Task/AO_STTask_Wolf_Surround.h"

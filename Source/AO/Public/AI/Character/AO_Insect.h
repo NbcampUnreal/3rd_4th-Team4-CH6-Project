@@ -1,4 +1,4 @@
-// AO_Insect.h
+//KSJ : AO_Insect
 
 #pragma once
 

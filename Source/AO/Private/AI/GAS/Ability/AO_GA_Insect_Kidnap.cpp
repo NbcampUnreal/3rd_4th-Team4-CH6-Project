@@ -1,4 +1,4 @@
-// AO_GA_Insect_Kidnap.cpp
+//KSJ : AO_GA_Insect_Kidnap
 
 #include "AI/GAS/Ability/AO_GA_Insect_Kidnap.h"
 #include "AI/Character/AO_Insect.h"
@@ -149,7 +149,7 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		IgnoreActors,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResults,
 		true
 	);

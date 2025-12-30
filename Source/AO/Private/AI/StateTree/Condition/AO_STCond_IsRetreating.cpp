@@ -1,4 +1,4 @@
-// AO_STCond_IsRetreating.cpp
+//KSJ : AO_STCond_IsRetreating
 
 #include "AI/StateTree/Condition/AO_STCond_IsRetreating.h"
 #include "AI/Character/AO_Stalker.h"

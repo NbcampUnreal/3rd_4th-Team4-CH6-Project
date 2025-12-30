@@ -1,4 +1,4 @@
-// AO_StalkerController.h
+//KSJ : AO_StalkerController
 
 #pragma once
 

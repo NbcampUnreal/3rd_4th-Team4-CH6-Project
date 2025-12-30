@@ -1,4 +1,4 @@
-// AO_TrollController.cpp
+//KSJ : AO_TrollController
 
 #include "AI/Controller/AO_TrollController.h"
 #include "AI/Character/AO_Troll.h"

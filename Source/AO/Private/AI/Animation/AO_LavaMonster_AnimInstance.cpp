@@ -1,4 +1,4 @@
-// AO_LavaMonster_AnimInstance.cpp
+//KSJ : AO_LavaMonster_AnimInstance
 
 #include "AI/Animation/AO_LavaMonster_AnimInstance.h"
 #include "AI/Character/AO_LavaMonster.h"

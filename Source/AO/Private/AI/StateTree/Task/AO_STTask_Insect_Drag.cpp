@@ -1,4 +1,4 @@
-// AO_STTask_Insect_Drag.cpp
+//KSJ : AO_STTask_Insect_Drag
 
 #include "AI/StateTree/Task/AO_STTask_Insect_Drag.h"
 #include "AI/Character/AO_Insect.h"

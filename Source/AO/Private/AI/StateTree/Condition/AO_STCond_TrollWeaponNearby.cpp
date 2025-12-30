@@ -1,3 +1,5 @@
+//KSJ : AO_STCond_TrollWeaponNearby
+
 #include "AI/StateTree/Condition/AO_STCond_TrollWeaponNearby.h"
 #include "AI/Character/AO_Troll.h"
 #include "AI/Component/AO_WeaponHolderComp.h"

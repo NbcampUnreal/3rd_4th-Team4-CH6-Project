@@ -1,4 +1,4 @@
-// AO_STTask_Insect_Kidnap.cpp
+//KSJ : AO_STTask_Insect_Kidnap
 
 #include "AI/StateTree/Task/AO_STTask_Insect_Kidnap.h"
 #include "AI/Character/AO_Insect.h"

@@ -1,3 +1,5 @@
+//KSJ : AO_GA_Bull_Charge
+
 #include "AI/GAS/Ability/AO_GA_Bull_Charge.h"
 #include "AI/Character/AO_Bull.h"
 #include "Character/AO_PlayerCharacter.h"
@@ -102,7 +104,7 @@ void UAO_GA_Bull_Charge::OnHitConfirmEvent(FGameplayEventData Payload)
         UEngineTypes::ConvertToTraceType(ECC_Pawn),
         false,
         IgnoreActors,
-        EDrawDebugTrace::ForDuration,
+        EDrawDebugTrace::None,
         HitResults,
         true
     );

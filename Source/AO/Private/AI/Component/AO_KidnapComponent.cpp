@@ -1,4 +1,4 @@
-// AO_KidnapComponent.cpp
+//KSJ : AO_KidnapComponent
 
 #include "AI/Component/AO_KidnapComponent.h"
 #include "Character/AO_PlayerCharacter.h"

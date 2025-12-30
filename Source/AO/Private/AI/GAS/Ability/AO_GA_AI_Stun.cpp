@@ -1,4 +1,4 @@
-// AO_GA_AI_Stun.cpp
+//KSJ : AO_GA_AI_Stun
 
 #include "AI/GAS/Ability/AO_GA_AI_Stun.h"
 #include "AI/Base/AO_AICharacterBase.h"

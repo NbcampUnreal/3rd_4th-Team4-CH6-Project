@@ -1,4 +1,4 @@
-// AO_STCond_IsKidnapping.h
+//KSJ : AO_STCond_IsKidnapping
 
 #pragma once
 

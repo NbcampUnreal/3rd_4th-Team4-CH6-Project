@@ -1,4 +1,4 @@
-// AO_STCond_ItemNearby.cpp
+//KSJ : AO_STCond_ItemNearby
 
 #include "AI/StateTree/Condition/AO_STCond_ItemNearby.h"
 #include "AI/Character/AO_Crab.h"

@@ -1,4 +1,4 @@
-// AO_Spawner_AIManager.cpp
+//KSJ : AO_Spawner_AIManager
 
 #include "AI/Spawner/AO_Spawner_AIManager.h"
 #include "AI/Area/AO_Area_SpawnRestriction.h"

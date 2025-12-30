@@ -1,4 +1,4 @@
-// AO_AIMemoryComponent.cpp
+//KSJ : AO_AIMemoryComponent
 
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"

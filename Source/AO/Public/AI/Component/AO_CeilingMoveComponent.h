@@ -1,4 +1,4 @@
-// AO_CeilingMoveComponent.h
+//KSJ : AO_CeilingMoveComponent
 
 #pragma once
 

@@ -1,4 +1,4 @@
-// AO_GA_Troll_Attack.cpp
+//KSJ : AO_GA_Troll_Attack
 
 #include "AI/GAS/Ability/AO_GA_Troll_Attack.h"
 #include "AI/Character/AO_Troll.h"
@@ -159,7 +159,7 @@ void UAO_GA_Troll_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration, // 디버깅용 (필요 시 None으로 변경)
+		EDrawDebugTrace::None,
 		HitResults,
 		true,
 		FLinearColor::Red,

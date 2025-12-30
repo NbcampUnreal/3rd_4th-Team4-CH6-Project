@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_GA_Werewolf_Howl
 
 
 #include "AI/GAS/Ability/AO_GA_Werewolf_Howl.h"

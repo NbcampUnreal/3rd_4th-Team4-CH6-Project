@@ -1,4 +1,4 @@
-// AO_STTask_Troll_Attack.cpp
+//KSJ : AO_STTask_Troll_Attack
 
 #include "AI/StateTree/Task/AO_STTask_Troll_Attack.h"
 #include "AI/Character/AO_Troll.h"

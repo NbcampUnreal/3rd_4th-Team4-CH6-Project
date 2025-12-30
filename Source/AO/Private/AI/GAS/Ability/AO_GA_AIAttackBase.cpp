@@ -1,4 +1,4 @@
-// AO_GA_AIAttackBase.cpp
+//KSJ : AO_GA_AIAttackBase
 
 #include "AI/GAS/Ability/AO_GA_AIAttackBase.h"
 #include "AI/Base/AO_AICharacterBase.h"
@@ -158,7 +158,7 @@ void UAO_GA_AIAttackBase::OnHitConfirmEvent(FGameplayEventData Payload)
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration, // 디버깅용 (필요 시 None으로 변경)
+		EDrawDebugTrace::None,
 		HitResults,
 		true,
 		FLinearColor::Red,

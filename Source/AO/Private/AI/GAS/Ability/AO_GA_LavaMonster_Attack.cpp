@@ -1,4 +1,4 @@
-// AO_GA_LavaMonster_Attack.cpp
+//KSJ : AO_GA_LavaMonster_Attack
 
 #include "AI/GAS/Ability/AO_GA_LavaMonster_Attack.h"
 #include "AI/Character/AO_LavaMonster.h"
@@ -11,7 +11,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "DrawDebugHelpers.h"
 
 UAO_GA_LavaMonster_Attack::UAO_GA_LavaMonster_Attack()
 {
@@ -186,12 +185,9 @@ void UAO_GA_LavaMonster_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResults,
-		true,
-		FLinearColor::Red,
-		FLinearColor::Green,
-		2.f
+		true
 	);
 
 	if (!bHit)
@@ -326,21 +322,6 @@ void UAO_GA_LavaMonster_Attack::UpdateGroundStrikeWarning()
 		const float ElapsedTime = CurrentTime - Target.WarningStartTime;
 		const float WarningProgress = FMath::Clamp(ElapsedTime / WarningDuration, 0.f, 1.f);
 
-		// 빨간색 구체로 전조 현상 표시 (진동 효과를 위해 크기 조절)
-		const float SphereRadius = CurrentAttackConfig.AttackRadius * (0.8f + 0.2f * FMath::Sin(ElapsedTime * 10.f));
-		const FColor WarningColor = FColor::Red;
-		
-		DrawDebugSphere(
-			World,
-			Target.StrikeLocation,
-			SphereRadius,
-			16,
-			WarningColor,
-			false,
-			0.1f,
-			0,
-			3.f // 두께
-		);
 	}
 }
 
@@ -374,21 +355,6 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 		// 데미지 및 넉백 적용
 		ApplyDamageAndKnockback(Player, CurrentAttackConfig);
 
-		// 디버그: 공격 발동 위치 표시
-		if (UWorld* World = GetWorld())
-		{
-			DrawDebugSphere(
-				World,
-				Target.StrikeLocation,
-				CurrentAttackConfig.AttackRadius,
-				16,
-				FColor::Yellow,
-				false,
-				2.f,
-				0,
-				5.f
-			);
-		}
 	}
 
 	// 타이머 제거

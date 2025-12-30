@@ -1,4 +1,4 @@
-// AO_AISubsystem.cpp
+//KSJ : AO_AISubsystem
 
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "Item/AO_MasterItem.h"

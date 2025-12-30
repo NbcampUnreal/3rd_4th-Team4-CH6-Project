@@ -1,4 +1,4 @@
-// AO_STTask_Troll_PickWeapon.cpp
+//KSJ : AO_STTask_Troll_PickWeapon
 
 #include "AI/StateTree/Task/AO_STTask_Troll_PickWeapon.h"
 #include "AI/Character/AO_Troll.h"

@@ -1,4 +1,4 @@
-// AO_CeilingMoveComponent.cpp
+//KSJ : AO_CeilingMoveComponent
 
 #include "AI/Component/AO_CeilingMoveComponent.h"
 #include "GameFramework/Character.h"

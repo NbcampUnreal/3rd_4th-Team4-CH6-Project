@@ -1,4 +1,4 @@
-// AO_GA_AIAttackBase.h
+//KSJ : AO_GA_AIAttackBase
 
 #pragma once
 
