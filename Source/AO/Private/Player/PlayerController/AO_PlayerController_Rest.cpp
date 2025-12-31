@@ -21,3 +21,17 @@ void AAO_PlayerController_Rest::Server_RequestRestExit_Implementation()
 
 	RestGM->HandleRestExitRequest(this);
 }
+
+void AAO_PlayerController_Rest::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			HUDWidget->AddToViewport();
+		}
+	}
+}

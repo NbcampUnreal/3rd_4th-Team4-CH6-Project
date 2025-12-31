@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// AO_PlayerController_Lobby.h
 
 #pragma once
 
@@ -8,9 +8,7 @@
 
 class ATargetPoint;
 class AAO_CustomizingCharacter;
-/**
- * 
- */
+
 UCLASS()
 class AO_API AAO_PlayerController_Lobby : public AAO_PlayerController_InGameBase
 {
@@ -80,6 +78,12 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<AAO_PlayerCharacter> PlayerCharacter = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> HUDWidget;
 	
 	FTimerHandle FadeTimerHandle;
 };
