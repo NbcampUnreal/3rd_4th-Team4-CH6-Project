@@ -294,6 +294,7 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		{
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
+			EIC->BindAction(IA_Outline_Train, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 2);
 		}			
 	}
 	
