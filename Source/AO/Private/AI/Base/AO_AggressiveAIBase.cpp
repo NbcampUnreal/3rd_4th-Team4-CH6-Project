@@ -1,15 +1,18 @@
-// AO_AggressiveAIBase.cpp
+//KSJ : AO_AggressiveAIBase
 
 #include "AI/Base/AO_AggressiveAIBase.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 AAO_AggressiveAIBase::AAO_AggressiveAIBase()
 {
 	// 베이스 클래스의 기본 속도를 RoamSpeed로 설정
 	DefaultMovementSpeed = RoamSpeed;
 	AlertMovementSpeed = ChaseSpeed;
+	
+	// AI Controller 자동 Possess 설정 - 클라이언트에서도 일관된 동작을 위해 필수
+	// Crab은 이 설정이 있어서 정상 동작하지만, AggressiveAI 계열은 없어서 문제 발생
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AAO_AggressiveAIBase::BeginPlay()
@@ -35,22 +38,11 @@ void AAO_AggressiveAIBase::SetChaseMode(bool bChasing)
 	}
 	
 	UpdateMovementSpeed();
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Chase mode %s"), *GetName(), bIsChasing ? TEXT("ON") : TEXT("OFF"));
 }
 
 void AAO_AggressiveAIBase::SetCurrentTarget(AAO_PlayerCharacter* NewTarget)
 {
 	CurrentTarget = NewTarget;
-
-	if (NewTarget)
-	{
-		AO_LOG(LogKSJ, Log, TEXT("%s: Target set to %s"), *GetName(), *NewTarget->GetName());
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Log, TEXT("%s: Target cleared"), *GetName());
-	}
 }
 
 bool AAO_AggressiveAIBase::IsTargetInAttackRange() const
@@ -79,12 +71,16 @@ void AAO_AggressiveAIBase::SetSearchMode(bool bSearching)
 	}
 
 	UpdateMovementSpeed();
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Search mode %s"), *GetName(), bIsSearching ? TEXT("ON") : TEXT("OFF"));
 }
 
 void AAO_AggressiveAIBase::UpdateMovementSpeed()
 {
+	// 서버에서만 실행되어야 함
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	UCharacterMovementComponent* MovementComp = GetCharacterMovement();
 	if (!MovementComp)
 	{

@@ -1,4 +1,4 @@
-// AO_EQS_Test_NavAreaExclusion.cpp
+//KSJ : AO_EQS_Test_NavAreaExclusion
 
 #include "AI/EQS/Test/AO_EQS_Test_NavAreaExclusion.h"
 #include "EnvironmentQuery/Items/EnvQueryItemType.h"
@@ -8,7 +8,6 @@
 #include "NavModifierVolume.h"
 #include "AI/NavArea/AO_NavArea_SpawnRestriction.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 UAO_EQS_Test_NavAreaExclusion::UAO_EQS_Test_NavAreaExclusion()
 {

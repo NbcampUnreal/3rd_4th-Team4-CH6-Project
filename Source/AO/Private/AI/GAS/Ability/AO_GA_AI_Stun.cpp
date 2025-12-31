@@ -1,11 +1,10 @@
-// AO_GA_AI_Stun.cpp
+//KSJ : AO_GA_AI_Stun
 
 #include "AI/GAS/Ability/AO_GA_AI_Stun.h"
 #include "AI/Base/AO_AICharacterBase.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 UAO_GA_AI_Stun::UAO_GA_AI_Stun()
 {
@@ -96,14 +95,9 @@ void UAO_GA_AI_Stun::ActivateAbility(
 
 			MontageTask->ReadyForActivation();
 		}
-		else
-		{
-			AO_LOG(LogKSJ, Warning, TEXT("AI Stun: Failed to create MontageTask"));
-		}
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AI Stun: StunMontage is null, using timer instead"));
 		// 모션이 없으면 타이머로 기절 종료 - DefaultStunDuration 후 자동 해제
 		UWorld* World = GetWorld();
 		if (ensure(World))
@@ -120,8 +114,6 @@ void UAO_GA_AI_Stun::ActivateAbility(
 			);
 		}
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AI Stun Ability Activated: %s"), *AICharacter->GetName());
 }
 
 void UAO_GA_AI_Stun::EndAbility(
@@ -172,8 +164,6 @@ void UAO_GA_AI_Stun::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	AO_LOG(LogKSJ, Log, TEXT("AI Stun Ability Ended"));
 }
 
 void UAO_GA_AI_Stun::OnMontageCompleted()

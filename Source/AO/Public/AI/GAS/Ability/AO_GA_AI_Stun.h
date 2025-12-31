@@ -1,4 +1,4 @@
-// AO_GA_AI_Stun.h
+//KSJ : AO_GA_AI_Stun
 
 #pragma once
 

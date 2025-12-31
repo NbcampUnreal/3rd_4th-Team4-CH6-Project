@@ -1,4 +1,4 @@
-// AO_AIMemoryComponent.h
+//KSJ : AO_AIMemoryComponent
 
 #pragma once
 

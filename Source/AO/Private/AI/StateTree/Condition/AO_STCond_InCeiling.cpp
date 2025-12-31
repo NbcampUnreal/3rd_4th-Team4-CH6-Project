@@ -1,4 +1,4 @@
-// AO_STCond_InCeiling.cpp
+//KSJ : AO_STCond_InCeiling
 
 #include "AI/StateTree/Condition/AO_STCond_InCeiling.h"
 #include "AI/Character/AO_Stalker.h"

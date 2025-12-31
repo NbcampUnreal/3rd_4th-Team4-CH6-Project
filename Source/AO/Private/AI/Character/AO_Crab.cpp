@@ -1,4 +1,4 @@
-// AO_Crab.cpp
+//KSJ : AO_Crab
 
 #include "AI/Character/AO_Crab.h"
 #include "AI/Component/AO_ItemCarryComponent.h"
@@ -7,7 +7,6 @@
 #include "Item/AO_MasterItem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NavigationSystem.h"
-#include "AO_Log.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -53,7 +52,6 @@ void AAO_Crab::HandleStunBegin()
 	if (ensure(ItemCarryComponent) && ItemCarryComponent->IsCarryingItem())
 	{
 		ItemCarryComponent->ForceDropItem();
-		AO_LOG(LogKSJ, Log, TEXT("Crab stunned - dropped item"));
 	}
 
 	// 도망 상태 해제
@@ -74,8 +72,6 @@ void AAO_Crab::SetFleeMode(bool bFleeing)
 	{
 		bIsFleeingFromPlayer = bFleeing;
 		UpdateMovementSpeed();
-
-		AO_LOG(LogKSJ, Log, TEXT("Crab Flee Mode: %s"), bFleeing ? TEXT("ON") : TEXT("OFF"));
 	}
 }
 
@@ -239,7 +235,6 @@ FVector AAO_Crab::CalculateItemDropLocation(const FVector& ExcludeLocation) cons
 			return BestLocation;
 		}
 		
-		AO_LOG(LogKSJ, Warning, TEXT("Crab: Could not find safe drop location, using current location"));
 		return GetActorLocation();
 	}
 
@@ -269,8 +264,6 @@ void AAO_Crab::UpdateMovementSpeed()
 	}
 
 	MovementComp->MaxWalkSpeed = NewSpeed;
-
-	AO_LOG(LogKSJ, Verbose, TEXT("Crab Speed Updated: %.1f"), NewSpeed);
 }
 
 void AAO_Crab::OnItemPickedUp(AAO_MasterItem* Item)
@@ -287,13 +280,6 @@ void AAO_Crab::OnItemPickedUp(AAO_MasterItem* Item)
 
 	// 속도 업데이트
 	UpdateMovementSpeed();
-
-	// Item이 유효한지 확인 후 로그 출력
-	if (ensure(Item))
-	{
-		AO_LOG(LogKSJ, Log, TEXT("Crab picked up item: %s, Cached %d player locations"), 
-			*Item->GetName(), CachedPlayerLocationsOnPickup.Num());
-	}
 }
 
 void AAO_Crab::OnItemDropped(AAO_MasterItem* Item)
@@ -303,10 +289,4 @@ void AAO_Crab::OnItemDropped(AAO_MasterItem* Item)
 
 	// 속도 업데이트
 	UpdateMovementSpeed();
-
-	// Item이 유효한지 확인 후 로그 출력
-	if (ensure(Item))
-	{
-		AO_LOG(LogKSJ, Log, TEXT("Crab dropped item: %s"), *Item->GetName());
-	}
 }

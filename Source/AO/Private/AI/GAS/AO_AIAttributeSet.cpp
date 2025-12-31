@@ -1,4 +1,4 @@
-// AO_AIAttributeSet.cpp
+//KSJ : AO_AIAttributeSet
 
 #include "AI/GAS/AO_AIAttributeSet.h"
 #include "Net/UnrealNetwork.h"

@@ -1,4 +1,4 @@
-// AO_StalkerController.h
+//KSJ : AO_StalkerController
 
 #pragma once
 
@@ -32,7 +32,33 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
 	FVector FindRetreatLocation();
 
+	// 공격 종료 처리 (Hit & Run 시작)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	void OnAttackFinished();
+
+	// 도주 중인지 여부
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	bool IsRetreating() const { return bIsRetreating; }
+
+	// 플레이어가 나를 보고 있는지 확인
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	bool IsPlayerLookingAtMe(AActor* TargetActor, float ToleranceDegrees = 45.f) const;
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
+
+	// 도주 타이머
+	void OnRetreatTimerExpired();
+
+protected:
+	// 도주 상태 플래그
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Stalker")
+	bool bIsRetreating = false;
+
+	// 도주 지속 시간
+	UPROPERTY(EditDefaultsOnly, Category = "AO|AI|Stalker")
+	float RetreatDuration = 5.f;
+
+	FTimerHandle RetreatTimerHandle;
 };
 

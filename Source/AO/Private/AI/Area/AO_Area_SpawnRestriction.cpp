@@ -1,4 +1,4 @@
-// AO_Area_SpawnRestriction.cpp
+//KSJ : AO_Area_SpawnRestriction
 
 #include "AI/Area/AO_Area_SpawnRestriction.h"
 

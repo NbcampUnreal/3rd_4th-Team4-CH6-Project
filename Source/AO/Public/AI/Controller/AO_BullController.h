@@ -1,4 +1,4 @@
-// AO_BullController.h
+//KSJ : AO_BullController
 
 #pragma once
 
@@ -25,6 +25,10 @@ public:
 	// 돌진 가능 여부 (거리, 쿨타임 등)
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Bull")
 	bool CanChargeAttack() const;
+
+	// 근접 공격 가능 여부 (너무 가까워서 돌진 불가능할 때)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Bull")
+	bool CanMeleeAttack() const;
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;

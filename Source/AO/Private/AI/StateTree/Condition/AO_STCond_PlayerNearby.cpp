@@ -1,4 +1,4 @@
-// AO_STCond_PlayerNearby.cpp
+//KSJ : AO_STCond_PlayerNearby
 
 #include "AI/StateTree/Condition/AO_STCond_PlayerNearby.h"
 #include "AI/Controller/AO_AIControllerBase.h"

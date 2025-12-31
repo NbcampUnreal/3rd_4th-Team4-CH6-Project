@@ -1,4 +1,4 @@
-// AO_STCond_HasItem.cpp
+//KSJ : AO_STCond_HasItem
 
 #include "AI/StateTree/Condition/AO_STCond_HasItem.h"
 #include "AI/Character/AO_Crab.h"

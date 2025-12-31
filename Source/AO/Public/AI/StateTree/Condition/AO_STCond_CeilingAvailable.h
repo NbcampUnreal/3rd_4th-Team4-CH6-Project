@@ -1,4 +1,4 @@
-// AO_STCond_CeilingAvailable.h
+//KSJ : AO_STCond_CeilingAvailable
 
 #pragma once
 

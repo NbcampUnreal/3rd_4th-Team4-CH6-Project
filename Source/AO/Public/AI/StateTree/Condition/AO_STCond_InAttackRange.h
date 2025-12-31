@@ -1,4 +1,4 @@
-// AO_STCond_InAttackRange.h
+//KSJ : AO_STCond_InAttackRange
 
 #pragma once
 

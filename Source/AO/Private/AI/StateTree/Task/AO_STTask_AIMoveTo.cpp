@@ -1,10 +1,9 @@
-// AO_STTask_AIMoveTo.cpp
+//KSJ : AO_STTask_AIMoveTo
 
 #include "AI/StateTree/Task/AO_STTask_AIMoveTo.h"
 #include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_AIMoveTo::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -20,7 +19,6 @@ EStateTreeRunStatus FAO_STTask_AIMoveTo::EnterState(FStateTreeExecutionContext& 
 	// 목표 위치가 유효해야 이동 가능
 	if (InstanceData.TargetLocation.IsZero())
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AIMoveTo: TargetLocation is zero"));
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -28,7 +26,6 @@ EStateTreeRunStatus FAO_STTask_AIMoveTo::EnterState(FStateTreeExecutionContext& 
 
 	if (Result == EPathFollowingRequestResult::Failed)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AIMoveTo Failed to start movement"));
 		return EStateTreeRunStatus::Failed;
 	}
 

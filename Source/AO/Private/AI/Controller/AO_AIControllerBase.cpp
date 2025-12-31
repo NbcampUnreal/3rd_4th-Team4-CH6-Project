@@ -1,4 +1,4 @@
-// AO_AIControllerBase.cpp
+//KSJ : AO_AIControllerBase
 
 #include "AI/Controller/AO_AIControllerBase.h"
 #include "AI/Base/AO_AICharacterBase.h"
@@ -9,7 +9,6 @@
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Components/StateTreeAIComponent.h"
 #include "StateTree.h"
-#include "AO_Log.h"
 
 AAO_AIControllerBase::AAO_AIControllerBase()
 {
@@ -25,6 +24,12 @@ void AAO_AIControllerBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// AI 컨트롤러는 서버에서만 실행되어야 함 (멀티플레이어 동기화)
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	SetupPerceptionSystem();
 
 	// Perception 이벤트 바인딩
@@ -38,6 +43,12 @@ void AAO_AIControllerBase::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	// AI 컨트롤러는 서버에서만 실행되어야 함 (멀티플레이어 동기화)
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	// State Tree 설정 및 시작
 	if (StateTreeComponent && DefaultStateTree)
 	{
@@ -48,10 +59,14 @@ void AAO_AIControllerBase::OnPossess(APawn* InPawn)
 
 void AAO_AIControllerBase::OnUnPossess()
 {
-	// State Tree 정지
-	if (StateTreeComponent)
+	// AI 컨트롤러는 서버에서만 실행되어야 함 (멀티플레이어 동기화)
+	if (HasAuthority())
 	{
-		StateTreeComponent->StopLogic(TEXT("UnPossessed"));
+		// State Tree 정지
+		if (StateTreeComponent)
+		{
+			StateTreeComponent->StopLogic(TEXT("UnPossessed"));
+		}
 	}
 
 	Super::OnUnPossess();
