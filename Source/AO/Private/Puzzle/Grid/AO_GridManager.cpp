@@ -14,7 +14,7 @@ void AAO_GridManager::BeginPlay()
 {
     Super::BeginPlay();
 
-#if ENABLE_DRAW_DEBUG
+#if WITH_EDITOR
     if (bShowDebugGrid)
     {
         DrawDebugGrid();
@@ -266,7 +266,7 @@ void AAO_GridManager::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 
 void AAO_GridManager::DrawDebugGrid()
 {
-#if ENABLE_DRAW_DEBUG
+#if WITH_EDITOR
     if (!GetWorld())
     {
     	return;

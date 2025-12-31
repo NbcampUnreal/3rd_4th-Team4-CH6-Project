@@ -28,12 +28,12 @@ public:
 	void SetParentLobby(UAO_LobbyListWidget* InParent) { ParentLobby = InParent; }
 
 protected:
-	UPROPERTY(meta=(BindWidget)) UButton* Btn_Join = nullptr;
+	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Join = nullptr;
 	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_Title = nullptr;
 	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_Slots = nullptr;
 	UPROPERTY(meta=(BindWidgetOptional)) UImage* Img_Lock = nullptr;
 
-	UFUNCTION() void OnClicked_Join();
+	UFUNCTION(BlueprintCallable) void OnClicked_Join();
 
 private:
 	UPROPERTY() TWeakObjectPtr<UAO_LobbyListWidget> ParentLobby;
