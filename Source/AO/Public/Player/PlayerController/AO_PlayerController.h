@@ -29,7 +29,7 @@ public:
 public:
 	// 삭제: Settings를 미리 AddToViewport 하고 Hidden으로 유지하던 흐름
 	// UIStackManager 사용 시에는 필요할 때 Push → Pop으로 관리
-	void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
+	// void CreateSettingsWidgetInstance(const int32 ZOrder, const ESlateVisibility Visibility);
 
 protected:
 	// void CleanupAudioResource();
