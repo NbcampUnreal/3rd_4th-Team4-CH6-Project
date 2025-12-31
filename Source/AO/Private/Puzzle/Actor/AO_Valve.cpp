@@ -1,5 +1,6 @@
 ﻿// HSJ : AO_Valve.cpp
 #include "Puzzle/Actor/AO_Valve.h"
+#include "Components/BoxComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -16,15 +17,70 @@ AAO_Valve::AAO_Valve(const FObjectInitializer& ObjectInitializer)
     InteractionContent = FText::FromString(TEXT("열기/닫기"));
 }
 
+void AAO_Valve::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+    
+    CollectVFXPoints();
+    CollectDamageZoneBoxes();
+}
+
+void AAO_Valve::CollectVFXPoints()
+{
+    VFXPoints.Empty();
+
+    TArray<USceneComponent*> ChildComponents;
+    GetRootComponent()->GetChildrenComponents(true, ChildComponents);
+
+    for (USceneComponent* Child : ChildComponents)
+    {
+        if (Child && Child->GetName().StartsWith(VFXPointPrefix))
+        {
+            VFXPoints.Add(Child);
+        }
+    }
+
+    VFXPoints.Sort([](const USceneComponent& A, const USceneComponent& B)
+    {
+        return A.GetName() < B.GetName();
+    });
+}
+
+void AAO_Valve::CollectDamageZoneBoxes()
+{
+    DamageZoneBoxes.Empty();
+
+    TArray<UBoxComponent*> BoxComponents;
+    GetComponents<UBoxComponent>(BoxComponents);
+
+    for (UBoxComponent* Box : BoxComponents)
+    {
+        if (Box && Box->GetName().StartsWith(DamageZonePrefix))
+        {
+            Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            Box->ShapeColor = FColor::Red;
+            
+            DamageZoneBoxes.Add(Box);
+        }
+    }
+
+    DamageZoneBoxes.Sort([](const UBoxComponent& A, const UBoxComponent& B)
+    {
+        return A.GetName() < B.GetName();
+    });
+}
+
 void AAO_Valve::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	for (FAO_ValveSpawnedActors& SpawnedActors : SpawnedActorsArray)
-	{
-		CleanupSpawnedActors(SpawnedActors);
-	}
-	SpawnedActorsArray.Empty();
+    CleanupEffects();
+    DestroyDamageZones();
     
-	Super::EndPlay(EndPlayReason);
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(InteractionLockTimer);
+    }
+    
+    Super::EndPlay(EndPlayReason);
 }
 
 void AAO_Valve::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -39,7 +95,23 @@ void AAO_Valve::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
 
     if (!HasAuthority())
     {
-    	return;
+        return;
+    }
+
+    // 상호작용 잠금
+    bInteractionEnabled = false;
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            InteractionLockTimer,
+            FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                bInteractionEnabled = true;
+            }),
+            InteractionLockDuration,
+            false
+        );
     }
 
     bIsValveOpen = !bIsValveOpen;
@@ -61,13 +133,12 @@ void AAO_Valve::OpenValve()
         UGameplayStatics::PlaySoundAtLocation(this, ValveOpenSound, GetActorLocation());
     }
 
-    SpawnedActorsArray.Empty();
-    SpawnedActorsArray.SetNum(SpawnInfoArray.Num());
-
-    for (int32 i = 0; i < SpawnInfoArray.Num(); ++i)
+    if (HasAuthority())
     {
-        SpawnEffects(SpawnInfoArray[i], SpawnedActorsArray[i]);
+        SpawnDamageZones();
     }
+
+    SpawnEffects();
 }
 
 void AAO_Valve::CloseValve()
@@ -77,127 +148,179 @@ void AAO_Valve::CloseValve()
         UGameplayStatics::PlaySoundAtLocation(this, ValveCloseSound, GetActorLocation());
     }
 
-    for (FAO_ValveSpawnedActors& SpawnedActors : SpawnedActorsArray)
+    if (HasAuthority())
     {
-        CleanupSpawnedActors(SpawnedActors);
+        DestroyDamageZones();
     }
 
-    SpawnedActorsArray.Empty();
+    CleanupEffects();
 }
 
-void AAO_Valve::SpawnEffects(const FAO_ValveSpawnInfo& SpawnInfo, FAO_ValveSpawnedActors& OutSpawned)
+void AAO_Valve::SpawnDamageZones()
 {
-    TObjectPtr<UWorld> World = GetWorld();
-    if (!World)
+    if (!DamageZoneClass || !GetWorld())
     {
-    	return;
+        return;
     }
 
-    FTransform ValveTransform = GetActorTransform();
+    // 기존 데미지존 전부 제거
+    DestroyDamageZones();
 
-	// 데미지존 스폰
-    if (SpawnInfo.DamageZoneClass)
+    SpawnedDamageZones.Reserve(DamageZoneBoxes.Num());
+
+    for (UBoxComponent* DamageBox : DamageZoneBoxes)
     {
-        FVector DamageZoneWorldOffset = ValveTransform.TransformVector(SpawnInfo.DamageZoneOffset);
-        FVector DamageZoneLocation = GetActorLocation() + DamageZoneWorldOffset;
-        FRotator DamageZoneRotationFinal = GetActorRotation() + SpawnInfo.DamageZoneRotation;
+        if (!DamageBox)
+        {
+            continue;
+        }
 
         FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
-        SpawnParams.Instigator = GetInstigator();
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-        OutSpawned.DamageZone = World->SpawnActor<AActor>(
-            SpawnInfo.DamageZoneClass,
-            DamageZoneLocation,
-            DamageZoneRotationFinal,
+        AActor* SpawnedZone = GetWorld()->SpawnActor<AActor>(
+            DamageZoneClass,
+            DamageBox->GetComponentLocation(),
+            DamageBox->GetComponentRotation(),
             SpawnParams
         );
-    }
 
-    FVector VFXWorldOffset = ValveTransform.TransformVector(SpawnInfo.VFXOffset);
-    FVector VFXLocation = GetActorLocation() + VFXWorldOffset;
-    FRotator VFXRotationFinal = GetActorRotation() + SpawnInfo.VFXRotation;
-
-    // VFX 스폰
-    if (SpawnInfo.NiagaraEffect)
-    {
-        OutSpawned.NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-            World,
-            SpawnInfo.NiagaraEffect,
-            VFXLocation,
-            VFXRotationFinal,
-            SpawnInfo.VFXScale,
-            true,
-            true,
-            ENCPoolMethod::None,
-            false
-        );
-    }
-    else if (SpawnInfo.CascadeEffect)
-    {
-        OutSpawned.CascadeComponent = UGameplayStatics::SpawnEmitterAtLocation(
-            World,
-            SpawnInfo.CascadeEffect,
-            VFXLocation,
-            VFXRotationFinal,
-            SpawnInfo.VFXScale,
-            true,
-            EPSCPoolMethod::None,
-            false
-        );
-
-        if (OutSpawned.CascadeComponent)
+        if (SpawnedZone)
         {
-            OutSpawned.CascadeComponent->Activate(true);
-        }
-    }
+            // 크기를 Box와 동일하게 설정
+            TArray<UBoxComponent*> ZoneBoxComponents;
+            SpawnedZone->GetComponents<UBoxComponent>(ZoneBoxComponents);
+            
+            if (ZoneBoxComponents.Num() > 0)
+            {
+                ZoneBoxComponents[0]->SetBoxExtent(DamageBox->GetScaledBoxExtent());
+            }
 
-    if (SpawnInfo.LoopingSound)
-    {
-        OutSpawned.AudioComponent = UGameplayStatics::SpawnSoundAtLocation(
-            World,
-            SpawnInfo.LoopingSound,
-            VFXLocation,
-            VFXRotationFinal,
-            SpawnInfo.SoundVolumeMultiplier,
-            SpawnInfo.SoundPitchMultiplier,
-            0.0f,
-            nullptr,
-            nullptr,
-            false
-        );
+            SpawnedDamageZones.Add(SpawnedZone);
+        }
     }
 }
 
-void AAO_Valve::CleanupSpawnedActors(FAO_ValveSpawnedActors& SpawnedActors)
+void AAO_Valve::DestroyDamageZones()
 {
-    // 데미지존 제거
-    if (SpawnedActors.DamageZone)
+    for (AActor* Zone : SpawnedDamageZones)
     {
-        SpawnedActors.DamageZone->Destroy();
-        SpawnedActors.DamageZone = nullptr;
+        if (Zone)
+        {
+            Zone->Destroy();
+        }
     }
 
-    // VFX 제거
-    if (SpawnedActors.NiagaraComponent)
+    SpawnedDamageZones.Empty();
+}
+
+void AAO_Valve::SpawnEffects()
+{
+    UWorld* World = GetWorld();
+    if (!World)
     {
-        SpawnedActors.NiagaraComponent->DestroyComponent();
-        SpawnedActors.NiagaraComponent = nullptr;
+        return;
     }
 
-    if (SpawnedActors.CascadeComponent)
+    CleanupEffects();
+
+    const int32 NumEffects = FMath::Min(EffectInfoArray.Num(), VFXPoints.Num());
+    SpawnedEffectsArray.SetNum(NumEffects);
+
+    for (int32 i = 0; i < NumEffects; ++i)
     {
-        SpawnedActors.CascadeComponent->DestroyComponent();
-        SpawnedActors.CascadeComponent = nullptr;
+        const FAO_ValveEffectSpawnInfo& EffectInfo = EffectInfoArray[i];
+        USceneComponent* VFXPoint = VFXPoints[i];
+        
+        if (!VFXPoint)
+        {
+            continue;
+        }
+
+        FAO_ValveSpawnedActors& Spawned = SpawnedEffectsArray[i];
+        
+        const FVector Location = VFXPoint->GetComponentLocation();
+        const FRotator Rotation = VFXPoint->GetComponentRotation();
+
+        if (EffectInfo.NiagaraEffect)
+        {
+            Spawned.NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                World,
+                EffectInfo.NiagaraEffect,
+                Location,
+                Rotation,
+                EffectInfo.VFXScale,
+                true,
+                true,
+                ENCPoolMethod::None,
+                true
+            );
+        }
+        else if (EffectInfo.CascadeEffect)
+        {
+            Spawned.CascadeComponent = UGameplayStatics::SpawnEmitterAtLocation(
+                World,
+                EffectInfo.CascadeEffect,
+                Location,
+                Rotation,
+                EffectInfo.VFXScale,
+                true,
+                EPSCPoolMethod::None,
+                true
+            );
+        }
+
+        if (EffectInfo.LoopingSound)
+        {
+            Spawned.AudioComponent = UGameplayStatics::SpawnSoundAtLocation(
+                World,
+                EffectInfo.LoopingSound,
+                Location,
+                Rotation,
+                EffectInfo.SoundVolumeMultiplier,
+                EffectInfo.SoundPitchMultiplier,
+                0.0f,
+                nullptr,
+                nullptr,
+                false
+            );
+            
+            if (Spawned.AudioComponent)
+            {
+                Spawned.AudioComponent->Play();
+            }
+        }
+    }
+}
+
+void AAO_Valve::CleanupEffects()
+{
+    for (FAO_ValveSpawnedActors& Spawned : SpawnedEffectsArray)
+    {
+        if (Spawned.NiagaraComponent)
+        {
+            Spawned.NiagaraComponent->Deactivate();
+            Spawned.NiagaraComponent->DestroyComponent();
+            Spawned.NiagaraComponent = nullptr;
+        }
+
+        if (Spawned.CascadeComponent)
+        {
+            Spawned.CascadeComponent->Deactivate();
+            Spawned.CascadeComponent->DestroyComponent();
+            Spawned.CascadeComponent = nullptr;
+        }
+
+        if (Spawned.AudioComponent)
+        {
+            Spawned.AudioComponent->Stop();
+            Spawned.AudioComponent->DestroyComponent();
+            Spawned.AudioComponent = nullptr;
+        }
     }
 
-    if (SpawnedActors.AudioComponent)
-    {
-        SpawnedActors.AudioComponent->Stop();
-        SpawnedActors.AudioComponent->DestroyComponent();
-        SpawnedActors.AudioComponent = nullptr;
-    }
+    SpawnedEffectsArray.Empty();
 }
 
 void AAO_Valve::OnRep_IsValveOpen()
