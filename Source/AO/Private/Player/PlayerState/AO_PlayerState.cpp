@@ -172,12 +172,20 @@ void AAO_PlayerState::OnRep_PlayerName()
 
 	// 보드에 표시되는 이름 갱신
 	RefreshLobbyReadyBoard();
+
+	OnPlayerNameReady.Broadcast(FText::FromString(GetPlayerName()));
 }
 
 void AAO_PlayerState::BeginPlay()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::BeginPlay();
+
+	if (!GetPlayerName().IsEmpty())
+	{
+		OnPlayerNameReady.Broadcast(FText::FromString(GetPlayerName()));
+	}
+	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
