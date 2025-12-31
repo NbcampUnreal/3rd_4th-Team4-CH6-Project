@@ -19,7 +19,8 @@ UAO_GameplayAbility_HitReact::UAO_GameplayAbility_HitReact()
 	TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
 	AbilityTriggers.Add(TriggerData);
 
-	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.HitReact")));
+	const FGameplayTagContainer HitReactTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.HitReact")));
+	SetAssetTags(HitReactTag);
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
 }
 
