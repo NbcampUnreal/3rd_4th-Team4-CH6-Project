@@ -197,6 +197,8 @@ void AAO_GasRoomPuzzle::StartPuzzle()
     MulticastCloseDoors();
     MulticastSpawnGasEffects();
 
+	OnPuzzleStarted_BP();
+
     if (UWorld* World = GetWorld(); World && HasAuthority())
     {
         World->GetTimerManager().SetTimer(
@@ -345,6 +347,8 @@ void AAO_GasRoomPuzzle::CompletePuzzle()
     MulticastCleanupGasEffects();
     MulticastClearPasswordHints();
 
+	OnPuzzleCompleted_BP();
+
     if (HasAuthority())
     {
         DeactivateDamageZone();
@@ -372,6 +376,8 @@ void AAO_GasRoomPuzzle::ResetPuzzle()
     MulticastOpenDoors();
     MulticastCleanupGasEffects();
     MulticastClearPasswordHints();
+
+	OnPuzzleReset_BP();
     
     if (HasAuthority())
     {
@@ -514,21 +520,21 @@ void AAO_GasRoomPuzzle::MulticastSpawnGasEffects_Implementation()
     	return;
     }
 
-    for (FAO_GasEffectSpawnedActors& SpawnedActor : SpawnedEffects)
-    {
-        if (SpawnedActor.NiagaraComponent)
-        {
-        	SpawnedActor.NiagaraComponent->DestroyComponent();
-        }
-        if (SpawnedActor.CascadeComponent)
-        {
-        	SpawnedActor.CascadeComponent->DestroyComponent();
-        }
-        if (SpawnedActor.AudioComponent)
-        {
-        	SpawnedActor.AudioComponent->DestroyComponent();
-        }
-    }
+	for (FAO_GasEffectSpawnedActors& SpawnedActor : SpawnedEffects)
+	{
+		if (SpawnedActor.NiagaraComponent && IsValid(SpawnedActor.NiagaraComponent))
+		{
+			SpawnedActor.NiagaraComponent->DestroyComponent();
+		}
+		if (SpawnedActor.CascadeComponent && IsValid(SpawnedActor.CascadeComponent))
+		{
+			SpawnedActor.CascadeComponent->DestroyComponent();
+		}
+		if (SpawnedActor.AudioComponent && IsValid(SpawnedActor.AudioComponent))
+		{
+			SpawnedActor.AudioComponent->DestroyComponent();
+		}
+	}
     SpawnedEffects.Empty();
 
     for (const FAO_GasEffectSpawnInfo& SpawnInfo : GasEffectSpawnInfos)
@@ -564,21 +570,24 @@ void AAO_GasRoomPuzzle::MulticastCleanupGasEffects_Implementation()
 {
     for (FAO_GasEffectSpawnedActors& SpawnedActor : SpawnedEffects)
     {
-        if (SpawnedActor.NiagaraComponent)
-        {
-            SpawnedActor.NiagaraComponent->Deactivate();
-            SpawnedActor.NiagaraComponent->DestroyComponent();
-        }
-        if (SpawnedActor.CascadeComponent)
-        {
-            SpawnedActor.CascadeComponent->Deactivate();
-            SpawnedActor.CascadeComponent->DestroyComponent();
-        }
-        if (SpawnedActor.AudioComponent)
-        {
-            SpawnedActor.AudioComponent->Stop();
-            SpawnedActor.AudioComponent->DestroyComponent();
-        }
+    	if (SpawnedActor.NiagaraComponent && IsValid(SpawnedActor.NiagaraComponent))
+    	{
+    		SpawnedActor.NiagaraComponent->Deactivate();
+    		SpawnedActor.NiagaraComponent->DestroyComponent();
+    		SpawnedActor.NiagaraComponent = nullptr;
+    	}
+    	if (SpawnedActor.CascadeComponent && IsValid(SpawnedActor.CascadeComponent))
+    	{
+    		SpawnedActor.CascadeComponent->Deactivate();
+    		SpawnedActor.CascadeComponent->DestroyComponent();
+    		SpawnedActor.CascadeComponent = nullptr;
+    	}
+    	if (SpawnedActor.AudioComponent && IsValid(SpawnedActor.AudioComponent))
+    	{
+    		SpawnedActor.AudioComponent->Stop();
+    		SpawnedActor.AudioComponent->DestroyComponent();
+    		SpawnedActor.AudioComponent = nullptr;
+    	}
     }
     
     SpawnedEffects.Empty();

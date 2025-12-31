@@ -9,6 +9,9 @@
 
 class UAbilitySystemComponent;
 class UGeometryCollectionComponent;
+class UNiagaraSystem;
+class UParticleSystem;
+class USoundBase;
 
 /**
  * 카오스 캐시를 사용한 파괴 가능한 오브젝트
@@ -53,10 +56,34 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction", meta=(ClampMin="0.0"))
 	float DestroyDelay = 4.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<USceneComponent> VFXSpawnPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|VFX", meta=(DisplayName="Niagara VFX"))
+	TObjectPtr<UNiagaraSystem> DestructionNiagaraVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|VFX", meta=(DisplayName="Cascade VFX (Legacy)"))
+	TObjectPtr<UParticleSystem> DestructionCascadeVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|VFX", meta=(ClampMin="0.1"))
+	FVector VFXScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|SFX")
+	TObjectPtr<USoundBase> DestructionSFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|SFX", meta=(ClampMin="0.0", ClampMax="10.0"))
+	float SFXVolume = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Destruction|SFX", meta=(ClampMin="0.1", ClampMax="4.0"))
+	float SFXPitch = 1.0f;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(ReplicatedUsing=OnRep_IsDestroyed)
+	bool bIsDestroyed = false;
 
 private:
 	UFUNCTION(Server, Reliable)
@@ -71,8 +98,8 @@ private:
 	UFUNCTION()
 	void OnRep_IsDestroyed();
 
-	UPROPERTY(ReplicatedUsing=OnRep_IsDestroyed)
-	bool bIsDestroyed = false;
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayDestructionEffects();
 
 	FTimerHandle DestroyTimerHandle;
 };
