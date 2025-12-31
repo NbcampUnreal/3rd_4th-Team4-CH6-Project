@@ -1,4 +1,4 @@
-// AO_GA_Stalker_Attack.h
+//KSJ : AO_GA_Stalker_Attack
 
 #pragma once
 

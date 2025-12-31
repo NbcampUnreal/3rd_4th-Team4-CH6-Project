@@ -1,4 +1,4 @@
-// AO_GA_LavaMonster_Attack.h
+//KSJ : AO_GA_LavaMonster_Attack
 
 #pragma once
 

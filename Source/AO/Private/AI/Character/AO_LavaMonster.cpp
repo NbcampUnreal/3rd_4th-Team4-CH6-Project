@@ -1,4 +1,4 @@
-// AO_LavaMonster.cpp
+//KSJ : AO_LavaMonster
 
 #include "AI/Character/AO_LavaMonster.h"
 #include "AI/Animation/AO_LavaMonster_AnimInstance.h"
@@ -6,7 +6,6 @@
 #include "AbilitySystemComponent.h"
 #include "AI/GAS/Ability/AO_GA_LavaMonster_Attack.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 AAO_LavaMonster::AAO_LavaMonster()
 {
@@ -146,7 +145,6 @@ ELavaMonsterAttackType AAO_LavaMonster::SelectAttackTypeByRange() const
 {
 	if (!CurrentTarget.IsValid())
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("SelectAttackTypeByRange: No current target"));
 		return ELavaMonsterAttackType::MeleePunch; // 기본값
 	}
 	
@@ -156,17 +154,11 @@ ELavaMonsterAttackType AAO_LavaMonster::SelectAttackTypeByRange() const
 	if (AvailableTypes.Num() == 0)
 	{
 		// 사용 가능한 공격이 없으면 기본값 (근접 공격)
-		AO_LOG(LogKSJ, Log, TEXT("SelectAttackTypeByRange: No available attacks at distance %.1f, using default"), Distance);
 		return ELavaMonsterAttackType::MeleePunch;
 	}
 	
 	const int32 RandomIndex = FMath::RandRange(0, AvailableTypes.Num() - 1);
-	const ELavaMonsterAttackType SelectedType = AvailableTypes[RandomIndex];
-	
-	AO_LOG(LogKSJ, Log, TEXT("SelectAttackTypeByRange: Selected attack type %d at distance %.1f (from %d available)"), 
-		static_cast<int32>(SelectedType), Distance, AvailableTypes.Num());
-	
-	return SelectedType;
+	return AvailableTypes[RandomIndex];
 }
 
 bool AAO_LavaMonster::IsTargetInAttackRange() const
@@ -223,7 +215,6 @@ void AAO_LavaMonster::ExecuteAttack(ELavaMonsterAttackType AttackType)
 {
 	if (bIsAttacking)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ExecuteAttack: Already attacking"));
 		return;
 	}
 
@@ -259,14 +250,6 @@ void AAO_LavaMonster::ExecuteAttack(ELavaMonsterAttackType AttackType)
 			}
 		}
 
-		if (!bAbilityActivated)
-		{
-			AO_LOG(LogKSJ, Error, TEXT("ExecuteAttack: Failed to activate LavaMonster Attack Ability! Check Ability Tags or Constraints."));
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Error, TEXT("ExecuteAttack: No ASC found"));
 	}
 }
 

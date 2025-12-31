@@ -79,8 +79,11 @@ void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 	{
 		PlayerCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
-		PlayerCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
-		PlayerCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
+
+		FInstanceUpdateDelegate UpdateCallback;
+		UpdateCallback.BindUFunction(this, "OnMeshUpdateFinished");
+		
+		PlayerCharacter->GetBodyComponent()->UpdateSkeletalMeshAsyncResult(UpdateCallback);
 	}
 }
 
@@ -127,4 +130,9 @@ void UAO_CustomizingComponent::ApplyCustomizingData()
 	{
 		ChangeOption(Instance, CustomizingData.ClothOptionData);
 	}
+}
+
+void UAO_CustomizingComponent::OnMeshUpdateFinished(const FUpdateContext& Context)
+{
+	PlayerCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
 }

@@ -1,4 +1,4 @@
-// AO_Troll.h
+//KSJ : AO_Troll
 
 #pragma once
 
@@ -104,13 +104,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Troll")
 	void ExecuteAttack(ETrollAttackType AttackType);
 
-	// 공격 중인지
-	UFUNCTION(BlueprintCallable, Category = "AO|AI|Troll")
-	bool IsAttacking() const { return bIsAttacking; }
-
-	// 공격 상태 설정 (GAS에서 사용)
-	void SetIsAttacking(bool bVal) { bIsAttacking = bVal; }
-
 	// 무기 줍기 중인지
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Troll")
 	bool IsPickingUpWeapon() const { return bIsPickingUpWeapon; }
@@ -142,10 +135,6 @@ protected:
 	// 공격 타입별 설정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Troll|Attack")
 	TMap<ETrollAttackType, FAO_TrollAttackConfig> AttackConfigs;
-
-	// 공격 중 플래그
-	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|Troll")
-	bool bIsAttacking = false;
 
 	// 무기 줍는 중 플래그
 	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|Troll")

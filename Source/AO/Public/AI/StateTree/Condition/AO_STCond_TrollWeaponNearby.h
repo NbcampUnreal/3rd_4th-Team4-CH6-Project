@@ -1,3 +1,5 @@
+//KSJ : AO_STCond_TrollWeaponNearby
+
 #pragma once
 
 #include "CoreMinimal.h"

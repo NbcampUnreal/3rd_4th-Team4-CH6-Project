@@ -1,4 +1,4 @@
-// AO_STCond_PlayerLooking.cpp
+//KSJ : AO_STCond_PlayerLooking
 
 #include "AI/StateTree/Condition/AO_STCond_PlayerLooking.h"
 #include "AI/Controller/AO_AggressiveAICtrl.h"

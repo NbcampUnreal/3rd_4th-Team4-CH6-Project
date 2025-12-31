@@ -1,4 +1,4 @@
-// AO_STCond_IsStunned.cpp
+//KSJ : AO_STCond_IsStunned
 
 #include "AI/StateTree/Condition/AO_STCond_IsStunned.h"
 #include "AI/Base/AO_AICharacterBase.h"

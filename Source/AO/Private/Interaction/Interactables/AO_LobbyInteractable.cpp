@@ -114,7 +114,7 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
             *GetNameSafe(Pawn));
         return;
     }
-
+    
     const bool bIsHost = IsLobbyHostController(PC);
 
     switch (InteractType)
@@ -205,6 +205,12 @@ void AAO_LobbyInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
                 TEXT("[LobbyInteract] Wardrobe: Server_RequestWardrobe from PC=%s IsLocal=%d"),
                 *GetNameSafe(PC),
                 PC->IsLocalController() ? 1 : 0);
+
+            if (Interactor)
+            {
+                AddDisabledPlayer(Interactor);
+            }
+            PC->CustomizingInteractable = this;
 
             PC->Server_RequestWardrobe();
             break;

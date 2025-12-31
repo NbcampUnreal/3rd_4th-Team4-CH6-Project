@@ -1,10 +1,9 @@
-// AO_STTask_Troll_Attack.cpp
+//KSJ : AO_STTask_Troll_Attack
 
 #include "AI/StateTree/Task/AO_STTask_Troll_Attack.h"
 #include "AI/Character/AO_Troll.h"
 #include "AI/Controller/AO_TrollController.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Troll_Attack::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -33,7 +32,6 @@ EStateTreeRunStatus FAO_STTask_Troll_Attack::EnterState(FStateTreeExecutionConte
 	InstanceData.bIsAttacking = true;
 	InstanceData.bWaitingForAttackEnd = true;
 
-	AO_LOG(LogKSJ, Log, TEXT("Troll attack started: type %d"), static_cast<int32>(AttackType));
 
 	return EStateTreeRunStatus::Running;
 }

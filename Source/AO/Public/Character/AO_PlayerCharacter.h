@@ -222,6 +222,8 @@ public:
 	TObjectPtr<USoundAttenuation> SA_VoiceChat = nullptr;
 
 //세훈: Customizable Object Instance
+public:
+	TObjectPtr<USkeletalMeshComponent> GetBaseSkeletalMesh() const { return BaseSkeletalMesh; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
 	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }

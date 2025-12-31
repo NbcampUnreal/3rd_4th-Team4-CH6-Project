@@ -1,4 +1,4 @@
-// AO_GA_LavaMonster_Attack.cpp
+//KSJ : AO_GA_LavaMonster_Attack
 
 #include "AI/GAS/Ability/AO_GA_LavaMonster_Attack.h"
 #include "AI/Character/AO_LavaMonster.h"
@@ -11,8 +11,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "DrawDebugHelpers.h"
-#include "AO_Log.h"
 
 UAO_GA_LavaMonster_Attack::UAO_GA_LavaMonster_Attack()
 {
@@ -33,7 +31,6 @@ void UAO_GA_LavaMonster_Attack::ActivateAbility(const FGameplayAbilitySpecHandle
 	AAO_LavaMonster* LavaMonster = Cast<AAO_LavaMonster>(ActorInfo->AvatarActor.Get());
 	if (!LavaMonster)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_LavaMonster_Attack: Avatar is not a LavaMonster"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -48,7 +45,6 @@ void UAO_GA_LavaMonster_Attack::ActivateAbility(const FGameplayAbilitySpecHandle
 	// 몽타주 확인
 	if (!CurrentAttackConfig.AttackMontage)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_LavaMonster_Attack: No montage for attack type %d"), static_cast<int32>(CurrentAttackType));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -85,7 +81,6 @@ void UAO_GA_LavaMonster_Attack::ActivateAbility(const FGameplayAbilitySpecHandle
 
 	if (!MontageTask)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_LavaMonster_Attack: Failed to create montage task"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -95,8 +90,6 @@ void UAO_GA_LavaMonster_Attack::ActivateAbility(const FGameplayAbilitySpecHandle
 	MontageTask->OnInterrupted.AddDynamic(this, &UAO_GA_LavaMonster_Attack::OnMontageCancelled);
 
 	MontageTask->ReadyForActivation();
-
-	AO_LOG(LogKSJ, Log, TEXT("%s: Started attack type %d"), *LavaMonster->GetName(), static_cast<int32>(CurrentAttackType));
 }
 
 void UAO_GA_LavaMonster_Attack::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -167,12 +160,9 @@ bool UAO_GA_LavaMonster_Attack::CanActivateAbility(const FGameplayAbilitySpecHan
 
 void UAO_GA_LavaMonster_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 {
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_LavaMonster_Attack: Received HitConfirmEvent!"));
-
 	const UAO_MeleeHitEventPayload* HitPayload = Cast<UAO_MeleeHitEventPayload>(Payload.OptionalObject);
 	if (!HitPayload)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("OnHitConfirmEvent: Invalid payload"));
 		return;
 	}
 
@@ -181,11 +171,6 @@ void UAO_GA_LavaMonster_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 	{
 		return;
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_LavaMonster_Attack: Performing Trace. Start: %s, End: %s, Radius: %f"), 
-		*HitPayload->Params.TraceStart.ToString(), 
-		*HitPayload->Params.TraceEnd.ToString(), 
-		HitPayload->Params.TraceRadius);
 
 	// 스피어 트레이스 수행 (NotifyState에서 전달된 정보 사용)
 	TArray<FHitResult> HitResults;
@@ -200,15 +185,10 @@ void UAO_GA_LavaMonster_Attack::OnHitConfirmEvent(FGameplayEventData Payload)
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResults,
-		true,
-		FLinearColor::Red,
-		FLinearColor::Green,
-		2.f
+		true
 	);
-
-	AO_LOG(LogKSJ, Log, TEXT("Trace Result: Found %d hits"), HitResults.Num());
 
 	if (!bHit)
 	{
@@ -287,12 +267,8 @@ void UAO_GA_LavaMonster_Attack::StartGroundStrike()
 			Target.bHasStruck = false;
 
 			GroundStrikeTargets.Add(Target);
-
-			AO_LOG(LogKSJ, Log, TEXT("GroundStrike: Found target %s at distance %f"), *Player->GetName(), Distance);
 		}
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("GroundStrike: Found %d targets in range"), GroundStrikeTargets.Num());
 
 	// 전조 현상 업데이트 타이머 시작
 	if (GroundStrikeTargets.Num() > 0)
@@ -346,21 +322,6 @@ void UAO_GA_LavaMonster_Attack::UpdateGroundStrikeWarning()
 		const float ElapsedTime = CurrentTime - Target.WarningStartTime;
 		const float WarningProgress = FMath::Clamp(ElapsedTime / WarningDuration, 0.f, 1.f);
 
-		// 빨간색 구체로 전조 현상 표시 (진동 효과를 위해 크기 조절)
-		const float SphereRadius = CurrentAttackConfig.AttackRadius * (0.8f + 0.2f * FMath::Sin(ElapsedTime * 10.f));
-		const FColor WarningColor = FColor::Red;
-		
-		DrawDebugSphere(
-			World,
-			Target.StrikeLocation,
-			SphereRadius,
-			16,
-			WarningColor,
-			false,
-			0.1f,
-			0,
-			3.f // 두께
-		);
 	}
 }
 
@@ -394,27 +355,6 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 		// 데미지 및 넉백 적용
 		ApplyDamageAndKnockback(Player, CurrentAttackConfig);
 
-		AO_LOG(LogKSJ, Log, TEXT("GroundStrike: Hit player %s at location %s"), *Player->GetName(), *Target.StrikeLocation.ToString());
-
-		// 디버그: 공격 발동 위치 표시
-		if (UWorld* World = GetWorld())
-		{
-			DrawDebugSphere(
-				World,
-				Target.StrikeLocation,
-				CurrentAttackConfig.AttackRadius,
-				16,
-				FColor::Yellow,
-				false,
-				2.f,
-				0,
-				5.f
-			);
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Log, TEXT("GroundStrike: Player %s moved away from strike location"), *Player->GetName());
 	}
 
 	// 타이머 제거
@@ -432,7 +372,6 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 {
 	if (!TargetActor || !DamageEffectClass)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("ApplyDamageAndKnockback: Invalid Target or DamageEffectClass"));
 		return;
 	}
 
@@ -448,7 +387,6 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 	const FGameplayTag InvulnerableTag = FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"));
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("ApplyDamageAndKnockback: Target is Invulnerable"));
 		return;
 	}
 
@@ -489,9 +427,6 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 
 	// HitReact 이벤트 발송
 	SendHitReactEvent(TargetActor, GetAvatarActorFromActorInfo());
-
-	AO_LOG(LogKSJ, Log, TEXT("Applied damage %.1f and knockback %.1f to %s"),
-		Config.Damage, Config.KnockbackStrength, *TargetActor->GetName());
 }
 
 void UAO_GA_LavaMonster_Attack::SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor)

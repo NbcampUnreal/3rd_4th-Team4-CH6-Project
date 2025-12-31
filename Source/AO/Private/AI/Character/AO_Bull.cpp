@@ -1,7 +1,8 @@
-// AO_Bull.cpp
+//KSJ : AO_Bull
 
 #include "AI/Character/AO_Bull.h"
 #include "AI/Controller/AO_BullController.h"
+#include "AI/Controller/AO_AggressiveAICtrl.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/AO_PlayerCharacter.h"
@@ -9,7 +10,8 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTagContainer.h"
-#include "AO_Log.h"
+#include "NavigationSystem.h"
+#include "AIController.h"
 
 AAO_Bull::AAO_Bull()
 {
@@ -31,6 +33,21 @@ AAO_Bull::AAO_Bull()
 
 	// AI Controller 설정
 	AIControllerClass = AAO_BullController::StaticClass();
+
+	// 근접 공격 기본값 설정
+	MeleeAttackConfig.Damage = 20.f;
+	MeleeAttackConfig.KnockbackStrength = 300.f;
+	MeleeAttackConfig.AttackRadius = 100.f;
+	MeleeAttackConfig.AttackDistance = 150.f;
+	MeleeAttackConfig.AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Combat.Melee"));
+}
+
+FEnemyAttackConfig AAO_Bull::GetCurrentAttackConfig_Implementation() const
+{
+	// 돌진 공격은 별도 GA(AO_GA_Bull_Charge)에서 처리하지만,
+	// 만약 추후 통합한다면 여기서 분기 처리 가능.
+	// 현재는 "일반 근접 공격" 요청 시 MeleeAttackConfig 반환.
+	return MeleeAttackConfig;
 }
 
 void AAO_Bull::BeginPlay()
@@ -60,8 +77,6 @@ void AAO_Bull::SetIsCharging(bool bCharging)
 		{
 			ChargeCollisionBox->SetCollisionEnabled(bCharging ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 		}
-
-		AO_LOG(LogKSJ, Log, TEXT("Bull Charging State: %s"), bCharging ? TEXT("ON") : TEXT("OFF"));
 	}
 }
 
@@ -72,8 +87,6 @@ void AAO_Bull::OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	// 플레이어만 타격
 	AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(OtherActor);
 	if (!Player) return;
-
-	AO_LOG(LogKSJ, Log, TEXT("Bull Hit Player: %s"), *Player->GetName());
 
 	// 1. 데미지 적용
 	if (DamageEffectClass)
@@ -96,30 +109,10 @@ void AAO_Bull::OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* Othe
 				{
 					const FGameplayTag DamageTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
 					DamageSpec.Data.Get()->SetSetByCallerMagnitude(DamageTag, ChargeDamage);
-					FActiveGameplayEffectHandle ActiveGE = SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-					
-					AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Applied GE_Damage. ActiveGE Valid: %s"), ActiveGE.WasSuccessfullyApplied() ? TEXT("True") : TEXT("False"));
-				}
-				else
-				{
-					AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageSpec is Invalid!"));
+					SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 				}
 			}
-			else
-			{
-				AO_LOG(LogKSJ, Log, TEXT("OnChargeOverlap: Target is Invulnerable"));
-			}
 		}
-		else
-		{
-			AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: Missing ASC (Source: %s, Target: %s)"), 
-				SourceASC ? *SourceASC->GetName() : TEXT("Null"), 
-				TargetASC ? *TargetASC->GetName() : TEXT("Null"));
-		}
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("OnChargeOverlap: DamageEffectClass is not set!"));
 	}
 
 	// 2. 넉다운 태그 이벤트 전송 (Player가 HitReact하도록)
@@ -154,5 +147,128 @@ void AAO_Bull::HandleStunBegin()
 void AAO_Bull::HandleStunEnd()
 {
 	Super::HandleStunEnd();
+}
+
+void AAO_Bull::BeginDestroy()
+{
+	// 타이머 정리
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(PostAttackTimerHandle);
+		World->GetTimerManager().ClearTimer(RetreatCheckTimerHandle);
+	}
+
+	Super::BeginDestroy();
+}
+
+void AAO_Bull::StartPostAttackRetreat()
+{
+	// 이미 쿨다운 중이면 무시
+	if (bInPostAttackCooldown)
+	{
+		return;
+	}
+
+	bInPostAttackCooldown = true;
+	bIsRetreating = true;
+
+	// 플레이어 반대 방향으로 후퇴 위치 계산
+	AAIController* AIController = Cast<AAIController>(GetController());
+	if (!AIController)
+	{
+		// Controller 없으면 바로 대기 상태로
+		OnRetreatComplete();
+		return;
+	}
+
+	AAO_PlayerCharacter* Target = nullptr;
+	if (AAO_AggressiveAICtrl* AOController = Cast<AAO_AggressiveAICtrl>(AIController))
+	{
+		Target = AOController->GetChaseTarget();
+	}
+
+	if (Target)
+	{
+		// 플레이어 반대 방향 계산
+		FVector RetreatDirection = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
+		RetreatDirection.Z = 0.f;
+		
+		FVector DesiredLocation = GetActorLocation() + (RetreatDirection * RetreatDistance);
+
+		// NavMesh 상의 유효한 위치로 보정
+		UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+		if (NavSys)
+		{
+			FNavLocation NavLocation;
+			if (NavSys->ProjectPointToNavigation(DesiredLocation, NavLocation, FVector(200.f, 200.f, 200.f)))
+			{
+				RetreatTargetLocation = NavLocation.Location;
+			}
+			else
+			{
+				// NavMesh에 투영 실패하면 원래 위치 사용
+				RetreatTargetLocation = DesiredLocation;
+			}
+		}
+		else
+		{
+			RetreatTargetLocation = DesiredLocation;
+		}
+
+		// 후퇴 이동 명령
+		AIController->MoveToLocation(RetreatTargetLocation, 50.f);
+
+		// 후퇴 완료 체크 타이머 (0.1초마다 체크)
+		GetWorld()->GetTimerManager().SetTimer(
+			RetreatCheckTimerHandle,
+			this,
+			&AAO_Bull::OnRetreatComplete,
+			0.1f,
+			true
+		);
+	}
+	else
+	{
+		// 타겟 없으면 바로 대기 상태로
+		OnRetreatComplete();
+	}
+}
+
+void AAO_Bull::OnRetreatComplete()
+{
+	// 후퇴 완료 체크
+	if (bIsRetreating)
+	{
+		float DistToTarget = FVector::Dist(GetActorLocation(), RetreatTargetLocation);
+		
+		// 목표 지점 근처에 도착했거나, 충분히 시간이 지났으면 후퇴 완료
+		if (DistToTarget < 100.f)
+		{
+			// 후퇴 완료
+			bIsRetreating = false;
+			GetWorld()->GetTimerManager().ClearTimer(RetreatCheckTimerHandle);
+
+			// 이동 중지
+			if (AAIController* AIController = Cast<AAIController>(GetController()))
+			{
+				AIController->StopMovement();
+			}
+
+			// 대기 타이머 시작
+			GetWorld()->GetTimerManager().SetTimer(
+				PostAttackTimerHandle,
+				this,
+				&AAO_Bull::EndPostAttackCooldown,
+				PostAttackWaitTime,
+				false
+			);
+		}
+	}
+}
+
+void AAO_Bull::EndPostAttackCooldown()
+{
+	bInPostAttackCooldown = false;
+	bIsRetreating = false;
 }
 

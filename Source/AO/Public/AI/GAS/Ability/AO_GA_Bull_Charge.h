@@ -1,3 +1,5 @@
+//KSJ : AO_GA_Bull_Charge
+
 #pragma once
 
 #include "CoreMinimal.h"

@@ -1,4 +1,4 @@
-// AO_STCond_CeilingAvailable.cpp
+//KSJ : AO_STCond_CeilingAvailable
 
 #include "AI/StateTree/Condition/AO_STCond_CeilingAvailable.h"
 #include "AI/Character/AO_Stalker.h"

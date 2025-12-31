@@ -1,3 +1,5 @@
+//KSJ : AO_Insect_AnimInstance
+
 #include "AI/Animation/AO_Insect_AnimInstance.h"
 #include "AI/Character/AO_Insect.h"
 
