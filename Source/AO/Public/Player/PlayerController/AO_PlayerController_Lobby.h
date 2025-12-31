@@ -6,6 +6,7 @@
 #include "AO_PlayerController_InGameBase.h"
 #include "AO_PlayerController_Lobby.generated.h"
 
+class AAO_LobbyInteractable;
 class ATargetPoint;
 class AAO_CustomizingCharacter;
 /**
@@ -59,11 +60,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
 	void CloseWardrobe();
 
+	UFUNCTION(Server, Reliable)
+	void Server_CloseWardrobe();
+	
 	void FadeIn();
 	void FadeOut();
 
 	void OnFadeInFinishedOpenUI();
 	void OnFadeInFinishedCloseUI();
+
+	UPROPERTY()
+	TObjectPtr<AAO_LobbyInteractable> CustomizingInteractable = nullptr;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customizing")

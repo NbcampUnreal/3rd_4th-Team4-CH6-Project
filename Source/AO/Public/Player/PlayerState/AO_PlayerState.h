@@ -9,6 +9,7 @@
 #include "AO_PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameReady, const FText&);
 
 UCLASS()
 class AO_API AAO_PlayerState : public APlayerState
@@ -54,6 +55,9 @@ public:
 	UFUNCTION()
 	void OnRep_LobbyIsReady();
 
+	// 플레이어 이름 준비 완료되면 델리게이트 호출
+	FOnPlayerNameReady OnPlayerNameReady;
+
 protected:
 	// 레디 상태 (변경 시 OnRep_LobbyIsReady 호출)
 	UPROPERTY(ReplicatedUsing=OnRep_LobbyIsReady)
@@ -92,7 +96,7 @@ public:
 	void SetIsAlive(bool bInIsAlive);
 
 	// 캐릭터 커스터마이징 옵션 데이터 (작성자: 김세훈)
-	UPROPERTY(Replicated)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Customizing", Replicated)
 	FCustomizingData CharacterCustomizingData;
 	
 	virtual void CopyProperties(APlayerState* PlayerState) override;

@@ -12,6 +12,7 @@
 #include "AO_Log.h"
 #include "MotionWarpingComponent.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
+#include "Character/Components/AO_NameplateComponent.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
@@ -74,6 +75,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	InteractableComponent->bInteractionEnabled = false;
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	DeathSpectateComponent = CreateDefaultSubobject<UAO_DeathSpectateComponent>(TEXT("DeathSpectateComponent"));
+	NameplateComponent = CreateDefaultSubobject<UAO_NameplateComponent>(TEXT("NameplateComponent"));
 	InventoryComp = CreateDefaultSubobject<UAO_InventoryComponent>(TEXT("InventoryComponent"));
 	PassiveComp = CreateDefaultSubobject<UAO_PassiveComponent>(TEXT("PassiveComponent"));
 
@@ -142,6 +144,11 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 		Inv->RegisterToSubsystem();
 	}
 	//ms
+
+	if (NameplateComponent)
+	{
+		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
+	}
 }
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
@@ -303,6 +310,16 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (InventoryComp)
 	{
 		InventoryComp->SetupInputBinding(PlayerInputComponent);
+	}
+}
+
+void AAO_PlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (NameplateComponent)
+	{
+		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
 	}
 }
 
