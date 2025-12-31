@@ -1,4 +1,4 @@
-// AO_STCond_HasItem.h
+//KSJ : AO_STCond_HasItem
 
 #pragma once
 

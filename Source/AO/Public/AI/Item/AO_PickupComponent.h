@@ -1,4 +1,4 @@
-// AO_PickupComponent.h
+//KSJ : AO_PickupComponent
 
 #pragma once
 

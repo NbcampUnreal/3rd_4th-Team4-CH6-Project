@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_STCond_HowlReceived
 
 
 #include "AI/StateTree/Condition/AO_STCond_HowlReceived.h"

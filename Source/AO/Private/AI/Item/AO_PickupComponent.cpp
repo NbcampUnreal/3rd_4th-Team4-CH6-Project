@@ -1,4 +1,4 @@
-// AO_PickupComponent.cpp
+//KSJ : AO_PickupComponent
 
 #include "AI/Item/AO_PickupComponent.h"
 #include "Net/UnrealNetwork.h"

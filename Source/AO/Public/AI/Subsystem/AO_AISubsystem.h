@@ -1,4 +1,4 @@
-// AO_AISubsystem.h
+//KSJ : AO_AISubsystem
 
 #pragma once
 
@@ -8,6 +8,7 @@
 
 class AAO_MasterItem;
 class AAO_PlayerCharacter;
+class AAO_Stalker;
 
 /**
  * 아이템 예약 정보
@@ -99,6 +100,10 @@ public:
 	// 특정 위치에서 가장 먼 NavMesh 위치 찾기
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Subsystem")
 	FVector FindLocationFarthestFromPlayers(const FVector& Origin, float SearchRadius) const;
+
+	// 모든 Stalker 위치 가져오기 (엄폐물 겹침 방지용)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Subsystem")
+	TArray<FVector> GetAllStalkerLocations(AActor* ExcludeStalker = nullptr) const;
 
 protected:
 	// 만료된 예약/쿨다운 정리

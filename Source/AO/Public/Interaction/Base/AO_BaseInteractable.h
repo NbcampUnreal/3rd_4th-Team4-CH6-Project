@@ -59,9 +59,18 @@ public:
 		meta=(EditCondition="bIsToggleable", EditConditionHides))
 	FAO_InteractionEffectSettings DeactivateEffect;
 
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
+	TArray<TObjectPtr<AActor>> DisabledPlayers;
+
 	UFUNCTION(BlueprintNativeEvent, Category="Interaction")
 	void OnInteractionSuccess_BP(AActor* Interactor);
 
+	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Disable Player Interaction"))
+	void AddDisabledPlayer(AActor* Player);
+
+	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Enable Player Interaction"))
+	void RemoveDisabledPlayer(AActor* Player);
+	
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor);
@@ -79,12 +88,6 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Interaction|Reaction")
 	void TriggerLinkedReactions(bool bActivate);
-
-	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Disable Player Interaction"))
-	void AddDisabledPlayer(AActor* Player);
-
-	UFUNCTION(BlueprintCallable, Category="Interaction", meta=(DisplayName="Enable Player Interaction"))
-	void RemoveDisabledPlayer(AActor* Player);
 
 	UFUNCTION(BlueprintPure, Category="Interaction")
 	bool IsPlayerDisabled(AActor* Player) const;
@@ -131,9 +134,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|Reaction")
 	TArray<TObjectPtr<AAO_PuzzleReactionActor>> LinkedReactionActors;
-
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="Interaction")
-	TArray<TObjectPtr<AActor>> DisabledPlayers;
 
 private:
 	void SpawnVFXInternal(const FAO_InteractionEffectSettings& EffectSettings, const FTransform& SpawnTransform);

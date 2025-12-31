@@ -1,4 +1,4 @@
-// AO_STTask_Bull_Charge.cpp
+//KSJ : AO_STTask_Bull_Charge
 
 #include "AI/StateTree/Task/AO_STTask_Bull_Charge.h"
 #include "AI/Controller/AO_BullController.h"
@@ -10,7 +10,6 @@
 #include "AIController.h"
 #include "NavigationSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
 
 EStateTreeRunStatus FAO_STTask_Bull_Charge::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
@@ -20,14 +19,12 @@ EStateTreeRunStatus FAO_STTask_Bull_Charge::EnterState(FStateTreeExecutionContex
 	AAO_BullController* Controller = GetController(Context);
 	if (!Controller) 
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_STTask_Bull_Charge: Controller is null"));
 		return EStateTreeRunStatus::Failed;
 	}
 
 	AAO_Bull* Bull = Controller->GetBull();
 	if (!Bull) 
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_STTask_Bull_Charge: Bull is null"));
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -37,7 +34,6 @@ EStateTreeRunStatus FAO_STTask_Bull_Charge::EnterState(FStateTreeExecutionContex
 	AAO_PlayerCharacter* TargetPlayer = Controller->GetNearestPlayerInSight();
 	if (!TargetPlayer)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_STTask_Bull_Charge: No player in sight"));
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -54,17 +50,14 @@ EStateTreeRunStatus FAO_STTask_Bull_Charge::EnterState(FStateTreeExecutionContex
 		if (ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(ChargeTag)))
 		{
 			InstanceData.bIsCharging = true;
-			AO_LOG(LogKSJ, Log, TEXT("AO_STTask_Bull_Charge: Charge ability activated, target: %s"), *TargetPlayer->GetName());
 			return EStateTreeRunStatus::Running;
 		}
 		else
 		{
-			AO_LOG(LogKSJ, Warning, TEXT("AO_STTask_Bull_Charge: Failed to activate charge ability"));
 		}
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_STTask_Bull_Charge: ASC is null"));
 	}
 
 	return EStateTreeRunStatus::Failed;
@@ -112,7 +105,6 @@ EStateTreeRunStatus FAO_STTask_Bull_Charge::Tick(FStateTreeExecutionContext& Con
 	else
 	{
 		// 타겟이 사라지면 실패
-		AO_LOG(LogKSJ, Warning, TEXT("AO_STTask_Bull_Charge: Target player is invalid"));
 		return EStateTreeRunStatus::Failed;
 	}
 

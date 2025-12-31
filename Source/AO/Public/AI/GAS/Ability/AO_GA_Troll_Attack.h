@@ -1,4 +1,4 @@
-// AO_GA_Troll_Attack.h
+//KSJ : AO_GA_Troll_Attack
 
 #pragma once
 

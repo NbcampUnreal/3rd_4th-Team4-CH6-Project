@@ -1,4 +1,4 @@
-// AO_CrabController.cpp
+//KSJ : AO_CrabController
 
 #include "AI/Controller/AO_CrabController.h"
 #include "AI/Character/AO_Crab.h"
@@ -6,7 +6,6 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "Item/AO_MasterItem.h"
 #include "NavigationSystem.h"
-#include "AO_Log.h"
 
 AAO_CrabController::AAO_CrabController()
 {
@@ -90,12 +89,7 @@ FVector AAO_CrabController::GetNearestThreatLocation() const
 					}
 				}
 
-				AO_LOG(LogKSJ, Log, TEXT("GetNearestThreatLocation: Using memory location: %s"), *NearestLoc.ToString());
 				return NearestLoc;
-			}
-			else
-			{
-				AO_LOG(LogKSJ, Log, TEXT("GetNearestThreatLocation: No recent locations in memory"));
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-// AO_Stalker.cpp
+//KSJ : AO_Stalker
 
 #include "AI/Character/AO_Stalker.h"
 #include "AI/Component/AO_CeilingMoveComponent.h"

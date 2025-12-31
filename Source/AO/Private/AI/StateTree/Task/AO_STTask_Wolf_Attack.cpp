@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_STTask_Wolf_Attack
 
 
 #include "AI/StateTree/Task/AO_STTask_Wolf_Attack.h"
@@ -8,7 +8,6 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Wolf_Attack::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -73,11 +72,9 @@ EStateTreeRunStatus FAO_STTask_Wolf_Attack::Tick(FStateTreeExecutionContext& Con
 			TagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Combat.Attack")));
 			if (ASC->TryActivateAbilitiesByTag(TagContainer, true))
 			{
-				AO_LOG(LogKSJ, Log, TEXT("Werewolf attack ability activated"));
 			}
 			else
 			{
-				AO_LOG(LogKSJ, Warning, TEXT("Werewolf attack ability activation failed"));
 			}
 		}
 	}

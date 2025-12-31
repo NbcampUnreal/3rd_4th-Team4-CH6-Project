@@ -1,4 +1,4 @@
-// AO_GA_Insect_Kidnap.cpp
+//KSJ : AO_GA_Insect_Kidnap
 
 #include "AI/GAS/Ability/AO_GA_Insect_Kidnap.h"
 #include "AI/Character/AO_Insect.h"
@@ -10,7 +10,6 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystemComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "AO_Log.h"
 
 UAO_GA_Insect_Kidnap::UAO_GA_Insect_Kidnap()
 {
@@ -38,7 +37,6 @@ void UAO_GA_Insect_Kidnap::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Insect_Kidnap: Failed to commit ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -46,19 +44,15 @@ void UAO_GA_Insect_Kidnap::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	AAO_Insect* Insect = Cast<AAO_Insect>(ActorInfo->AvatarActor.Get());
 	if (!Insect)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_GA_Insect_Kidnap: Avatar is not an Insect"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
 	if (!KidnapMontage)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Insect_Kidnap: No Montage Assigned"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: Activating kidnap ability"));
 
 	// 1. 히트 이벤트 대기 (몽타주 Notify에서 발송될 수 있음)
 	UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -72,7 +66,6 @@ void UAO_GA_Insect_Kidnap::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	{
 		WaitEventTask->EventReceived.AddDynamic(this, &UAO_GA_Insect_Kidnap::OnHitConfirmEvent);
 		WaitEventTask->ReadyForActivation();
-		AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: Waiting for Event.Combat.Confirm"));
 	}
 
 	// 2. 몽타주 재생
@@ -87,11 +80,9 @@ void UAO_GA_Insect_Kidnap::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		MontageTask->OnCancelled.AddDynamic(this, &UAO_GA_Insect_Kidnap::OnMontageCancelled);
 		MontageTask->OnInterrupted.AddDynamic(this, &UAO_GA_Insect_Kidnap::OnMontageCancelled);
 		MontageTask->ReadyForActivation();
-		AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: Playing montage: %s"), *KidnapMontage->GetName());
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_GA_Insect_Kidnap: Failed to create montage task"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -108,7 +99,6 @@ void UAO_GA_Insect_Kidnap::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 			TraceDelay,
 			false
 		);
-		AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: Scheduled trace at %.2f seconds"), TraceDelay);
 	}
 }
 
@@ -120,13 +110,11 @@ void UAO_GA_Insect_Kidnap::EndAbility(const FGameplayAbilitySpecHandle Handle, c
 		World->GetTimerManager().ClearTimer(TraceTimerHandle);
 	}
 
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: EndAbility (Cancelled: %s)"), bWasCancelled ? TEXT("true") : TEXT("false"));
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UAO_GA_Insect_Kidnap::OnHitConfirmEvent(FGameplayEventData Payload)
 {
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: OnHitConfirmEvent received"));
 	PerformKidnapTrace();
 }
 
@@ -135,14 +123,12 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 	AAO_Insect* Insect = Cast<AAO_Insect>(GetAvatarActorFromActorInfo());
 	if (!Insect)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Insect is null"));
 		return;
 	}
 
 	// 이미 납치 중이면 스킵
 	if (Insect->IsKidnapping())
 	{
-		AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Already kidnapping, skipping"));
 		return;
 	}
 
@@ -155,9 +141,6 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(Insect);
 
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Trace from %s to %s (Radius: %.1f, Distance: %.1f)"),
-		*Start.ToString(), *End.ToString(), TraceRadius, TraceDistance);
-
 	bool bHit = UKismetSystemLibrary::SphereTraceMulti(
 		GetWorld(),
 		Start,
@@ -166,25 +149,20 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 		UEngineTypes::ConvertToTraceType(TraceChannel),
 		false,
 		IgnoreActors,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResults,
 		true
 	);
 
 	if (!bHit)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: No hit detected"));
 		return;
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Hit %d actors"), HitResults.Num());
 
 	for (const FHitResult& Hit : HitResults)
 	{
 		if (AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(Hit.GetActor()))
 		{
-			AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Found player %s"), *Player->GetName());
-			
 			// 빠른 체크: 이미 납치된 플레이어는 건너뛰기
 			UAbilitySystemComponent* PlayerASC = Player->GetAbilitySystemComponent();
 			if (PlayerASC)
@@ -192,7 +170,6 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 				const FGameplayTag KidnappedTag = FGameplayTag::RequestGameplayTag(FName("Status.Debuff.Kidnapped"));
 				if (PlayerASC->HasMatchingGameplayTag(KidnappedTag))
 				{
-					AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Player %s is already kidnapped, skipping"), *Player->GetName());
 					continue;
 				}
 			}
@@ -204,23 +181,19 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 				{
 					if (AISubsystem->IsPlayerBeingKidnapped(Player))
 					{
-						AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: Player %s is already reserved by another Insect, skipping"), *Player->GetName());
 						continue;
 					}
 				}
 			}
 			
 			// 납치 시도
-			if (Insect->GetKidnapComponent()->TryKidnapPlayer(Player))
+			bool bKidnapSuccess = Insect->GetKidnapComponent()->TryKidnapPlayer(Player);
+			
+			if (bKidnapSuccess)
 			{
-				AO_LOG(LogKSJ, Log, TEXT("AO_GA_Insect_Kidnap: Kidnap Successful!"));
 				// 성공했으므로 타이머 취소
 				GetWorld()->GetTimerManager().ClearTimer(TraceTimerHandle);
 				break; // 한 명만 납치
-			}
-			else
-			{
-				AO_LOG(LogKSJ, Warning, TEXT("AO_GA_Insect_Kidnap::PerformKidnapTrace: TryKidnapPlayer failed for %s"), *Player->GetName());
 			}
 		}
 	}
@@ -235,4 +208,3 @@ void UAO_GA_Insect_Kidnap::OnMontageCancelled()
 {
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
-

@@ -1,4 +1,4 @@
-// AO_STCond_ItemNearby.cpp
+//KSJ : AO_STCond_ItemNearby
 
 #include "AI/StateTree/Condition/AO_STCond_ItemNearby.h"
 #include "AI/Character/AO_Crab.h"
@@ -6,7 +6,6 @@
 #include "Item/AO_MasterItem.h"
 #include "AIController.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 
 bool FAO_STCond_ItemNearby::TestCondition(FStateTreeExecutionContext& Context) const
 {

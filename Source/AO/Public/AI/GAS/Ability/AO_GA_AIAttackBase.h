@@ -1,14 +1,18 @@
+//KSJ : AO_GA_AIAttackBase
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "AI/AO_AITypes.h"
 #include "AO_GA_AIAttackBase.generated.h"
 
 /**
- * AI 범용 공격 Ability Base
+ * 모든 AI(적)의 공통 근접 공격 Ability
  * 
- * - 몽타주 재생 -> Notify(Event.Combat.Confirm) 대기 -> SphereTrace -> Hit 처리
- * - 자식 클래스에서 OnTargetHit를 오버라이드하여 납치 등 특수 로직 구현 가능
+ * - AAO_AICharacterBase의 GetCurrentAttackConfig()를 통해 공격 데이터(데미지, 몽타주 등)를 가져옴
+ * - NotifyState(Event.Combat.Confirm) 타이밍에 맞춰 Sphere Trace 수행
+ * - 데미지 및 넉백 적용
  */
 UCLASS()
 class AO_API UAO_GA_AIAttackBase : public UGameplayAbility
@@ -20,59 +24,44 @@ public:
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 
 protected:
-    // 몽타주 재생 함수 (자식에서 오버라이드하여 랜덤 선택 등 구현 가능)
-    virtual UAnimMontage* GetMontageToPlay() const;
+	// 히트 확정 이벤트 처리 (AnimNotify)
+	UFUNCTION()
+	void OnHitConfirmEvent(FGameplayEventData Payload);
 
+	// 몽타주 완료 처리
 	UFUNCTION()
 	void OnMontageCompleted();
 
+	// 몽타주 취소 처리
 	UFUNCTION()
 	void OnMontageCancelled();
 
-    // 히트 판정 이벤트 수신
-    UFUNCTION()
-    void OnHitConfirmEvent(FGameplayEventData Payload);
+	// 데미지 및 넉백 적용
+	virtual void ApplyDamageAndKnockback(AActor* TargetActor, AActor* InstigatorActor, const FEnemyAttackConfig& Config);
 
-    // [Virtual] 적중 시 처리 로직 (기본: 데미지+넉백+이벤트)
-    virtual void OnTargetHit(AActor* TargetActor, AActor* InstigatorActor);
+	// 히트 반응 이벤트 전송
+	virtual void SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor, float Damage);
+
+	// 자식 클래스에서 오버라이드 가능한 히트 콜백 (레거시 지원 또는 확장용)
+	virtual void OnTargetHit(AActor* TargetActor, AActor* InstigatorActor);
 
 protected:
-    // --- 설정 변수들 ---
+	// 현재 수행 중인 공격 설정
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FEnemyAttackConfig CurrentAttackConfig;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-	TObjectPtr<UAnimMontage> AttackMontage;
+	// 트레이스 채널 (기본값: Pawn)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
 
-    // 공격 판정 범위
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    float TraceRadius = 50.f;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    float TraceDistance = 150.f;
-
-    // 데미지 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    float DamageAmount = 10.f;
-
-    // 넉백 강도
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    float KnockbackStrength = 0.f;
+	// 넉다운 히트 리액트 태그 (기본값: Event.Combat.HitReact.Knockdown)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	FGameplayTag KnockdownHitReactTag;
     
-    // 넉백 방향 (UpVector 보정치)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    float KnockbackUpForce = 0.3f;
-
-    // 데미지 GE 클래스
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    TSubclassOf<UGameplayEffect> DamageEffectClass;
-
-    // 적중 시 상대에게 보낼 이벤트 태그 (HitReact/Knockdown 등)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    FGameplayTag HitReactTag;
-    
-    // 디버그 트레이스 표시 여부
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-    bool bShowDebugTrace = false;
+    // 일반 히트 리액트 태그 (기본값: Event.Combat.HitReact.Light)
+    UPROPERTY(EditDefaultsOnly, Category = "Combat")
+    FGameplayTag DefaultHitReactTag;
 };
-

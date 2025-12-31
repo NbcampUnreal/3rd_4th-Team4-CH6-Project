@@ -1,4 +1,4 @@
-// AO_STCond_CanAmbush.cpp
+//KSJ : AO_STCond_CanAmbush
 
 #include "AI/StateTree/Condition/AO_STCond_CanAmbush.h"
 #include "AI/Controller/AO_AggressiveAICtrl.h"

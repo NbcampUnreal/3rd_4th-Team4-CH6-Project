@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_EQS_Context_PackMembers
 
 
 #include "AI/EQS/AO_EQS_Context_PackMembers.h"

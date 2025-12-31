@@ -43,6 +43,7 @@ protected:
 	TObjectPtr<UAO_DummyCustomComponent> DummyCustomComponent;
 
 public:
+	TObjectPtr<USkeletalMeshComponent> GetBaseSkeletalMesh() const { return BaseSkeletalMesh; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
 	TObjectPtr<UAO_DummyCustomComponent> GetCustomizingComponent() const { return DummyCustomComponent; }

@@ -12,6 +12,7 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UAO_NameplateComponent;
 class UAO_DeathSpectateComponent;
 class UAO_PlayerCharacter_AttributeDefaults;
 class UAO_CustomizingComponent;
@@ -62,6 +63,7 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void OnRep_PlayerState() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -103,6 +105,8 @@ protected:
 	TObjectPtr<UAO_InteractableComponent> InteractableComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_DeathSpectateComponent> DeathSpectateComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UAO_NameplateComponent> NameplateComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
@@ -218,6 +222,8 @@ public:
 	TObjectPtr<USoundAttenuation> SA_VoiceChat = nullptr;
 
 //세훈: Customizable Object Instance
+public:
+	TObjectPtr<USkeletalMeshComponent> GetBaseSkeletalMesh() const { return BaseSkeletalMesh; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetBodyComponent() const { return BodyComponent; }
 	TObjectPtr<UCustomizableSkeletalComponent> GetHeadComponent() const { return HeadComponent; }
 	TObjectPtr<UAO_CustomizingComponent> GetCustomizingComponent() const { return CustomizingComponent; }

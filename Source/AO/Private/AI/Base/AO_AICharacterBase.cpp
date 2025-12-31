@@ -1,4 +1,4 @@
-// AO_AICharacterBase.cpp
+//KSJ : AO_AICharacterBase
 
 #include "AI/Base/AO_AICharacterBase.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
@@ -8,22 +8,23 @@
 #include "GameplayTagContainer.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
+#include "Components/CapsuleComponent.h"
 
 AAO_AICharacterBase::AAO_AICharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
+	
+	NetUpdateFrequency = 30.0f;
+	MinNetUpdateFrequency = 15.0f;
+	NetPriority = 2.0f;
 
-	// GAS 컴포넌트 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	// Attribute Set 생성
 	AttributeSet = CreateDefaultSubobject<UAO_AIAttributeSet>(TEXT("AttributeSet"));
 
-	// Memory 컴포넌트 생성
 	MemoryComponent = CreateDefaultSubobject<UAO_AIMemoryComponent>(TEXT("MemoryComponent"));
 }
 
@@ -31,15 +32,44 @@ void AAO_AICharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+	{
+		MovementComp->SetIsReplicated(true);
+		MovementComp->bEnablePhysicsInteraction = false;
+		MovementComp->NetworkSmoothingMode = ENetworkSmoothingMode::Exponential;
+		MovementComp->NetworkMaxSmoothUpdateDistance = 92.0f;
+		MovementComp->NetworkNoSmoothUpdateDistance = 140.0f;
+		
+		if (HasAuthority())
+		{
+			MovementComp->bRunPhysicsWithNoController = true;
+		}
+		else
+		{
+			MovementComp->bRunPhysicsWithNoController = false;
+			MovementComp->bAlwaysCheckFloor = false;
+			MovementComp->bSweepWhileNavWalking = false;
+			MovementComp->MaxDepenetrationWithGeometry = 0.0f;
+			MovementComp->MaxDepenetrationWithPawn = 0.0f;
+		}
+	}
+
+	if (!HasAuthority())
+	{
+		if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+		{
+			Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		}
+	}
+
 	if (HasAuthority())
 	{
 		InitializeAbilitySystem();
-	}
-
-	// 기본 이동 속도 설정
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->MaxWalkSpeed = DefaultMovementSpeed;
+		
+		if (GetCharacterMovement())
+		{
+			GetCharacterMovement()->MaxWalkSpeed = DefaultMovementSpeed;
+		}
 	}
 }
 
@@ -55,7 +85,6 @@ UAbilitySystemComponent* AAO_AICharacterBase::GetAbilitySystemComponent() const
 
 bool AAO_AICharacterBase::IsStunned() const
 {
-	// AbilitySystemComponent가 없으면 기절 상태가 아닌 것으로 처리
 	if (!ensureMsgf(AbilitySystemComponent, TEXT("AbilitySystemComponent is null on %s"), *GetName()))
 	{
 		return false;
@@ -77,60 +106,61 @@ void AAO_AICharacterBase::OnStunEnd()
 
 void AAO_AICharacterBase::HandleStunBegin()
 {
-	// 기본 기절 처리: 이동 멈춤
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (GetCharacterMovement())
 	{
 		GetCharacterMovement()->StopMovementImmediately();
 	}
-
-	AO_LOG(LogKSJ, Log, TEXT("AI Stunned: %s"), *GetName());
 }
 
 void AAO_AICharacterBase::HandleStunEnd()
 {
-	// 기절 해제 처리
-	AO_LOG(LogKSJ, Log, TEXT("AI Stun Ended: %s"), *GetName());
 }
 
 void AAO_AICharacterBase::TestStun()
 {
 	if (!AbilitySystemComponent)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TestStun: AbilitySystemComponent is null on %s"), *GetName());
 		return;
 	}
 
-	// Event.AI.Stunned 이벤트 발생
 	FGameplayTag StunEventTag = FGameplayTag::RequestGameplayTag(FName("Event.AI.Stunned"));
 	FGameplayEventData EventData;
 	EventData.Instigator = this;
 	EventData.Target = this;
 	
 	AbilitySystemComponent->HandleGameplayEvent(StunEventTag, &EventData);
-	
-	AO_LOG(LogKSJ, Log, TEXT("TestStun: Triggered stun event on %s"), *GetName());
 }
 
 void AAO_AICharacterBase::TestStunEnd()
 {
 	if (!AbilitySystemComponent)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("TestStunEnd: AbilitySystemComponent is null on %s"), *GetName());
 		return;
 	}
 
-	// 기절 Ability 태그로 취소 (프로젝트 내 다른 코드와 동일한 패턴)
 	FGameplayTagContainer StunAbilityTags;
 	StunAbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Stunned")));
 	
 	AbilitySystemComponent->CancelAbilities(&StunAbilityTags);
-	
-	AO_LOG(LogKSJ, Log, TEXT("TestStunEnd: Cancelled stun ability on %s"), *GetName());
+}
+
+FEnemyAttackConfig AAO_AICharacterBase::GetCurrentAttackConfig_Implementation() const
+{
+	return FEnemyAttackConfig();
+}
+
+void AAO_AICharacterBase::SetIsAttacking(bool bAttacking)
+{
+	bIsAttacking = bAttacking;
 }
 
 void AAO_AICharacterBase::InitializeAbilitySystem()
 {
-	// GAS 초기화 - AbilitySystemComponent가 반드시 존재해야 함
 	if (!ensure(AbilitySystemComponent))
 	{
 		return;
@@ -144,7 +174,6 @@ void AAO_AICharacterBase::InitializeAbilitySystem()
 
 void AAO_AICharacterBase::BindDefaultAbilities()
 {
-	// 기본 Ability 바인딩 - AbilitySystemComponent 필수
 	if (!ensure(AbilitySystemComponent))
 	{
 		return;
@@ -162,7 +191,6 @@ void AAO_AICharacterBase::BindDefaultAbilities()
 
 void AAO_AICharacterBase::BindDefaultEffects()
 {
-	// 기본 Effect 바인딩 - AbilitySystemComponent 필수
 	if (!ensure(AbilitySystemComponent))
 	{
 		return;

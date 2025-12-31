@@ -1,4 +1,4 @@
-// AO_STTask_Troll_PickWeapon.cpp
+//KSJ : AO_STTask_Troll_PickWeapon
 
 #include "AI/StateTree/Task/AO_STTask_Troll_PickWeapon.h"
 #include "AI/Character/AO_Troll.h"
@@ -9,11 +9,9 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
-	AO_LOG(LogKSJ, Log, TEXT("AO_STTask_Troll_PickWeapon: EnterState Called"));
 
 	FAO_STTask_Troll_PickWeapon_InstanceData& InstanceData = Context.GetInstanceData<FAO_STTask_Troll_PickWeapon_InstanceData>(*this);
 	InstanceData.bIsMoving = false;
@@ -25,21 +23,18 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::EnterState(FStateTreeExecutionC
 
 	if (!Controller || !Troll)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_STTask_Troll_PickWeapon: Controller or Troll is NULL"));
 		return EStateTreeRunStatus::Failed;
 	}
 
 	// 이미 무기를 들고 있으면 성공
 	if (Troll->HasWeapon())
 	{
-		AO_LOG(LogKSJ, Log, TEXT("AO_STTask_Troll_PickWeapon: Troll already has weapon"));
 		return EStateTreeRunStatus::Succeeded;
 	}
 
 	UAO_WeaponHolderComp* WeaponHolder = Troll->GetWeaponHolderComponent();
 	if (!WeaponHolder)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_STTask_Troll_PickWeapon: WeaponHolder is NULL"));
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -47,19 +42,14 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::EnterState(FStateTreeExecutionC
 	AAO_TrollWeapon* NearestWeapon = WeaponHolder->FindNearestWeaponInRadius(InstanceData.SearchRadius);
 	if (!NearestWeapon)
 	{
-		AO_LOG(LogKSJ, Log, TEXT("AO_STTask_Troll_PickWeapon: No weapon in %.1f radius, checking sight..."), InstanceData.SearchRadius);
 		NearestWeapon = WeaponHolder->FindNearestWeaponInSight();
 	}
 
 	if (!NearestWeapon)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_STTask_Troll_PickWeapon: No weapon found nearby (Radius & Sight checked)"));
 		return EStateTreeRunStatus::Failed;
 	}
 	
-	AO_LOG(LogKSJ, Log, TEXT("AO_STTask_Troll_PickWeapon: Found weapon %s at distance %.1f"), 
-		*NearestWeapon->GetName(), 
-		FVector::Dist(Troll->GetActorLocation(), NearestWeapon->GetActorLocation()));
 
 	InstanceData.TargetWeapon = NearestWeapon;
 
@@ -70,11 +60,9 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::EnterState(FStateTreeExecutionC
 	if (MoveToWeapon(Controller, NearestWeapon, InstanceData.AcceptanceRadius))
 	{
 		InstanceData.bIsMoving = true;
-		AO_LOG(LogKSJ, Log, TEXT("Troll moving to pickup weapon: %s"), *NearestWeapon->GetName());
 	}
 	else
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("Troll failed to start move to weapon: %s"), *NearestWeapon->GetName());
 	}
 
 	return EStateTreeRunStatus::Running;
@@ -144,12 +132,10 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::Tick(FStateTreeExecutionContext
 					{
 						Troll->SetPickingUpWeapon(false);
 						InstanceData.bIsPlayingPickupAnimation = false;
-						AO_LOG(LogKSJ, Log, TEXT("Troll picked up weapon successfully after animation"));
 						return EStateTreeRunStatus::Succeeded;
 					}
 					else
 					{
-						AO_LOG(LogKSJ, Warning, TEXT("Troll failed to pickup weapon after animation"));
 						Troll->SetPickingUpWeapon(false);
 						InstanceData.bIsPlayingPickupAnimation = false;
 						return EStateTreeRunStatus::Failed;
@@ -171,8 +157,6 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::Tick(FStateTreeExecutionContext
 	
 	if (Dist2DSq <= FMath::Square(InstanceData.PickupRadius))
 	{
-		AO_LOG(LogKSJ, Log, TEXT("Troll is close enough to weapon (Dist2D: %.1f, Dist3D: %.1f, PickupRadius: %.1f)"), 
-			Dist2D, Dist3D, InstanceData.PickupRadius);
 		
 		// 몽타주가 설정되어 있으면 재생
 		if (InstanceData.PickupMontage)
@@ -190,7 +174,6 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::Tick(FStateTreeExecutionContext
 					// 몽타주 재생
 					AnimInstance->Montage_Play(InstanceData.PickupMontage, 1.0f);
 					InstanceData.bIsPlayingPickupAnimation = true;
-					AO_LOG(LogKSJ, Log, TEXT("Troll playing pickup montage: %s"), *InstanceData.PickupMontage->GetName());
 					return EStateTreeRunStatus::Running;
 				}
 			}
@@ -201,14 +184,10 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::Tick(FStateTreeExecutionContext
 		if (WeaponHolder && WeaponHolder->PickupWeapon(TargetWeapon))
 		{
 			Troll->SetPickingUpWeapon(false);
-			AO_LOG(LogKSJ, Log, TEXT("Troll picked up weapon successfully (no montage)"));
 			return EStateTreeRunStatus::Succeeded;
 		}
 		else
 		{
-			AO_LOG(LogKSJ, Warning, TEXT("Troll failed to pickup weapon - WeaponHolder: %s, TargetWeapon IsPickedUp: %s"), 
-				WeaponHolder ? TEXT("Valid") : TEXT("Null"),
-				TargetWeapon->IsPickedUp() ? TEXT("Yes") : TEXT("No"));
 			Troll->SetPickingUpWeapon(false);
 			return EStateTreeRunStatus::Failed;
 		}
@@ -219,8 +198,6 @@ EStateTreeRunStatus FAO_STTask_Troll_PickWeapon::Tick(FStateTreeExecutionContext
 	if (MoveStatus == EPathFollowingStatus::Idle)
 	{
 		// 이동이 완료되었지만 아직 줍지 못함 - 다시 이동 시도
-		AO_LOG(LogKSJ, Log, TEXT("Troll stopped but not close enough (Dist2D: %.1f, Dist3D: %.1f), retrying move"), 
-			Dist2D, Dist3D);
 		MoveToWeapon(Controller, TargetWeapon, InstanceData.AcceptanceRadius);
 	}
 
