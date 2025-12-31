@@ -110,6 +110,15 @@ protected:
     UFUNCTION(NetMulticast, Reliable)
     void MulticastClearPasswordHints();
 
+	UFUNCTION(BlueprintImplementableEvent, Category="GasRoom|Events", meta=(DisplayName="On Puzzle Started"))
+	void OnPuzzleStarted_BP();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="GasRoom|Events", meta=(DisplayName="On Puzzle Completed"))
+	void OnPuzzleCompleted_BP();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="GasRoom|Events", meta=(DisplayName="On Puzzle Reset"))
+	void OnPuzzleReset_BP();
+
 private:
     void CollectCandidateDecals();
     void SelectRandomCandidates();
