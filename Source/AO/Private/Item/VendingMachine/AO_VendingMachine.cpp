@@ -33,20 +33,13 @@ void AAO_VendingMachine::BeginPlay()
 
 	if (HasAuthority())
 	{
-		// ShopManager가 미지정이면 자동 검색
 		if (!ShopManager)
 		{
 			for (TActorIterator<AAO_ShopManager> It(GetWorld()); It; ++It)
 			{
 				ShopManager = *It;
-				UE_LOG(LogTemp, Warning, TEXT("[VM] Found ShopManager on server."));
 				break;
 			}
-		}
-
-		if (!ShopManager)
-		{
-			UE_LOG(LogTemp, Error, TEXT("[VM] FAILED to find ShopManager"));
 		}
 
 		ApplyItemData();
@@ -101,42 +94,28 @@ void AAO_VendingMachine::ApplyItemData()
 			}
 		}
 	}
-	else
-	{
-	}
 }
 
 void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
 {
-	UE_LOG(LogShop, Warning, TEXT("[VM] HandleInteractionSuccess Called. Authority=%s"),
-		HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
-
 	if (!HasAuthority())
 	{
-		UE_LOG(LogShop, Warning, TEXT("[VM] NO AUTHORITY → EXIT"));
 		return;
 	}
 
 	if (!ShopManager)
 	{
-		UE_LOG(LogShop, Error, TEXT("[VM] ShopManager is NULL!"));
 		return;
 	}
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Request Buy Item. Price=%d"), ItemPrice);
-
+	
 	ShopManager->Server_BuyItem(ItemPrice, this);
 }
 
 
 void AAO_VendingMachine::SpawnVendingItem()
 {
-	UE_LOG(LogShop, Warning, TEXT("[VM] SpawnVendingItem Executed"));
-
 	FVector SpawnLocation = StaticMesh->GetComponentLocation()
 		+ GetActorForwardVector() * 40.f;
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Spawn Location = %s"), *SpawnLocation.ToString());
 
 	FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 
@@ -168,9 +147,7 @@ void AAO_VendingMachine::Server_RequestBuy_Implementation(AActor* Interactor)
 
 	if (!ShopManager)
 		return;
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Server_RequestBuy"));
-
+	
 	ShopManager->Server_BuyItem(ItemPrice, this);
 }
 
