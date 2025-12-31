@@ -40,12 +40,32 @@ void AAO_InsectController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus 
 				{
 					if (AISubsystem->IsPlayerRecentlyKidnapped(Player))
 					{
+						// 현재 추격 중인 대상이 쿨다운에 들어가면 추격 중단
+						if (GetChaseTarget() == Player)
+						{
+							SetChaseTarget(nullptr);
+							AAO_AggressiveAIBase* AI = GetAggressiveAI();
+							if (AI)
+							{
+								AI->SetChaseMode(false);
+							}
+						}
 						return; // 쿨타운 중인 플레이어는 무시
 					}
 					
 					// 이미 다른 Insect가 납치 중인 플레이어도 무시
 					if (AISubsystem->IsPlayerBeingKidnapped(Player))
 					{
+						// 현재 추격 중인 대상이 다른 Insect에게 납치되면 추격 중단
+						if (GetChaseTarget() == Player)
+						{
+							SetChaseTarget(nullptr);
+							AAO_AggressiveAIBase* AI = GetAggressiveAI();
+							if (AI)
+							{
+								AI->SetChaseMode(false);
+							}
+						}
 						return; // 이미 납치 중인 플레이어는 무시
 					}
 				}
@@ -59,6 +79,29 @@ void AAO_InsectController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus 
 
 void AAO_InsectController::OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location)
 {
+	if (!Player)
+	{
+		return;
+	}
+
+	// 쿨다운 중인 플레이어는 추격하지 않음
+	if (UWorld* World = GetWorld())
+	{
+		if (UAO_AISubsystem* AISubsystem = World->GetSubsystem<UAO_AISubsystem>())
+		{
+			if (AISubsystem->IsPlayerRecentlyKidnapped(Player))
+			{
+				return; // 쿨다운 중인 플레이어는 추격하지 않음
+			}
+			
+			// 이미 다른 Insect가 납치 중인 플레이어도 추격하지 않음
+			if (AISubsystem->IsPlayerBeingKidnapped(Player))
+			{
+				return; // 이미 납치 중인 플레이어는 추격하지 않음
+			}
+		}
+	}
+
 	Super::OnPlayerDetected(Player, Location);
 
 	// Insect 특화 로직:

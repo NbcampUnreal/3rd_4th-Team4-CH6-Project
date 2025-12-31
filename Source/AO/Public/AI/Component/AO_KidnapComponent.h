@@ -62,6 +62,9 @@ protected:
 	UFUNCTION()
 	void OnPlayerDeathTagChanged(const FGameplayTag Tag, int32 NewCount);
 
+	// Kidnapped 태그만 제거 (사망한 플레이어용)
+	void RemoveKidnappedTag(AAO_PlayerCharacter* Player);
+
 public:
 	// 납치 상태 변경 델리게이트
 	UPROPERTY(BlueprintAssignable, Category = "AO|AI|Kidnap")

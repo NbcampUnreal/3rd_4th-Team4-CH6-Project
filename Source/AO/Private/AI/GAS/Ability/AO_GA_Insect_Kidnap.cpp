@@ -187,7 +187,9 @@ void UAO_GA_Insect_Kidnap::PerformKidnapTrace()
 			}
 			
 			// 납치 시도
-			if (Insect->GetKidnapComponent()->TryKidnapPlayer(Player))
+			bool bKidnapSuccess = Insect->GetKidnapComponent()->TryKidnapPlayer(Player);
+			
+			if (bKidnapSuccess)
 			{
 				// 성공했으므로 타이머 취소
 				GetWorld()->GetTimerManager().ClearTimer(TraceTimerHandle);

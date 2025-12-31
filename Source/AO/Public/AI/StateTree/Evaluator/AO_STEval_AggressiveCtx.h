@@ -38,6 +38,10 @@ struct FAO_STEval_AggressiveCtx_InstanceData
 	UPROPERTY(EditAnywhere, Category = "Output")
 	bool bIsStunned = false;
 
+	// 공격 후 쿨다운 상태 여부 (후퇴/대기 중)
+	UPROPERTY(EditAnywhere, Category = "Output")
+	bool bInPostAttackCooldown = false;
+
 	// 현재 추격 대상
 	UPROPERTY(EditAnywhere, Category = "Output")
 	TWeakObjectPtr<AAO_PlayerCharacter> CurrentTarget;

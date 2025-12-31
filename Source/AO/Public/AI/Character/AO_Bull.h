@@ -7,6 +7,7 @@
 #include "AO_Bull.generated.h"
 
 class UBoxComponent;
+class AAO_AggressiveAICtrl;
 
 /**
  * Bull (황소형) AI 캐릭터
@@ -32,6 +33,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Bull")
 	void SetIsCharging(bool bCharging);
 
+	// 공격 후 쿨다운 상태인지 확인 (부모 클래스 오버라이드)
+	virtual bool IsInPostAttackCooldown() const override { return bInPostAttackCooldown; }
+
+	// 공격 후 후퇴 시작 (Ability 종료 시 호출)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Bull")
+	void StartPostAttackRetreat();
+
 	// 돌진 충돌 처리 (돌진 중 Overlap 발생 시)
 	UFUNCTION()
 	void OnChargeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -41,10 +49,17 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 	
 	// 기절 처리 오버라이드
 	virtual void HandleStunBegin() override;
 	virtual void HandleStunEnd() override;
+
+	// 후퇴 완료 후 대기 시작
+	void OnRetreatComplete();
+
+	// 쿨다운 종료
+	void EndPostAttackCooldown();
 
 protected:
 	// 돌진 충돌 판정용 박스 (머리 부분)
@@ -74,5 +89,32 @@ protected:
 	// 근접 공격 설정 (신규 시스템)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Bull|Combat")
 	FEnemyAttackConfig MeleeAttackConfig;
+
+	// === 공격 후 후퇴/쿨다운 시스템 ===
+	
+	// 공격 후 후퇴 거리 (에디터에서 조절 가능)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Bull|PostAttack")
+	float RetreatDistance = 400.f;
+
+	// 후퇴 후 대기 시간 (플레이어가 일어나는 시간보다 약간 길게)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Bull|PostAttack")
+	float PostAttackWaitTime = 3.5f;
+
+	// 공격 후 쿨다운 상태 플래그
+	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|Bull")
+	bool bInPostAttackCooldown = false;
+
+	// 후퇴 중 플래그
+	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|Bull")
+	bool bIsRetreating = false;
+
+	// 쿨다운 타이머 핸들
+	FTimerHandle PostAttackTimerHandle;
+
+	// 후퇴 체크 타이머 핸들
+	FTimerHandle RetreatCheckTimerHandle;
+
+	// 후퇴 목표 위치
+	FVector RetreatTargetLocation;
 };
 

@@ -61,6 +61,7 @@ void FAO_STEval_AggressiveCtx::UpdateContextData(FStateTreeExecutionContext& Con
 	InstanceData.bIsSearching = AI->IsInSearchMode();
 	InstanceData.bHasPlayerInSight = Controller->HasPlayerInSight();
 	InstanceData.bTargetInAttackRange = AI->IsTargetInAttackRange();
+	InstanceData.bInPostAttackCooldown = AI->IsInPostAttackCooldown();
 
 	// 현재 대상
 	InstanceData.CurrentTarget = AI->GetCurrentTarget();

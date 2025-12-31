@@ -8,9 +8,12 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AI/Subsystem/AO_AISubsystem.h"
+#include "AI/Controller/AO_InsectController.h"
+#include "AI/Base/AO_AggressiveAIBase.h"
 #include "NavigationSystem.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "AI/Character/AO_Insect.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 
 UAO_KidnapComponent::UAO_KidnapComponent()
@@ -76,7 +79,9 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 		if (UAO_AISubsystem* AISubsystem = World->GetSubsystem<UAO_AISubsystem>())
 		{
 			// 이미 다른 AI가 납치 중이거나 쿨다운 중이면 실패
-			if (!AISubsystem->TryReservePlayerForKidnap(TargetPlayer, GetOwner()))
+			bool bReserveSuccess = AISubsystem->TryReservePlayerForKidnap(TargetPlayer, GetOwner());
+			
+			if (!bReserveSuccess)
 			{
 				return false;
 			}
@@ -187,19 +192,14 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			if (UCapsuleComponent* Capsule = ReleasedPlayer->GetCapsuleComponent())
 			{
 				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-				Capsule->SetCollisionProfileName(TEXT("Player")); // 프로필 복구
+				Capsule->SetCollisionProfileName(TEXT("Player"));
 			}
 			
 			if (MoveComp)
 			{
-				// 속도 초기화 (이상한 속도로 날아가는 것 방지)
 				MoveComp->Velocity = FVector::ZeroVector;
 				MoveComp->StopMovementImmediately();
-				
-				// Movement Mode 복구
 				MoveComp->SetMovementMode(MOVE_Walking);
-				
-				// 중력 복구
 				MoveComp->GravityScale = 1.0f;
 			}
 
@@ -208,13 +208,23 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		}
 		else
 		{
-			// 사망한 플레이어: 위치만 바닥으로 조정
+			// 사망한 플레이어: 바닥에 떨어지도록 물리 복구
+			if (UCapsuleComponent* Capsule = ReleasedPlayer->GetCapsuleComponent())
+			{
+				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				Capsule->SetCollisionProfileName(TEXT("Ragdoll"));
+			}
+			
 			if (MoveComp)
 			{
-				// 속도 초기화
 				MoveComp->Velocity = FVector::ZeroVector;
 				MoveComp->StopMovementImmediately();
+				MoveComp->SetMovementMode(MOVE_Walking);
+				MoveComp->GravityScale = 1.0f;
 			}
+			
+			// 사망한 플레이어도 Kidnapped 태그 제거 (다시 납치 가능하도록)
+			RemoveKidnappedTag(ReleasedPlayer);
 		}
 
 		// 4. 플레이어 위치를 안전하게 설정 (NavMesh 위로) - 생존/사망 모두 적용
@@ -291,6 +301,28 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		}
 	}
 
+	// 7. 추격 대상 초기화 및 추격 완전히 중단 (떨어뜨린 플레이어를 더 이상 추격하지 않도록)
+	if (AAO_Insect* Insect = Cast<AAO_Insect>(GetOwner()))
+	{
+		if (AAO_InsectController* InsectController = Cast<AAO_InsectController>(Insect->GetController()))
+		{
+			if (InsectController->GetChaseTarget() == ReleasedPlayer)
+			{
+				// 이동 즉시 중지
+				InsectController->StopMovement();
+				
+				// 추격 대상 초기화
+				InsectController->SetChaseTarget(nullptr);
+				
+				// 추격 모드 종료
+				Insect->SetChaseMode(false);
+				
+				// 수색 모드도 종료 (배회로 전환)
+				InsectController->EndSearch();
+			}
+		}
+	}
+
 	CurrentVictim = nullptr;
 	OnKidnapStateChanged.Broadcast(false);
 }
@@ -325,12 +357,11 @@ void UAO_KidnapComponent::ApplyDotDamage()
 	const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
 	if (TargetASC->HasMatchingGameplayTag(DeathTag))
 	{
-		// 사망한 플레이어는 납치 해제하고 타이머 정리
+		// 사망한 플레이어는 DoT만 중지, 납치는 유지 (시체 끌고 다님)
 		if (UWorld* World = GetWorld())
 		{
 			World->GetTimerManager().ClearTimer(DotTimerHandle);
 		}
-		ReleaseKidnap(false);
 		return;
 	}
 
@@ -482,7 +513,19 @@ void UAO_KidnapComponent::OnPlayerDeathTagChanged(const FGameplayTag Tag, int32 
 			World->GetTimerManager().ClearTimer(DotTimerHandle);
 		}
 		
-		// 사망 시 던지지 않고 그냥 떨어뜨림
-		ReleaseKidnap(false);
+		// 사망해도 납치는 유지 - 시체도 끌고 다님
+	}
+}
+
+void UAO_KidnapComponent::RemoveKidnappedTag(AAO_PlayerCharacter* Player)
+{
+	if (!Player || !IsValid(Player))
+	{
+		return;
+	}
+
+	if (UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+	{
+		ASC->RemoveLooseGameplayTag(KidnappedStatusTag);
 	}
 }

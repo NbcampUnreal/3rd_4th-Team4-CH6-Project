@@ -78,6 +78,12 @@ void UAO_GA_Bull_Charge::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 	if (Bull)
 	{
 		Bull->SetIsCharging(false);
+
+		// 공격 성공(Cancel이 아닌 경우) 시 후퇴 및 쿨다운 시작
+		if (!bWasCancelled)
+		{
+			Bull->StartPostAttackRetreat();
+		}
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

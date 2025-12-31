@@ -51,11 +51,18 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	// 리플리케이션 콜백: 클라이언트에서 Mesh 회전/위치 업데이트
+	UFUNCTION()
+	void OnRep_bIsCeilingMode();
+
 private:
 	void UpdateCeilingPosition(float DeltaTime, bool bImmediate = false);
 	
 	// 천장 Normal에 맞춰 캡슐 회전 조정
 	void UpdateCapsuleRotationToCeiling(const FVector& CeilingNormal);
+
+	// 클라이언트에서 Mesh 회전/위치를 업데이트하는 헬퍼 함수
+	void UpdateMeshVisualsForCeilingMode(bool bEnable);
 
 protected:
 	UPROPERTY()
@@ -69,7 +76,7 @@ protected:
 	float CeilingTraceDistance = 500.f;
 
 	// 천장 이동 활성화 여부
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Ceiling Move")
+	UPROPERTY(ReplicatedUsing = OnRep_bIsCeilingMode, BlueprintReadOnly, Category = "Ceiling Move")
 	bool bIsCeilingMode = false;
 
 	// 천장에 붙을 때의 보정 오프셋

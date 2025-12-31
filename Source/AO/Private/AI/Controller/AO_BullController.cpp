@@ -26,6 +26,12 @@ bool AAO_BullController::CanChargeAttack() const
 		return false;
 	}
 
+	// 공격 후 쿨다운 중이면 불가
+	if (Bull->IsInPostAttackCooldown())
+	{
+		return false;
+	}
+
 	AAO_PlayerCharacter* Target = GetChaseTarget();
 	if (!Target)
 	{
@@ -52,6 +58,12 @@ bool AAO_BullController::CanMeleeAttack() const
 {
 	AAO_Bull* Bull = GetBull();
 	if (!Bull || Bull->IsStunned() || Bull->IsCharging())
+	{
+		return false;
+	}
+
+	// 공격 후 쿨다운 중이면 불가
+	if (Bull->IsInPostAttackCooldown())
 	{
 		return false;
 	}

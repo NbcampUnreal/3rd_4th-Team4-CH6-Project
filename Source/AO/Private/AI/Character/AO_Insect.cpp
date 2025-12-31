@@ -46,18 +46,10 @@ void AAO_Insect::UpdateMovementSpeed()
 	if (IsKidnapping())
 	{
 		MoveComp->MaxWalkSpeed = DragSpeed;
-		
-		// 뒷걸음질을 위해 회전 방향 고정 해제 (Controller가 Focus를 잡거나 StateTree Task가 처리)
-		MoveComp->bOrientRotationToMovement = false; 
-		MoveComp->bUseControllerDesiredRotation = true; // 컨트롤러가 보는 방향(타겟)을 바라봄
 	}
 	else
 	{
 		MoveComp->MaxWalkSpeed = NormalSpeed;
-		
-		// 일반 이동 복구
-		MoveComp->bOrientRotationToMovement = true;
-		MoveComp->bUseControllerDesiredRotation = false;
 	}
 }
 
