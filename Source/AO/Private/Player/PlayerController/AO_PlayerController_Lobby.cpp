@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// AO_PlayerController_Lobby.cpp
 
 
 #include "Player/PlayerController/AO_PlayerController_Lobby.h"
@@ -34,6 +34,16 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 
 	PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+
+	// HUD 위젯 추가
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			HUDWidget->AddToViewport();
+		}
+	}
 }
 
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)

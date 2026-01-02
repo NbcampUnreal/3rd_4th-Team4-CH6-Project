@@ -17,6 +17,7 @@ UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
 	SetAssetTags(TraversalTag);
 
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
+	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable")));
 }
 
 void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -44,7 +45,6 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 		checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
 
 		Character->GetCharacterMovement()->DisableMovement();
-		// Character->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		
 		if (BlockAbilitiesEffectClass)
 		{
