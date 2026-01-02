@@ -88,6 +88,8 @@ private:
 	void RefreshLobbyReadyBoard();
 
 	void InitVoiceChat();
+	// 플레이어 이름 준비 완료시 브로드캐스트
+	void BroadcastPlayerNameReady();
 
 // JM : 생존 여부 판단용 변수 추가 (임시)
 public:

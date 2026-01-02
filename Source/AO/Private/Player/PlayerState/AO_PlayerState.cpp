@@ -176,7 +176,7 @@ void AAO_PlayerState::OnRep_PlayerName()
 	// 보드에 표시되는 이름 갱신
 	RefreshLobbyReadyBoard();
 
-	OnPlayerNameReady.Broadcast(FText::FromString(GetPlayerName()));
+	BroadcastPlayerNameReady();
 }
 
 void AAO_PlayerState::BeginPlay()
@@ -249,6 +249,15 @@ void AAO_PlayerState::InitVoiceChat()
 		OSS->StartVoiceChat();
 	}
 	AO_LOG_ROLE(LogJM, Warning, TEXT("End"));
+}
+
+void AAO_PlayerState::BroadcastPlayerNameReady()
+{
+	const FString Name = GetPlayerName();
+	if (!Name.IsEmpty())
+	{
+		OnPlayerNameReady.Broadcast(FText::FromString(Name));
+	}
 }
 
 //ms: 인벤토리 유지
