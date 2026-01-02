@@ -29,7 +29,7 @@ public:
 	void SaveCustomizingData();
 
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
-	void ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh);
+	void ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh, float NewCapsuleHeight);
 
 	UFUNCTION(BlueprintCallable, Category = "Customizing")
 	void ChangeOptionInBlueprint(const FParameterOptionName& NewOptionData);
