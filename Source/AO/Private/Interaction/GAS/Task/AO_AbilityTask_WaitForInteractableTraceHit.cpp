@@ -66,6 +66,11 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::OnDestroy(bool bInOwnerFinishe
 	{
 		World->GetTimerManager().ClearTimer(TraceTimerHandle);
 	}
+
+	if (CurrentInteractionInfos.Num() > 0)
+	{
+		HighlightInteractables(CurrentInteractionInfos, false);
+	}
 	
 	Super::OnDestroy(bInOwnerFinished);
 }
@@ -82,6 +87,9 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 	{
 		return;
 	}
+
+	InteractionQuery.RequestingAvatar = AvatarActor;
+	InteractionQuery.RequestingController = ActorInfo->PlayerController.Get();
 	
 	// 트레이스에서 제외할 액터 설정 (자신 + 부착된 액터들)
 	TArray<AActor*> ActorsToIgnore;
@@ -268,7 +276,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::UpdateInteractionInfos(
 
 		// 상호작용 정보 가져오기
 		FAO_InteractionInfo InteractionInfo = Interactable->GetInteractionInfo(InteractQuery);
-		InteractionInfo.Interactable = Interactable; //
+		InteractionInfo.Interactable = Interactable;
 
 		// 상호작용 가능 여부 및 어빌리티 활성화 가능 여부 체크
 		if (InteractionInfo.AbilityToGrant)

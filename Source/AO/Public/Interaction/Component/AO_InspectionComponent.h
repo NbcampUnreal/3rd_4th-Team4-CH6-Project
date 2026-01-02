@@ -124,9 +124,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> InspectionInputContext;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	int32 InspectionInputPriority = 10;
-
 	UPROPERTY(EditAnywhere, Category = "Inspection")
 	FGameplayTagContainer CancelInspectionTags;
 

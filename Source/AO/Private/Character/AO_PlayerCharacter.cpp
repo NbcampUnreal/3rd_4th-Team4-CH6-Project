@@ -149,6 +149,17 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 	{
 		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
 	}
+
+	if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(NewController))
+	{
+		if (PC->IsLocalController())
+		{
+			if (TObjectPtr<UAO_InteractionComponent> InteractionComp = FindComponentByClass<UAO_InteractionComponent>())
+			{
+				InteractionComp->InitializeInteractionUI(PC);
+			}
+		}
+	}
 }
 
 UAO_FoleyAudioBank* AAO_PlayerCharacter::GetFoleyAudioBank_Implementation() const
@@ -320,6 +331,23 @@ void AAO_PlayerCharacter::OnRep_PlayerState()
 	if (NameplateComponent)
 	{
 		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
+	}
+}
+
+void AAO_PlayerCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	
+	// 클라이언트 InteractionComponent UI 초기화
+	if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->IsLocalController())
+		{
+			if (TObjectPtr<UAO_InteractionComponent> InteractionComp = FindComponentByClass<UAO_InteractionComponent>())
+			{
+				InteractionComp->InitializeInteractionUI(PC);
+			}
+		}
 	}
 }
 

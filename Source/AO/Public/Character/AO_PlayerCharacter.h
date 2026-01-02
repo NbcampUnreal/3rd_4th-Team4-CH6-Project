@@ -84,6 +84,7 @@ public:
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
 	bool IsInspecting() const;
+	virtual void OnRep_Controller() override;
 
 	void StartSprint_GAS(bool bShouldSprint);
 	

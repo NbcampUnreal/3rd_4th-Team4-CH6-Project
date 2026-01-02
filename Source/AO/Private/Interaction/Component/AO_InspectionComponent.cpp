@@ -330,10 +330,10 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
 	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
 		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 	{
-		// Inspection Context를 높은 우선순위로 추가
+		// Inspection Context 추가
 		if (InspectionInputContext)
 		{
-			InputSubsystem->AddMappingContext(InspectionInputContext, InspectionInputPriority);
+			InputSubsystem->AddMappingContext(InspectionInputContext, 0);
 		}
 	}
 

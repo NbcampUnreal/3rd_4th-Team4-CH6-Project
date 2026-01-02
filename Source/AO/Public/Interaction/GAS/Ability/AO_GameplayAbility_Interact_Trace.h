@@ -16,6 +16,7 @@ public:
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	// Task 콜백
 	UFUNCTION()
@@ -32,4 +33,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Interaction", meta=(ClampMin="0.0", UIMin="0.0", UIMax="500.0"))
 	float TraceSphereRadius = 60.0f;
+
+private:
+	void OnDeathTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	
+	FDelegateHandle DeathTagDelegateHandle;
 };

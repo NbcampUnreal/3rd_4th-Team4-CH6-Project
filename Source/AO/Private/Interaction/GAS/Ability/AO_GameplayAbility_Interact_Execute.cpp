@@ -19,7 +19,7 @@
 
 UAO_GameplayAbility_Interact_Execute::UAO_GameplayAbility_Interact_Execute()
 {
-	ActivationPolicy = ECYAbilityActivationPolicy::Manual;
+	ActivationPolicy = EAOAbilityActivationPolicy::Manual;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
 	ReplicationPolicy = EGameplayAbilityReplicationPolicy::ReplicateYes;

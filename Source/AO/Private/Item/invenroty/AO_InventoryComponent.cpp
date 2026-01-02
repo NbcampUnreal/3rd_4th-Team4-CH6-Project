@@ -100,12 +100,16 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 
 void UAO_InventoryComponent::OnLeftClick()
 {
+	if (!CanInventoryAction()) return;
+	
     if (GetOwnerRole() < ROLE_Authority) UseInventoryItem_Server();
     else UseInventoryItem_Server_Implementation();
 }
 
 void UAO_InventoryComponent::OnRightClick()
 {
+	if (!CanInventoryAction()) return;
+	
     if (GetOwnerRole() < ROLE_Authority) DropInventoryItem_Server();
     else DropInventoryItem_Server_Implementation();
 }
@@ -421,4 +425,20 @@ void UAO_InventoryComponent::ApplySlotsFromSave(
 
 	if (OnInventoryUpdated.IsBound())
 		OnInventoryUpdated.Broadcast(Slots);
+}
+
+bool UAO_InventoryComponent::CanInventoryAction() const
+{
+	if (TObjectPtr<AActor> Owner = GetOwner())
+	{
+		if (TObjectPtr<UAbilitySystemComponent> ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
+		{
+			// Inspection 중이면 인벤토리 액션 불가
+			if (ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Inspecting"))))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }
