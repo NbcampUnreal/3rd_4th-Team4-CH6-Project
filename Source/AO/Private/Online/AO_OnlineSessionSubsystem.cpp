@@ -1237,3 +1237,25 @@ void UAO_OnlineSessionSubsystem::UnmuteAllRemoteTalker()
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
+
+bool UAO_OnlineSessionSubsystem::IsRemotePlayerTalking(APlayerState* PS)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	{
+		return false;
+	}
+
+	TSharedPtr<const FUniqueNetId> PSId = PS->GetUniqueId().GetUniqueNetId();
+	if (!AO_ENSURE(PSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	{
+		return false;
+	}
+
+	bool result = VoiceInterface->IsRemotePlayerTalking(*PSId); 
+	AO_LOG(LogJM, Log, TEXT("End (return %d)"), result);
+	
+	return result;
+}
