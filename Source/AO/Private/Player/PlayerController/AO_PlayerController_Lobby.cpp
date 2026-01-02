@@ -181,6 +181,11 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 
 void AAO_PlayerController_Lobby::CloseWardrobe()
 {
+	if (FadeTimerHandle.IsValid())
+	{
+		return;
+	}
+	
 	FadeIn();
 
 	GetWorldTimerManager().SetTimer(FadeTimerHandle, this, &AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI,
@@ -231,6 +236,8 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedOpenUI()
 
 		CustomizingWidget->AddToViewport();
 	}
+	
+	FadeTimerHandle.Invalidate();
 	
 	FadeOut();
 }

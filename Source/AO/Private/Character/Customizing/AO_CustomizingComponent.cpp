@@ -5,6 +5,7 @@
 
 #include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "Components/CapsuleComponent.h"
 #include "MuCO/CustomizableObject.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -77,6 +78,17 @@ void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 {
 	if (PlayerCharacter->GetBodyComponent()->GetCustomizableObjectInstance() != Instance)
 	{
+		if (CustomizingData.CharacterSkeletalMesh == nullptr)
+		{
+			CustomizingData.CharacterSkeletalMesh = SkeletalMeshMap[CustomizingData.CharacterMeshType];
+			PlayerCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
+			AO_LOG(LogKSH, Warning, TEXT("Default CustomizingData.CharacterSkeletalMesh is Null."
+								"So custom set value CustomizingData.CharacterSkeletalMesh and set default skeletal mesh"));
+		}
+
+		PlayerCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(CustomizingData.CapsuleHalfHeight);
+		SetCharacterCapsuleDelegate.Broadcast(CustomizingData.CapsuleHalfHeight);
+		
 		PlayerCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
 
