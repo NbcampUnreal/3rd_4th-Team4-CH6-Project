@@ -30,6 +30,9 @@ public:
 
 	/* 게임 실패 처리 */
 	void HandleStageFail(AController* Requester);
+	
+	/* 부활 카운트 증가 */
+	void HandleSharedReviveCountIncreased();
 			
 	/* 기차 연료 조건 미달시 실패 트리거 */
 	void TriggerStageFailByTrainFuel();
@@ -46,6 +49,19 @@ protected:
 
 	/* 공용 부활 횟수와 생존자 수를 보고 전멸 여부 평가 */
 	void EvaluateTeamWipe();
+	
+	/* 죽은 순서대로 자동 부활시키기 위한 대기 큐 */
+	UPROPERTY()
+	TArray<TWeakObjectPtr<AAO_PlayerState>> PendingReviveQueue;
+
+	/* 부활 큐에 플레이어 추가 */
+	void EnqueuePendingRevive(AAO_PlayerState* DeadPlayerState);
+
+	/* 부활 큐에서 플레이어 제거 */
+	void RemoveFromPendingRevive(AAO_PlayerState* PlayerState);
+
+	/* 공용 부활 카운트와 큐 상태를 보고 자동 부활 처리 */
+	void TryAutoReviveFromQueue();
 	
 	/* 방 진행정보 초기화 */
 	void RollbackSessionInGameFlag();
