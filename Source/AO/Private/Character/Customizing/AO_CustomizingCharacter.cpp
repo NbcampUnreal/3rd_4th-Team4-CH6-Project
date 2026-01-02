@@ -28,9 +28,11 @@ AAO_CustomizingCharacter::AAO_CustomizingCharacter()
 
 	BaseSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BaseSkeletalMesh"));
 	BaseSkeletalMesh->SetupAttachment(DefaultSkeletalMesh);
+	//BaseSkeletalMesh->SetIsReplicated(true);
 	
 	BodySkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodySkeletalMesh"));
 	BodySkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	//BodySkeletalMesh->SetIsReplicated(true);
 	BodyComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("BodyComponent"));
 	BodyComponent->SetupAttachment(BodySkeletalMesh);
 	BodyComponent->SetComponentName(FName("Body"));
@@ -38,6 +40,7 @@ AAO_CustomizingCharacter::AAO_CustomizingCharacter()
 	
 	HeadSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadSkeletalMesh"));
 	HeadSkeletalMesh->SetupAttachment(BaseSkeletalMesh);
+	//HeadSkeletalMesh->SetIsReplicated(true);
 	HeadComponent = CreateDefaultSubobject<UCustomizableSkeletalComponent>(TEXT("HeadComponent"));
 	HeadComponent->SetupAttachment(HeadSkeletalMesh);
 	HeadComponent->SetComponentName(FName("Head"));

@@ -19,12 +19,11 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
-
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 public:
-	void SetDisplayName(const FText& InName);
 	void HandlePlayerStateChanged(APlayerState* NewPlayerState);
 
 protected:
@@ -62,10 +61,21 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UAO_NameTagWidget> WidgetInstance;
 
-	TWeakObjectPtr<APlayerState> CachedPlayerState;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayName)
+	FText DisplayName;
 
+	UFUNCTION()
+	void OnRep_DisplayName();
+
+	// 서버에서 이름 갱신
+	void SetDisplayName_Server(const FText& InName);
+
+	// UI 반영
+	void ApplyDisplayNameToWidget();
+	
+	// 유틸용 함수
 	void EnsureWidgetComponent();
-	void RefreshNameFromPlayerState();
+	void TryInitNameFromOwner();
 	void ApplyDistanceVisuals();
 	bool ShouldHideForSelf() const;
 };
