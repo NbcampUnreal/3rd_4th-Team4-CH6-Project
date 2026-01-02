@@ -98,6 +98,24 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		return;
 	}
 
+	AAO_GameState* GS = GetWorld()->GetGameState<AAO_GameState>();
+
+	if (!GS->CheckHintCount())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageExit: HintCount is not correct"));
+		return;
+	}
+	bool AllHint = GS->CheckHintCount();
+	if(AllHint==true)
+	{
+		AO_LOG(LogJSH, Log, TEXT("StageExit: All Hint is true"));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Not all hints are collected"));
+		return;
+	}
+	
 	// 현재 스테이지의 열차에서 연료 값 가져오기
 	AAO_newTrain* Train = nullptr;
 

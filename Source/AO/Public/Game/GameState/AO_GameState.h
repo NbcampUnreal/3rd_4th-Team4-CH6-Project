@@ -40,5 +40,18 @@ public:
 
 protected:
 	FTimerHandle UnmuteVoiceTimerHandle;
+
+public:
+	UPROPERTY(Replicated)
+	bool bHint1 = false;
+	UPROPERTY(Replicated)
+	bool bHint2 = false;
+	UPROPERTY(Replicated)
+	bool bHint3 = false;
+
+	UFUNCTION(BlueprintCallable)
+	void FindHint(int32 Num);
+
+	bool CheckHintCount();
 	
 };

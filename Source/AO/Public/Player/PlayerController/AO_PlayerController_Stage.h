@@ -157,4 +157,7 @@ protected:
 	void HandleReviveInput();
 
 	/* --------------------------------------*/
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "GameLogic")
+	void Server_NotifyHintFound(int32 HintNum);
 };

@@ -97,3 +97,22 @@ int32 AAO_GameState::GetSharedReviveCount() const
 {
 	return SharedReviveCount;
 }
+
+void AAO_GameState::FindHint(int32 Num)
+{
+	if (!HasAuthority()) return;
+	
+	switch (Num)
+	{
+	case 1: bHint1 = true; break;
+	case 2: bHint2 = true; break;
+	case 3: bHint3 = true; break;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
+}
+
+bool AAO_GameState::CheckHintCount()
+{
+	return bHint1 && bHint2 && bHint3;
+}
