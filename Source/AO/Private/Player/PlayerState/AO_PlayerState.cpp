@@ -7,6 +7,9 @@
 #include "AO_Log.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Net/UnrealNetwork.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
+#include "Settings/AO_GameSettingsManager.h"
+#include "Settings/AO_GameUserSettings.h"
 
 AAO_PlayerState::AAO_PlayerState()
 {
@@ -185,6 +188,8 @@ void AAO_PlayerState::BeginPlay()
 	{
 		OnPlayerNameReady.Broadcast(FText::FromString(GetPlayerName()));
 	}
+
+	InitVoiceChat();	// JM : 레벨 이동시 보이스 채팅 초기화 (Unmute 해제)
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -220,6 +225,30 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 
 		Board->RebuildBoard();
 	}
+}
+
+void AAO_PlayerState::InitVoiceChat()
+{
+	AO_LOG_ROLE(LogJM, Warning, TEXT("Start"));
+	UAO_GameUserSettings* GameUserSettings = GetGameInstance()->GetSubsystem<UAO_GameSettingsManager>()->GetGameUserSettings();
+	if (!AO_ENSURE(GameUserSettings, TEXT("Can't Get GameUserSettings")))
+	{
+		return;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("Can't Get OSS")))
+	{
+		return;
+	}
+
+	AO_LOG_ROLE(LogJM, Warning, TEXT("PS(%s) Voice Enabled (%d)"), *GetName(), GameUserSettings->bIsEnableVoiceChat);
+	OSS->UnmuteAllRemoteTalker();	// JM : 보이스 활성화 안해도 Unmute는 해야 들리겠지?
+	if (GameUserSettings->bIsEnableVoiceChat)
+	{
+		OSS->StartVoiceChat();
+	}
+	AO_LOG_ROLE(LogJM, Warning, TEXT("End"));
 }
 
 //ms: 인벤토리 유지

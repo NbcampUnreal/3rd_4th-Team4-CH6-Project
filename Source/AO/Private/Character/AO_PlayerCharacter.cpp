@@ -714,16 +714,17 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 	VOIPTalker->Settings.ComponentToAttachTo = GetMesh();
 	VOIPTalker->Settings.AttenuationSettings = SA_VoiceChat;
 
-	if (IsLocallyControlled())
+	/*if (IsLocallyControlled())
 	{
-		InitVoiceChat();
-	}
+		// InitVoiceChat();
+	}*/
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerCharacter::InitVoiceChat()
+/*void AAO_PlayerCharacter::InitVoiceChat()
 {
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
 	UAO_GameUserSettings* GameUserSettings = GetGameInstance()->GetSubsystem<UAO_GameSettingsManager>()->GetGameUserSettings();
 	if (!AO_ENSURE(GameUserSettings, TEXT("Can't Get GameUserSettings")))
 	{
@@ -736,12 +737,14 @@ void AAO_PlayerCharacter::InitVoiceChat()
 		return;
 	}
 
+	AO_LOG_ROLE(LogJM, Log, TEXT("PS(%s) Voice Enabled (%d)"), *GetName(), GameUserSettings->bIsEnableVoiceChat);
 	if (GameUserSettings->bIsEnableVoiceChat)
 	{
 		OSS->StartVoiceChat();
 		OSS->UnmuteAllRemoteTalker();
 	}
-}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}*/
 
 //ms: 사망시 아이템 버리기
 void AAO_PlayerCharacter::HandlePlayerDeath()
