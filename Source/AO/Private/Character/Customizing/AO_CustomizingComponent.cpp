@@ -87,7 +87,7 @@ void UAO_CustomizingComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 		}
 
 		PlayerCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(CustomizingData.CapsuleHalfHeight);
-		SetCharacterCapsuleDelegate.Broadcast(CustomizingData.CapsuleHalfHeight);
+		OnCapsuleChangedDelegate.Broadcast(CustomizingData.CapsuleHalfHeight);
 		
 		PlayerCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		PlayerCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);

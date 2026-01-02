@@ -2,10 +2,14 @@
 
 #include "Character/Components/AO_NameplateComponent.h"
 
+#include "AO_Log.h"
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/PlayerState/AO_PlayerState.h"
+#include "Character/Customizing/AO_CustomizingComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/Character.h"
 #include "UI/Player/AO_NameTagWidget.h"
 
 UAO_NameplateComponent::UAO_NameplateComponent()
@@ -23,13 +27,32 @@ void UAO_NameplateComponent::BeginPlay()
 	EnsureWidgetComponent();
 	ApplyDistanceVisuals();
 
-	if (GetOwner() && GetOwner()->HasAuthority())
+	AActor* Owner = GetOwner();
+	if (!ensure(Owner))
+	{
+		return;
+	}
+
+	if (Owner && Owner->HasAuthority())
 	{
 		TryInitNameFromOwner();
 	}
 	else
 	{
 		ApplyDisplayNameToWidget();
+	}
+
+	UAO_CustomizingComponent* CustomizingComp = Owner->FindComponentByClass<UAO_CustomizingComponent>();
+	if (CustomizingComp)
+	{
+		CachedCustomizingComponent = CustomizingComp;
+		CustomizingComp->OnCapsuleChangedDelegate.AddUObject(this, &UAO_NameplateComponent::HandleCapsuleSizeChanged);
+	}
+
+	ACharacter* OwnerCharacter = Cast<ACharacter>(Owner);
+	if (OwnerCharacter && OwnerCharacter->GetCapsuleComponent())
+	{
+		HandleCapsuleSizeChanged(OwnerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	}
 }
 
@@ -44,6 +67,16 @@ void UAO_NameplateComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 	
 	ApplyDistanceVisuals();
+}
+
+void UAO_NameplateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (CachedCustomizingComponent.IsValid())
+	{
+		CachedCustomizingComponent->OnCapsuleChangedDelegate.RemoveAll(this);
+	}
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void UAO_NameplateComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -79,6 +112,18 @@ void UAO_NameplateComponent::HandlePlayerStateChanged(APlayerState* NewPlayerSta
 void UAO_NameplateComponent::OnRep_DisplayName()
 {
 	ApplyDisplayNameToWidget();
+}
+
+void UAO_NameplateComponent::HandleCapsuleSizeChanged(float NewHalfHeight)
+{
+	if (!WidgetComponent)
+	{
+		return;
+	}
+
+	CapsuleHeight = NewHalfHeight;
+	const float ZOffset = CapsuleHeight + BaseZOffset;
+	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, ZOffset));
 }
 
 void UAO_NameplateComponent::SetDisplayName_Server(const FText& InName)
@@ -143,7 +188,6 @@ void UAO_NameplateComponent::EnsureWidgetComponent()
 	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	WidgetComponent->SetDrawAtDesiredSize(true);
 	WidgetComponent->SetPivot(FVector2D(0.5f, 0.5f));
-	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, BaseZOffset));
 
 	if (NameplateWidgetClass)
 	{
@@ -200,7 +244,7 @@ void UAO_NameplateComponent::ApplyDistanceVisuals()
 	}
 
 	// 멀수록 살짝 위로
-	const float ZOffset = BaseZOffset + FMath::Lerp(0.f, ExtraZOffset, Alpha);
+	const float ZOffset = CapsuleHeight + BaseZOffset + FMath::Lerp(0.f, ExtraZOffset, Alpha);
 	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, ZOffset));
 }
 

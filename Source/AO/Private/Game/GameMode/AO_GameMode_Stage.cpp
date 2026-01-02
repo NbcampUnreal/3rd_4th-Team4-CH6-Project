@@ -310,7 +310,7 @@ bool AAO_GameMode_Stage::TryRevivePlayer(APlayerController* ReviveTargetPC)
 	if (APawn* OldPawn = ReviveTargetPC->GetPawn())
 	{
 		OldPawn->DetachFromControllerPendingDestroy();
-		OldPawn->Destroy();
+		//OldPawn->Destroy();
 	}
 
 	// 시작 지점에서 리스폰 (기본 PlayerStart 사용)
