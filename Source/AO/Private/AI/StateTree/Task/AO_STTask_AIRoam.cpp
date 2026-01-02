@@ -1,4 +1,4 @@
-// AO_STTask_AIRoam.cpp
+//KSJ : AO_STTask_AIRoam
 
 #include "AI/StateTree/Task/AO_STTask_AIRoam.h"
 #include "AI/Character/AO_Crab.h"
@@ -8,7 +8,6 @@
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "StateTreeExecutionContext.h"
-#include "AO_Log.h"
 #include "AI/Component/AO_CeilingMoveComponent.h"
 
 EStateTreeRunStatus FAO_STTask_AIRoam::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
@@ -26,7 +25,6 @@ EStateTreeRunStatus FAO_STTask_AIRoam::EnterState(FStateTreeExecutionContext& Co
 	FVector RoamLocation = FindRandomRoamLocation(Context, InstanceData.RoamRadius);
 	if (RoamLocation.IsZero())
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AIRoam: Failed to find roam location"));
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -77,7 +75,6 @@ EStateTreeRunStatus FAO_STTask_AIRoam::Tick(FStateTreeExecutionContext& Context,
 				if (!CeilingComp->IsInCeilingMode() && CeilingComp->CheckCeilingAvailability())
 				{
 					Stalker->SetCeilingMode(true);
-					AO_LOG(LogKSJ, Log, TEXT("Stalker: Auto-enabled ceiling mode during Roam"));
 				}
 			}
 		}

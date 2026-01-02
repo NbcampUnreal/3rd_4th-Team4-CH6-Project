@@ -1,4 +1,4 @@
-// AO_STCond_IsKidnapping.cpp
+//KSJ : AO_STCond_IsKidnapping
 
 #include "AI/StateTree/Condition/AO_STCond_IsKidnapping.h"
 #include "AI/Character/AO_Insect.h"

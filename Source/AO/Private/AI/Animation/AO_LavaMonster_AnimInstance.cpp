@@ -1,9 +1,8 @@
-// AO_LavaMonster_AnimInstance.cpp
+//KSJ : AO_LavaMonster_AnimInstance
 
 #include "AI/Animation/AO_LavaMonster_AnimInstance.h"
 #include "AI/Character/AO_LavaMonster.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AO_Log.h"
 
 UAO_LavaMonster_AnimInstance::UAO_LavaMonster_AnimInstance()
 {
@@ -94,7 +93,6 @@ void UAO_LavaMonster_AnimInstance::PlayStunMontage()
 {
 	if (!StunMontage)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("PlayStunMontage: StunMontage is null"));
 		return;
 	}
 

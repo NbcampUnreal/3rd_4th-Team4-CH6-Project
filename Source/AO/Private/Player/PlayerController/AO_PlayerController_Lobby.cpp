@@ -10,6 +10,7 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Engine/GameInstance.h"
 #include "Engine/TargetPoint.h"
+#include "Interaction/Interactables/AO_LobbyInteractable.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
@@ -100,7 +101,7 @@ void AAO_PlayerController_Lobby::Server_RequestWardrobe_Implementation()
 		*GetName(),
 		HasAuthority() ? 1 : 0,
 		IsLocalController() ? 1 : 0);
-
+	
 	Client_OpenWardrobe();
 }
 
@@ -196,6 +197,24 @@ void AAO_PlayerController_Lobby::CloseWardrobe()
 									FadeTime, false);
 }
 
+void AAO_PlayerController_Lobby::Server_CloseWardrobe_Implementation()
+{
+	if (!CustomizingInteractable)
+	{
+		AO_LOG(LogJSH, Error, TEXT("CustomizingInteractable is NULL"));
+		return;
+	}
+
+	AAO_PlayerCharacter* Interactor = Cast<AAO_PlayerCharacter>(GetPawn());
+	if (!Interactor)
+	{
+		AO_LOG(LogJSH, Error, TEXT("Character is NULL"));
+		return;
+	}
+
+	CustomizingInteractable->RemoveDisabledPlayer(Interactor);
+}
+
 void AAO_PlayerController_Lobby::FadeIn()
 {
 	if (PlayerCameraManager)
@@ -237,6 +256,8 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy->Destroy();
 		CustomizingDummy = nullptr;
 	}
+
+	Server_CloseWardrobe();
 	
 	FadeOut();
 }

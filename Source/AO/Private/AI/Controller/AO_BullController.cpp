@@ -1,4 +1,4 @@
-// AO_BullController.cpp
+//KSJ : AO_BullController
 
 #include "AI/Controller/AO_BullController.h"
 #include "AI/Character/AO_Bull.h"
@@ -26,6 +26,12 @@ bool AAO_BullController::CanChargeAttack() const
 		return false;
 	}
 
+	// 공격 후 쿨다운 중이면 불가
+	if (Bull->IsInPostAttackCooldown())
+	{
+		return false;
+	}
+
 	AAO_PlayerCharacter* Target = GetChaseTarget();
 	if (!Target)
 	{
@@ -48,3 +54,32 @@ bool AAO_BullController::CanChargeAttack() const
 	return true;
 }
 
+bool AAO_BullController::CanMeleeAttack() const
+{
+	AAO_Bull* Bull = GetBull();
+	if (!Bull || Bull->IsStunned() || Bull->IsCharging())
+	{
+		return false;
+	}
+
+	// 공격 후 쿨다운 중이면 불가
+	if (Bull->IsInPostAttackCooldown())
+	{
+		return false;
+	}
+
+	AAO_PlayerCharacter* Target = GetChaseTarget();
+	if (!Target)
+	{
+		return false;
+	}
+
+	// 거리 체크: 돌진 최소 거리보다 가까우면 근접 공격 시도
+	float DistSq = FVector::DistSquared(Bull->GetActorLocation(), Target->GetActorLocation());
+	if (DistSq < MinChargeDistance * MinChargeDistance)
+	{
+		return true;
+	}
+
+	return false;
+}

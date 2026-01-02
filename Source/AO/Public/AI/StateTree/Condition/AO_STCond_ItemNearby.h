@@ -1,4 +1,4 @@
-// AO_STCond_ItemNearby.h
+//KSJ : AO_STCond_ItemNearby
 
 #pragma once
 

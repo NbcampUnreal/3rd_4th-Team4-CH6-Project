@@ -1,4 +1,4 @@
-// AO_STCond_HasWeapon.h
+//KSJ : AO_STCond_HasWeapon
 
 #pragma once
 

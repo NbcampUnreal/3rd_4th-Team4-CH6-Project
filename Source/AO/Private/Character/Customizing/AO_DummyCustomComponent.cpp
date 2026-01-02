@@ -52,13 +52,14 @@ void UAO_DummyCustomComponent::SaveCustomizingData()
 	PlayerState->ServerRPC_SetCharacterCustomizingData(CustomizingData);
 }
 
-void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType)
+void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh)
 {
 	CustomizingData.CharacterMeshType = NewMeshType;
+	CustomizingData.CharacterSkeletalMesh = NewMesh;
 	
 	TObjectPtr<UCustomizableObjectInstance> Instance = GetCurrentCustomizableObjectInstanceFromMap();
 	checkf(Instance, TEXT("Instance is invalid"));
-
+	
 	ChangeCharacterMesh(Instance);
 }
 
@@ -98,8 +99,11 @@ void UAO_DummyCustomComponent::ChangeCharacterMesh(UCustomizableObjectInstance* 
 	{
 		CustomizingCharacter->GetBodyComponent()->SetCustomizableObjectInstance(Instance);
 		CustomizingCharacter->GetHeadComponent()->SetCustomizableObjectInstance(Instance);
-		CustomizingCharacter->GetBodyComponent()->UpdateSkeletalMeshAsync();
-		CustomizingCharacter->GetHeadComponent()->UpdateSkeletalMeshAsync();
+
+		FInstanceUpdateDelegate UpdateCallback;
+		UpdateCallback.BindUFunction(this, "OnMeshUpdateFinished");
+		
+		CustomizingCharacter->GetBodyComponent()->UpdateSkeletalMeshAsyncResult(UpdateCallback);
 	}
 }
 
@@ -131,4 +135,10 @@ void UAO_DummyCustomComponent::ApplyCustomizingData()
 	{
 		ChangeOption(Instance, CustomizingData.ClothOptionData);
 	}
+}
+
+void UAO_DummyCustomComponent::OnMeshUpdateFinished(const FUpdateContext& Context)
+{
+	CustomizingCharacter->GetBaseSkeletalMesh()->SetSkeletalMeshAsset(CustomizingData.CharacterSkeletalMesh);
+	AO_LOG(LogKSH, Log, TEXT("Mesh update finished"));
 }

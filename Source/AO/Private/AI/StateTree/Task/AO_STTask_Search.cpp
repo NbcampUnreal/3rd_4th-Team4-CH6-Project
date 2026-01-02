@@ -1,4 +1,4 @@
-// AO_STTask_Search.cpp
+//KSJ : AO_STTask_Search
 
 #include "AI/StateTree/Task/AO_STTask_Search.h"
 #include "AI/Base/AO_AggressiveAIBase.h"
@@ -6,7 +6,6 @@
 #include "StateTreeExecutionContext.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "AO_Log.h"
 
 EStateTreeRunStatus FAO_STTask_Search::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -45,9 +44,6 @@ EStateTreeRunStatus FAO_STTask_Search::EnterState(FStateTreeExecutionContext& Co
 		}
 	}
 
-	AO_LOG(LogKSJ, Log, TEXT("Search started at %.0f, %.0f, %.0f for %.1f seconds"),
-		InstanceData.SearchCenterLocation.X, InstanceData.SearchCenterLocation.Y, InstanceData.SearchCenterLocation.Z,
-		InstanceData.SearchDuration);
 
 	return EStateTreeRunStatus::Running;
 }

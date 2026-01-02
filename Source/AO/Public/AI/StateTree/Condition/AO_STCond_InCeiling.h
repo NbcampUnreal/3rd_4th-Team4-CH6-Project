@@ -1,4 +1,4 @@
-// AO_STCond_InCeiling.h
+//KSJ : AO_STCond_InCeiling
 
 #pragma once
 

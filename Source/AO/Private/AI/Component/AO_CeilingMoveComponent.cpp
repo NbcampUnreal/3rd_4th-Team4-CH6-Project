@@ -1,4 +1,4 @@
-// AO_CeilingMoveComponent.cpp
+//KSJ : AO_CeilingMoveComponent
 
 #include "AI/Component/AO_CeilingMoveComponent.h"
 #include "GameFramework/Character.h"
@@ -7,7 +7,6 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
-#include "AO_Log.h"
 
 UAO_CeilingMoveComponent::UAO_CeilingMoveComponent()
 {
@@ -38,7 +37,69 @@ void UAO_CeilingMoveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	if (bIsCeilingMode)
 	{
-		UpdateCeilingPosition(DeltaTime);
+		if (GetOwner() && GetOwner()->HasAuthority())
+		{
+			// 서버에서만 천장 위치 계산 및 업데이트
+			UpdateCeilingPosition(DeltaTime);
+		}
+		else
+		{
+			// 클라이언트에서는 서버에서 계산된 Mesh 오프셋을 따라가기 위해
+			// 간단한 보간만 수행 (실제 위치는 서버에서 리플리케이션됨)
+			// Mesh 회전은 천장 Normal에 맞춰 업데이트
+			if (OwnerCharacter && MoveComp)
+			{
+				UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
+				if (CapsuleComp)
+				{
+					// 클라이언트에서도 천장 감지하여 Mesh 회전 업데이트
+					FVector CurrentLoc = OwnerCharacter->GetActorLocation();
+					float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
+					FVector Start = CurrentLoc;
+					Start.Z += CapsuleHalfHeight;
+					FVector End = Start + FVector::UpVector * CeilingTraceDistance;
+
+					FHitResult Hit;
+					FCollisionQueryParams Params;
+					Params.AddIgnoredActor(OwnerCharacter);
+
+					if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+					{
+						// 천장 Normal에 맞춰 Mesh 회전만 업데이트
+						UpdateCapsuleRotationToCeiling(Hit.Normal);
+						
+						// Mesh 위치 오프셋도 클라이언트에서 계산
+						USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+						if (MeshComp && bInitialLocationSaved)
+						{
+							const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
+							const float DesiredMeshOffsetZ = DesiredActorZ - CurrentLoc.Z;
+							
+							const float InterpSpeed = 30.f;
+							const float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+							float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, DesiredMeshOffsetZ, DeltaTime, InterpSpeed);
+							
+							FVector NewRelLoc = InitialMeshRelativeLocation;
+							NewRelLoc.Z += NewOffsetZ;
+							MeshComp->SetRelativeLocation(NewRelLoc);
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		// 바닥 모드일 때 주기적으로 천장 감지 및 자동 전환 체크 (서버에서만)
+		if (GetOwner() && GetOwner()->HasAuthority())
+		{
+			AutoTransitionCheckTimer += DeltaTime;
+			if (AutoTransitionCheckTimer >= AutoTransitionCheckInterval)
+			{
+				AutoTransitionCheckTimer = 0.f;
+				CheckForCeilingAutoTransition();
+			}
+		}
 	}
 }
 
@@ -46,7 +107,8 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 {
 	if (!OwnerCharacter) return;
 
-	if (bEnable && !CheckCeilingAvailability())
+	// 서버에서만 천장 가용성 체크
+	if (GetOwner() && GetOwner()->HasAuthority() && bEnable && !CheckCeilingAvailability())
 	{
 		// 천장이 없으면 활성화 불가
 		return;
@@ -56,45 +118,63 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 	{
 		bIsCeilingMode = bEnable;
 
-		USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
-		
-		if (bIsCeilingMode)
+		// 서버에서만 Movement 설정 변경
+		if (GetOwner() && GetOwner()->HasAuthority())
 		{
-			// NavMesh를 사용하기 위해 Walking 모드 유지
-			// Gravity만 0으로 설정하여 중력 영향 제거
-			MoveComp->GravityScale = 0.f;
-			MoveComp->SetMovementMode(MOVE_Walking); // Flying이 아닌 Walking 유지
+			USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
 			
-			// Mesh만 뒤집기 (Actor 회전은 유지하여 NavMesh와 호환)
-			if (MeshComp)
+			if (bIsCeilingMode)
 			{
-				// 초기 Rotation 저장 (한 번만)
-				if (!bInitialRotationSaved)
-				{
-					InitialMeshRotation = MeshComp->GetRelativeRotation();
-					bInitialRotationSaved = true;
-				}
+				// NavMesh를 사용하기 위해 Walking 모드 유지
+				// Gravity만 0으로 설정하여 중력 영향 제거
+				MoveComp->GravityScale = 0.f;
+				MoveComp->SetMovementMode(MOVE_Walking); // Flying이 아닌 Walking 유지
 				
-				// Pitch 180도로 뒤집기 (천장에 매달린 것처럼 보이도록)
-				FRotator MeshRot = InitialMeshRotation;
-				MeshRot.Pitch += 180.f;
-				MeshComp->SetRelativeRotation(MeshRot);
-			}
+				// Mesh만 뒤집기 (Actor 회전은 유지하여 NavMesh와 호환)
+				// 실제 회전은 UpdateCeilingPosition에서 천장 Normal에 맞춰 조정됨
+				if (MeshComp)
+				{
+					// 초기 Rotation 저장 (한 번만)
+					if (!bInitialRotationSaved)
+					{
+						InitialMeshRotation = MeshComp->GetRelativeRotation();
+						bInitialRotationSaved = true;
+					}
+					// 초기 Location 저장 (한 번만)
+					if (!bInitialLocationSaved)
+					{
+						InitialMeshRelativeLocation = MeshComp->GetRelativeLocation();
+						bInitialLocationSaved = true;
+					}
+				}
 
-			// 천장 모드 진입 시 즉시 천장 위치로 이동
-			UpdateCeilingPosition(0.f, true); // 즉시 적용
+				// 천장 모드 진입 시 즉시 천장 위치로 "보이도록" 보정 (회전/오프셋)
+				UpdateCeilingPosition(0.f, true); // 즉시 적용
+			}
+			else
+			{
+				// 바닥 모드 복귀
+				MoveComp->GravityScale = 1.f;
+				MoveComp->SetMovementMode(MOVE_Walking);
+				
+				// Mesh 회전/위치 복구
+				if (MeshComp && bInitialRotationSaved)
+				{
+					MeshComp->SetRelativeRotation(InitialMeshRotation);
+				}
+				if (MeshComp && bInitialLocationSaved)
+				{
+					MeshComp->SetRelativeLocation(InitialMeshRelativeLocation);
+				}
+
+				// 자동 전환 체크 타이머 리셋
+				AutoTransitionCheckTimer = 0.f;
+			}
 		}
 		else
 		{
-			// 바닥 모드 복귀
-			MoveComp->GravityScale = 1.f;
-			MoveComp->SetMovementMode(MOVE_Walking);
-			
-			// Mesh 회전 복구
-			if (MeshComp && bInitialRotationSaved)
-			{
-				MeshComp->SetRelativeRotation(InitialMeshRotation);
-			}
+			// 클라이언트에서는 Mesh 시각적 업데이트만 수행
+			UpdateMeshVisualsForCeilingMode(bEnable);
 		}
 	}
 }
@@ -121,15 +201,23 @@ bool UAO_CeilingMoveComponent::CheckCeilingAvailability() const
 	// WorldStatic 레이어에 대해 천장 검사
 	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
 
-	// 천장이 있고, 평평한지 확인 (Normal.Z가 -1에 가까워야 함)
-	// Normal.Z < -0.7f: 천장이 수평에 가까움 (약 45도 이내)
-	if (bHit && Hit.Normal.Z < -0.7f)
+	if (bHit)
 	{
-		// 천장까지의 거리가 적절한지 확인 (너무 높으면 이동 불가)
-		float DistanceToCeiling = (Hit.Location - Start).Size();
-		if (DistanceToCeiling <= CeilingTraceDistance && DistanceToCeiling >= CapsuleHalfHeight * 0.5f)
+		// 천장 Normal의 Z 성분을 각도로 변환
+		// Normal.Z = -1.0 (수평) ~ 0.0 (수직)
+		// MaxCeilingAngle에 맞춰 허용 각도 계산
+		float MinNormalZ = FMath::Cos(FMath::DegreesToRadians(90.f - MaxCeilingAngle));
+		MinNormalZ = -MinNormalZ; // 천장이므로 음수
+
+		// 천장이 허용 각도 내에 있는지 확인
+		if (Hit.Normal.Z <= MinNormalZ)
 		{
-			return true;
+			// 천장까지의 거리가 적절한지 확인 (너무 높으면 이동 불가)
+			float DistanceToCeiling = (Hit.Location - Start).Size();
+			if (DistanceToCeiling <= CeilingTraceDistance && DistanceToCeiling >= CapsuleHalfHeight * 0.5f)
+			{
+				return true;
+			}
 		}
 	}
 
@@ -163,11 +251,6 @@ void UAO_CeilingMoveComponent::UpdateCeilingPosition(float DeltaTime, bool bImme
 			NavMeshLocation.X = NavLocation.Location.X;
 			NavMeshLocation.Y = NavLocation.Location.Y;
 		}
-		else
-		{
-			// NavMesh를 찾지 못하면 현재 X, Y 유지
-			AO_LOG(LogKSJ, Warning, TEXT("Stalker: Failed to project to NavMesh at ceiling mode"));
-		}
 	}
 
 	// 천장 위치 확인 - NavMesh 프로젝션된 위치의 캡슐 상단에서 시작
@@ -184,44 +267,156 @@ void UAO_CeilingMoveComponent::UpdateCeilingPosition(float DeltaTime, bool bImme
 
 	if (bHit)
 	{
-		// 천장에 붙이기 - 캡슐 상단이 천장에 붙도록 계산
-		FVector TargetLoc = Hit.Location;
-		TargetLoc.Z -= (CapsuleHalfHeight + CeilingOffset);
+		// 핵심: NavMesh는 바닥에만 있으므로, Actor(캡슐)는 바닥 NavMesh를 따라 움직여야 한다.
+		// 천장 모드에서는 Actor를 천장으로 "텔레포트"하지 않고, Mesh만 위로 오프셋하여
+		// 시각적으로 천장에 붙어 보이게 만든다. (MoveTo/PathFollowing 안정화 목적)
 
-		// NavMesh 프로젝션된 X, Y를 사용하고 Z만 천장 높이로 조정
-		FVector NewLocation = FVector(NavMeshLocation.X, NavMeshLocation.Y, TargetLoc.Z);
-		
-		float NewZ;
-		if (bImmediate)
+		USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+		if (!MeshComp || !bInitialLocationSaved)
 		{
-			// 즉시 적용 (천장 모드 진입 시)
-			NewZ = TargetLoc.Z;
+			return;
 		}
-		else
+
+		// 천장에 붙어 보일 목표 Z (Actor를 옮길 경우의 목표 Z)
+		const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
+		const float DesiredMeshOffsetZ = DesiredActorZ - CurrentLoc.Z; // Actor는 그대로이므로 Mesh만 올림
+
+		float NewOffsetZ = DesiredMeshOffsetZ;
+		if (!bImmediate)
 		{
-			// 부드러운 보정 (Interp 속도 증가)
-			float InterpSpeed = 30.f;
-			NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetLoc.Z, DeltaTime, InterpSpeed);
+			// 부드러운 보정
+			const float InterpSpeed = 30.f;
+			const float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+			NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, DesiredMeshOffsetZ, DeltaTime, InterpSpeed);
 		}
+
+		// 기울어진 천장에 맞춰 Mesh 회전 조정
+		UpdateCapsuleRotationToCeiling(Hit.Normal);
+
+		// Mesh 위치 오프셋 적용 (X/Y는 유지)
+		FVector NewRelLoc = InitialMeshRelativeLocation;
+		NewRelLoc.Z += NewOffsetZ;
+		MeshComp->SetRelativeLocation(NewRelLoc);
 		
-		NewLocation.Z = NewZ;
-		
-		// Sweep을 사용하여 충돌 체크 (벽에 부딪히는 것 방지)
-		FHitResult SweepHit;
-		bool bMoved = OwnerCharacter->SetActorLocation(NewLocation, true, &SweepHit, ETeleportType::None);
-		
-		// 벽에 부딪혔으면 로그만 남기고 위치는 유지 (Controller가 경로를 재계산할 것)
-		if (!bMoved && SweepHit.bBlockingHit)
-		{
-			AO_LOG(LogKSJ, Verbose, TEXT("Stalker: Hit wall at ceiling mode, location: %s, blocking: %s"), 
-				*NewLocation.ToString(), *SweepHit.GetActor()->GetName());
-			// 경로를 다시 찾도록 Controller에 알림은 필요 없음 (PathFollowingComponent가 자동으로 처리)
-		}
 	}
 	else
 	{
 		// 천장이 끊기면 바닥 모드로 전환 (낙하)
 		SetCeilingMode(false);
 	}
+}
+
+void UAO_CeilingMoveComponent::OnRep_bIsCeilingMode()
+{
+	// 클라이언트에서 리플리케이션된 값이 변경되었을 때 Mesh 시각적 업데이트
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		UpdateMeshVisualsForCeilingMode(bIsCeilingMode);
+	}
+}
+
+void UAO_CeilingMoveComponent::UpdateMeshVisualsForCeilingMode(bool bEnable)
+{
+	if (!OwnerCharacter) return;
+
+	USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+	if (!MeshComp) return;
+
+	if (bEnable)
+	{
+		// 초기 값 저장 (한 번만)
+		if (!bInitialRotationSaved)
+		{
+			InitialMeshRotation = MeshComp->GetRelativeRotation();
+			bInitialRotationSaved = true;
+		}
+		if (!bInitialLocationSaved)
+		{
+			InitialMeshRelativeLocation = MeshComp->GetRelativeLocation();
+			bInitialLocationSaved = true;
+		}
+
+		// 클라이언트에서는 서버에서 계산된 위치를 기반으로 Mesh만 업데이트
+		// 실제 천장 위치는 서버에서 계산되므로, 클라이언트는 Mesh 회전만 적용
+		// 위치는 서버에서 리플리케이션된 Actor 위치를 따라감
+		FRotator MeshRot = InitialMeshRotation;
+		MeshRot.Pitch += 180.f;
+		MeshComp->SetRelativeRotation(MeshRot);
+	}
+	else
+	{
+		// 바닥 모드 복귀: Mesh 회전/위치 복구
+		if (bInitialRotationSaved)
+		{
+			MeshComp->SetRelativeRotation(InitialMeshRotation);
+		}
+		if (bInitialLocationSaved)
+		{
+			MeshComp->SetRelativeLocation(InitialMeshRelativeLocation);
+		}
+	}
+}
+
+void UAO_CeilingMoveComponent::CheckForCeilingAutoTransition()
+{
+	// 바닥 모드일 때만 자동 전환 체크
+	if (bIsCeilingMode || !OwnerCharacter)
+	{
+		return;
+	}
+
+	// 천장이 있는지 확인
+	if (CheckCeilingAvailability())
+	{
+		// 천장이 있으면 자동으로 천장 모드로 전환
+		SetCeilingMode(true);
+	}
+}
+
+void UAO_CeilingMoveComponent::UpdateCapsuleRotationToCeiling(const FVector& CeilingNormal)
+{
+	if (!OwnerCharacter || !bIsCeilingMode)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+	if (!MeshComp || !bInitialRotationSaved)
+	{
+		return;
+	}
+
+	// 천장 Normal이 거의 수평이면 기본 180도 회전만 적용
+	if (CeilingNormal.Z < -0.99f)
+	{
+		// 수평 천장: 초기 회전 + 180도만 적용
+		FRotator MeshRot = InitialMeshRotation;
+		MeshRot.Pitch += 180.f;
+		MeshComp->SetRelativeRotation(MeshRot);
+		return;
+	}
+
+	// 기울어진 천장: 천장 Normal에 맞춰 추가 회전 계산
+	// 기본 Up 벡터에서 천장 Up 벡터로의 회전 계산
+	FVector DefaultUp = FVector::UpVector;
+	FVector CeilingUp = -CeilingNormal.GetSafeNormal();
+	
+	// 두 벡터 사이의 회전 쿼터니언 계산
+	FQuat RotationQuat = FQuat::FindBetweenNormals(DefaultUp, CeilingUp);
+	FRotator AdditionalRotation = RotationQuat.Rotator();
+	
+	// 초기 회전 + 180도 (거꾸로 매달림) + 천장 기울기 보정
+	FRotator FinalMeshRotation = InitialMeshRotation;
+	FinalMeshRotation.Pitch += 180.f;
+	
+	// 추가 회전을 부드럽게 보간
+	FRotator CurrentMeshRotation = MeshComp->GetRelativeRotation();
+	FRotator TargetRotation = FinalMeshRotation + AdditionalRotation;
+	
+	// 부드러운 회전 보간 (회전 속도 조절 가능)
+	float RotationSpeed = 5.f;
+	FRotator InterpolatedRotation = FMath::RInterpTo(CurrentMeshRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), RotationSpeed);
+	
+	MeshComp->SetRelativeRotation(InterpolatedRotation);
 }
 

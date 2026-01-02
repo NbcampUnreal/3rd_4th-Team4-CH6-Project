@@ -1,4 +1,4 @@
-// AO_LavaMonster.h
+//KSJ : AO_LavaMonster
 
 #pragma once
 
@@ -106,13 +106,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster")
 	void ExecuteAttack(ELavaMonsterAttackType AttackType);
 
-	// 공격 중인지
-	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster")
-	bool IsAttacking() const { return bIsAttacking; }
-
-	// 공격 상태 설정 (GAS에서 사용)
-	void SetIsAttacking(bool bVal) { bIsAttacking = bVal; }
-
 	// 현재 공격 타입 가져오기
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster")
 	ELavaMonsterAttackType GetCurrentAttackType() const { return CurrentAttackType; }
@@ -134,10 +127,6 @@ protected:
 	// 공격 타입별 설정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Attack")
 	TMap<ELavaMonsterAttackType, FAO_LavaMonsterAttackConfig> AttackConfigs;
-
-	// 공격 중 플래그
-	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|LavaMonster")
-	bool bIsAttacking = false;
 
 	// 현재 공격 타입
 	UPROPERTY(BlueprintReadOnly, Category = "AO|AI|LavaMonster")
