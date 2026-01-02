@@ -20,23 +20,28 @@ UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Lockout.Stamina")));
 }
 
-void UAO_GameplayAbility_Sprint::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilitySpec& Spec)
-{
-	Super::OnAvatarSet(ActorInfo, Spec);
-
-	Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
-	checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
-
-	CharacterMovement = Character->GetCharacterMovement();
-	checkf(CharacterMovement, TEXT("Failed to get CharacterMovementComponent"));
-}
-
 bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                                     const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
                                                     const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid() || !ActorInfo->AvatarActor.IsValid())
+	{
+		return false;
+	}
+
+	const AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	if (!Character)
+	{
+		return false;
+	}
+
+	const UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement();
+	if (!CharacterMovement)
 	{
 		return false;
 	}
@@ -51,7 +56,12 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
 		return false;
 	}
 
-	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSetChecked<UAO_PlayerCharacter_AttributeSet>();
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		return false;
+	}
+	
 	const float CurrentStamina = AttributeSet->GetStamina();
 	const float MaxStamina = AttributeSet->GetMaxStamina();
 
@@ -72,6 +82,12 @@ void UAO_GameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHandl
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	if (!Character)
+	{
+		return;
+	}
 	
 	Character->StartSprint_GAS(true);
 }
@@ -80,6 +96,18 @@ void UAO_GameplayAbility_Sprint::InputPressed(const FGameplayAbilitySpecHandle H
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+
+	const AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	if (!Character)
+	{
+		return;
+	}
+
+	const UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement();
+	if (!CharacterMovement)
+	{
+		return;
+	}
 	
 	if (CharacterMovement->Velocity.SizeSquared2D() < KINDA_SMALL_NUMBER)
 	{
@@ -102,26 +130,34 @@ void UAO_GameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
+	AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	if (!Character)
+	{
+		return;
+	}
+
 	if (Character)
 	{
 		Character->StartSprint_GAS(false);
 	}
 
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
-	checkf(ASC, TEXT("Failed to get AbilitySystemComponent"));
-	
-	const FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
-	ASC->RemoveActiveEffectsWithTags(SprintCostTag);
 
-	checkf(PostSprintNoRegenEffectClass, TEXT("PostSprintNoRegenEffectClass is null"));
-	if (ActorInfo->IsNetAuthority())
+	if (ASC)
 	{
-		const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-		const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoRegenEffectClass, 1.f, Context);
+		const FGameplayTagContainer SprintCostTag(FGameplayTag::RequestGameplayTag(FName("Effect.Cost.Sprint")));
+		ASC->RemoveActiveEffectsWithTags(SprintCostTag);
 
-		if (SpecHandle.IsValid())
+		checkf(PostSprintNoRegenEffectClass, TEXT("PostSprintNoRegenEffectClass is null"));
+		if (ActorInfo->IsNetAuthority())
 		{
-			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			const FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+			const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(PostSprintNoRegenEffectClass, 1.f, Context);
+
+			if (SpecHandle.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			}
 		}
 	}
 	

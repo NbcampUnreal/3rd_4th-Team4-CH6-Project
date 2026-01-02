@@ -1,4 +1,4 @@
-// AO_STCond_IsStunned.h
+//KSJ : AO_STCond_IsStunned
 
 #pragma once
 

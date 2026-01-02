@@ -1,4 +1,4 @@
-// AO_NavArea_SpawnRestriction.cpp
+//KSJ : AO_NavArea_SpawnRestriction
 
 #include "AI/NavArea/AO_NavArea_SpawnRestriction.h"
 

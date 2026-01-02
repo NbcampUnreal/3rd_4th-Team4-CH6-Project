@@ -1,4 +1,4 @@
-// AO_EQS_Test_LineOfSight.cpp
+//KSJ : AO_EQS_Test_LineOfSight
 
 #include "AI/EQS/Test/AO_EQS_Test_LineOfSight.h"
 #include "EnvironmentQuery/Items/EnvQueryItemType.h"
@@ -8,7 +8,6 @@
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
 #include "Kismet/GameplayStatics.h"
-#include "AO_Log.h"
 
 UAO_EQS_Test_LineOfSight::UAO_EQS_Test_LineOfSight()
 {

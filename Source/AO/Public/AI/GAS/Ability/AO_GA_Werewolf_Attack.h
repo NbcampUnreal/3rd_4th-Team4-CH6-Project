@@ -1,31 +1,25 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_GA_Werewolf_Attack
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
+#include "AI/GAS/Ability/AO_GA_AIAttackBase.h"
 #include "AO_GA_Werewolf_Attack.generated.h"
 
 /**
  * Werewolf Attack Ability
  * - 근접 공격 (Heavy Hit)
+ * - AO_GA_AIAttackBase를 상속하여 히트 처리 로직 사용
  */
 UCLASS()
-class AO_API UAO_GA_Werewolf_Attack : public UGameplayAbility
+class AO_API UAO_GA_Werewolf_Attack : public UAO_GA_AIAttackBase
 {
 	GENERATED_BODY()
 
 public:
 	UAO_GA_Werewolf_Attack();
 	
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
-
 protected:
-	UFUNCTION()
-	void OnMontageCompleted();
-
-protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Montage")
-	TObjectPtr<UAnimMontage> AttackMontage;
+	// AO_GA_AIAttackBase의 OnTargetHit 오버라이드 (Heavy Hit React 적용)
+	virtual void OnTargetHit(AActor* TargetActor, AActor* InstigatorActor) override;
 };

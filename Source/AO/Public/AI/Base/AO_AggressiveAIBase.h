@@ -1,4 +1,4 @@
-// AO_AggressiveAIBase.h
+//KSJ : AO_AggressiveAIBase
 
 #pragma once
 
@@ -59,6 +59,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Aggressive")
 	float GetRoamSpeed() const { return RoamSpeed; }
+
+	// 공격 후 쿨다운 상태 확인 (하위 클래스에서 오버라이드)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Aggressive")
+	virtual bool IsInPostAttackCooldown() const { return false; }
 
 protected:
 	virtual void BeginPlay() override;

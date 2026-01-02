@@ -1,4 +1,4 @@
-// AO_Spawner_AIManager.cpp
+//KSJ : AO_Spawner_AIManager
 
 #include "AI/Spawner/AO_Spawner_AIManager.h"
 #include "AI/Area/AO_Area_SpawnRestriction.h"
@@ -11,7 +11,6 @@
 #include "NavigationSystem.h"
 #include "NavModifierVolume.h"
 #include "AIController.h"
-#include "AO_Log.h"
 
 AAO_Spawner_AIManager::AAO_Spawner_AIManager()
 {
@@ -28,20 +27,15 @@ void AAO_Spawner_AIManager::BeginPlay()
 	
 	if (!bShouldSpawn)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Not running on server (HasAuthority: %d, IsPIE: %d)"), HasAuthority(), GetWorld()->IsPlayInEditor());
 		return;
 	}
 
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: BeginPlay - Starting initialization"));
-
 	// 플레이어 목록 초기화
 	UpdatePlayerList();
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Found %d players"), CachedPlayers.Num());
 
 	// 첫 스폰 시도까지 대기 시간 계산
 	float InitialDelay = FMath::Max(0.1f, SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation));
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, InitialDelay, false);
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: First spawn scheduled in %.2f seconds"), InitialDelay);
 
 	// 집중 스폰 영역 초기화 (볼륨 기반)
 	for (TObjectPtr<AAO_Area_SpawnIntensive> IntensiveArea : IntensiveVolumes)
@@ -60,9 +54,6 @@ void AAO_Spawner_AIManager::BeginPlay()
 
 	// NavArea 기반 집중 스폰은 별도 타이머로 처리하지 않고,
 	// TrySpawnAI에서 NavArea를 확인하여 처리
-
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Initialized with %d monster classes, max %d monsters, EQS Query: %s"), 
-		MonsterClasses.Num(), MaxMonstersInLevel, IsValid(SpawnLocationQuery) ? *SpawnLocationQuery->GetName() : TEXT("NULL"));
 }
 
 void AAO_Spawner_AIManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -100,15 +91,10 @@ void AAO_Spawner_AIManager::TrySpawnAI()
 		return;
 	}
 
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: TrySpawnAI called"));
-
 	// 최대 수 체크
 	int32 CurrentCount = GetCurrentSpawnedAICount();
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Current monster count: %d/%d"), CurrentCount, MaxMonstersInLevel);
 	if (CurrentCount >= MaxMonstersInLevel)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Max monsters reached (%d/%d)"), CurrentCount, MaxMonstersInLevel);
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -118,8 +104,6 @@ void AAO_Spawner_AIManager::TrySpawnAI()
 	// 몬스터 종류 체크
 	if (MonsterClasses.Num() == 0)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: No monster classes configured"));
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -129,8 +113,6 @@ void AAO_Spawner_AIManager::TrySpawnAI()
 	// EQS 쿼리 실행
 	if (!IsValid(SpawnLocationQuery))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: SpawnLocationQuery is not set"));
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -139,11 +121,8 @@ void AAO_Spawner_AIManager::TrySpawnAI()
 
 	// 플레이어 목록 업데이트
 	UpdatePlayerList();
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Found %d players"), CachedPlayers.Num());
 	if (CachedPlayers.Num() == 0)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: No players found, skipping spawn"));
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -151,20 +130,14 @@ void AAO_Spawner_AIManager::TrySpawnAI()
 	}
 
 	// EQS 쿼리 실행
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Executing EQS query: %s"), *SpawnLocationQuery->GetName());
 	FEnvQueryRequest QueryRequest(SpawnLocationQuery, this);
 	QueryRequest.Execute(EEnvQueryRunMode::SingleResult, this, &AAO_Spawner_AIManager::OnEQSQueryFinished);
 }
 
 void AAO_Spawner_AIManager::OnEQSQueryFinished(TSharedPtr<FEnvQueryResult> Result)
 {
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: EQS query finished - Valid: %d, Items: %d"), 
-		Result.IsValid() ? 1 : 0, Result.IsValid() ? Result->Items.Num() : 0);
-	
 	if (!Result.IsValid() || Result->Items.Num() == 0)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: EQS query failed or no valid locations found"));
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -178,7 +151,6 @@ void AAO_Spawner_AIManager::OnEQSQueryFinished(TSharedPtr<FEnvQueryResult> Resul
 	for (int32 i = 0; i < Result->Items.Num(); ++i)
 	{
 		float ItemScore = Result->GetItemScore(i);
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Item[%d] Score: %.2f"), i, ItemScore);
 		if (ItemScore > BestScore)
 		{
 			BestScore = ItemScore;
@@ -186,12 +158,8 @@ void AAO_Spawner_AIManager::OnEQSQueryFinished(TSharedPtr<FEnvQueryResult> Resul
 		}
 	}
 	
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Best item index: %d, Score: %.2f"), BestItemIndex, BestScore);
-	
 	if (BestItemIndex == INDEX_NONE)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: No valid item found in EQS result"));
-		
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
 		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AAO_Spawner_AIManager::TrySpawnAI, NextDelay, false);
@@ -226,7 +194,6 @@ void AAO_Spawner_AIManager::ExecuteSpawn(const FVector& SpawnLocation, TSubclass
 {
 	if (!IsValid(MonsterClass))
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Invalid monster class"));
 		return;
 	}
 
@@ -253,7 +220,6 @@ void AAO_Spawner_AIManager::ExecuteSpawn(const FVector& SpawnLocation, TSubclass
 			{
 				// AIControllerClass가 설정되지 않았으면 기본 AIController 사용
 				ControllerClass = AAIController::StaticClass();
-				AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: %s has no AIControllerClass, using default AAIController"), *SpawnedMonster->GetName());
 			}
 			
 			// Controller 생성
@@ -265,27 +231,8 @@ void AAO_Spawner_AIManager::ExecuteSpawn(const FVector& SpawnLocation, TSubclass
 			{
 				// Controller가 Pawn을 Possess
 				NewController->Possess(SpawnedMonster);
-				AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Created and possessed controller %s for %s"), 
-					*NewController->GetClass()->GetName(), *SpawnedMonster->GetName());
-			}
-			else
-			{
-				AO_LOG(LogKSJ, Error, TEXT("AO_Spawner_AIManager: Failed to spawn controller for %s (AIControllerClass: %s)"), 
-					*SpawnedMonster->GetName(), 
-					ControllerClass ? *ControllerClass->GetName() : TEXT("NULL"));
 			}
 		}
-		else
-		{
-			AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: %s already has controller: %s"), 
-				*SpawnedMonster->GetName(), *SpawnedMonster->GetController()->GetClass()->GetName());
-		}
-		
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Spawned %s at %s"), *SpawnedMonster->GetName(), *SpawnLocation.ToString());
-	}
-	else
-	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: Failed to spawn monster"));
 	}
 }
 
@@ -461,13 +408,9 @@ void AAO_Spawner_AIManager::OnAIDestroyed(AActor* DestroyedActor)
 
 void AAO_Spawner_AIManager::DebugSpawn()
 {
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: DebugSpawn called - HasAuthority: %d, IsPIE: %d"), 
-		HasAuthority(), GetWorld()->IsPlayInEditor());
-	
 	bool bShouldSpawn = HasAuthority() || GetWorld()->IsPlayInEditor();
 	if (!bShouldSpawn)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_Spawner_AIManager: DebugSpawn can only be called on server or in PIE"));
 		return;
 	}
 
@@ -475,34 +418,27 @@ void AAO_Spawner_AIManager::DebugSpawn()
 	int32 CurrentCount = GetCurrentSpawnedAICount();
 	if (CurrentCount >= MaxMonstersInLevel)
 	{
-		AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: DebugSpawn: Max monsters reached (%d/%d), spawning anyway"), CurrentCount, MaxMonstersInLevel);
 	}
 
 	// 몬스터 종류 체크
 	if (MonsterClasses.Num() == 0)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_Spawner_AIManager: DebugSpawn: No monster classes configured"));
 		return;
 	}
 
 	// EQS 쿼리 실행 (동기적으로)
 	if (!IsValid(SpawnLocationQuery))
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_Spawner_AIManager: DebugSpawn: SpawnLocationQuery is not set"));
 		return;
 	}
 
 	UpdatePlayerList();
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: DebugSpawn: Found %d players"), CachedPlayers.Num());
 	if (CachedPlayers.Num() == 0)
 	{
-		AO_LOG(LogKSJ, Error, TEXT("AO_Spawner_AIManager: DebugSpawn: No players found - cannot spawn"));
 		return;
 	}
 
 	// EQS 쿼리 실행
-	AO_LOG(LogKSJ, Warning, TEXT("AO_Spawner_AIManager: DebugSpawn: Executing EQS query: %s"), *SpawnLocationQuery->GetName());
 	FEnvQueryRequest QueryRequest(SpawnLocationQuery, this);
 	QueryRequest.Execute(EEnvQueryRunMode::SingleResult, this, &AAO_Spawner_AIManager::OnEQSQueryFinished);
 }
-

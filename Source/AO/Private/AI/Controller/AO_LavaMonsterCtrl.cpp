@@ -1,8 +1,7 @@
-// AO_LavaMonsterCtrl.cpp
+//KSJ : AO_LavaMonsterCtrl
 
 #include "AI/Controller/AO_LavaMonsterCtrl.h"
 #include "AI/Character/AO_LavaMonster.h"
-#include "AO_Log.h"
 
 AAO_LavaMonsterCtrl::AAO_LavaMonsterCtrl()
 {
@@ -13,10 +12,6 @@ void AAO_LavaMonsterCtrl::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	AAO_LavaMonster* LavaMonster = Cast<AAO_LavaMonster>(InPawn);
-	if (LavaMonster)
-	{
-		AO_LOG(LogKSJ, Log, TEXT("LavaMonsterCtrl possessed %s"), *LavaMonster->GetName());
-	}
 }
 
 AAO_LavaMonster* AAO_LavaMonsterCtrl::GetLavaMonster() const

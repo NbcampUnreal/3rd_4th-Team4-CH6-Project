@@ -1,4 +1,4 @@
-// AO_STCond_PlayerNearby.h
+//KSJ : AO_STCond_PlayerNearby
 
 #pragma once
 

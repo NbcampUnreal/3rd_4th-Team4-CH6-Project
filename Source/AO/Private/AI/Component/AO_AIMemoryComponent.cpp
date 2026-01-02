@@ -1,8 +1,7 @@
-// AO_AIMemoryComponent.cpp
+//KSJ : AO_AIMemoryComponent
 
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
-#include "AO_Log.h"
 
 UAO_AIMemoryComponent::UAO_AIMemoryComponent()
 {
@@ -53,9 +52,6 @@ void UAO_AIMemoryComponent::SetLastKnownLocation(AAO_PlayerCharacter* Player, co
 	Memory.LastLostLocation = Location;
 	Memory.LostTime = World->GetTimeSeconds();
 	Memory.bIsInSight = false;
-
-	AO_LOG(LogKSJ, Log, TEXT("Memory Updated - Player: %s, LastLostLocation: %s"), 
-		*Player->GetName(), *Location.ToString());
 }
 
 bool UAO_AIMemoryComponent::GetPlayerMemory(AAO_PlayerCharacter* Player, FAO_PlayerMemoryData& OutData) const
@@ -193,8 +189,6 @@ void UAO_AIMemoryComponent::SetLastHeardLocation(const FVector& Location)
 
 	LastHeardLocation = Location;
 	LastHeardTime = World->GetTimeSeconds();
-
-	AO_LOG(LogKSJ, Log, TEXT("Heard noise at: %s"), *Location.ToString());
 }
 
 void UAO_AIMemoryComponent::ClearHeardLocation()

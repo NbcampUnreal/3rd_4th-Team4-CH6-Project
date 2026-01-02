@@ -1,4 +1,4 @@
-// AO_CeilingMoveComponent.h
+//KSJ : AO_CeilingMoveComponent
 
 #pragma once
 
@@ -44,11 +44,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
 	bool CheckCeilingAvailability() const;
 
+	// 이동 중 천장 감지 및 자동 전환 체크 (바닥 모드일 때 호출)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	void CheckForCeilingAutoTransition();
+
 protected:
 	virtual void BeginPlay() override;
 
+	// 리플리케이션 콜백: 클라이언트에서 Mesh 회전/위치 업데이트
+	UFUNCTION()
+	void OnRep_bIsCeilingMode();
+
 private:
 	void UpdateCeilingPosition(float DeltaTime, bool bImmediate = false);
+	
+	// 천장 Normal에 맞춰 캡슐 회전 조정
+	void UpdateCapsuleRotationToCeiling(const FVector& CeilingNormal);
+
+	// 클라이언트에서 Mesh 회전/위치를 업데이트하는 헬퍼 함수
+	void UpdateMeshVisualsForCeilingMode(bool bEnable);
 
 protected:
 	UPROPERTY()
@@ -62,7 +76,7 @@ protected:
 	float CeilingTraceDistance = 500.f;
 
 	// 천장 이동 활성화 여부
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Ceiling Move")
+	UPROPERTY(ReplicatedUsing = OnRep_bIsCeilingMode, BlueprintReadOnly, Category = "Ceiling Move")
 	bool bIsCeilingMode = false;
 
 	// 천장에 붙을 때의 보정 오프셋
@@ -72,9 +86,29 @@ protected:
 	// Mesh의 초기 RelativeRotation (복구용)
 	UPROPERTY()
 	FRotator InitialMeshRotation;
+
+	// Mesh의 초기 RelativeLocation (천장 오프셋 복구용)
+	UPROPERTY()
+	FVector InitialMeshRelativeLocation = FVector::ZeroVector;
 	
 	// 초기 Rotation 저장 여부
 	UPROPERTY()
 	bool bInitialRotationSaved = false;
+
+	// 초기 Location 저장 여부
+	UPROPERTY()
+	bool bInitialLocationSaved = false;
+
+	// 자동 전환 체크 타이머
+	UPROPERTY()
+	float AutoTransitionCheckTimer = 0.f;
+
+	// 자동 전환 체크 간격
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move")
+	float AutoTransitionCheckInterval = 0.2f;
+
+	// 기울어진 천장 지원 최대 각도 (도 단위, 0~90)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move")
+	float MaxCeilingAngle = 60.f;
 };
 

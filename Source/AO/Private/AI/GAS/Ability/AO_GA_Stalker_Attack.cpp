@@ -1,4 +1,4 @@
-// AO_GA_Stalker_Attack.cpp
+//KSJ : AO_GA_Stalker_Attack
 
 #include "AI/GAS/Ability/AO_GA_Stalker_Attack.h"
 #include "AI/Character/AO_Stalker.h"

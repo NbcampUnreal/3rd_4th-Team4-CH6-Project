@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//KSJ : AO_STTask_Wolf_Surround
 
 #pragma once
 
@@ -32,6 +32,10 @@ struct FAO_STTask_Wolf_Surround_InstanceData
 	
 	// EQS Request ID
 	int32 QueryRequestID = INDEX_NONE;
+
+	// 현재 목표 포위 위치
+	UPROPERTY()
+	FVector CurrentTargetPosition = FVector::ZeroVector;
 };
 
 /**

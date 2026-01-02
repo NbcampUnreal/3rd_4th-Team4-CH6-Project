@@ -1,4 +1,4 @@
-// AO_Troll_AnimInstance.cpp
+//KSJ : AO_Troll_AnimInstance
 
 #include "AI/Animation/AO_Troll_AnimInstance.h"
 #include "AI/Character/AO_Troll.h"

@@ -1,4 +1,4 @@
-// AO_STCond_InAttackRange.cpp
+//KSJ : AO_STCond_InAttackRange
 
 #include "AI/StateTree/Condition/AO_STCond_InAttackRange.h"
 #include "AI/Base/AO_AggressiveAIBase.h"
