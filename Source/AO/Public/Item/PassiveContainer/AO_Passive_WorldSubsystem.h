@@ -29,4 +29,5 @@ public:
 	FString GetPlayerPersistentId(APlayerController* PC);
 	void SnapshotPlayerData(APlayerController* PC);
 	void RestorePlayerGASData(APlayerController* PC);
+	void ClearAllPlayerData();
 };

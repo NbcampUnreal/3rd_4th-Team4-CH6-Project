@@ -5,6 +5,7 @@
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO_Log.h"
+#include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Net/UnrealNetwork.h"
 
@@ -147,13 +148,19 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 	if (PS)
 	{
 		PS->CharacterCustomizingData = this->CharacterCustomizingData;
+		//ms : 다음스테이지에서 인벤토리 유지
+		UAO_GameInstance* GI = GetGameInstance<UAO_GameInstance>();
+        
+		if (GI && GI->CurrentStageIndex == 0)
+		{
+			PS->PersistentInventory.Empty();
+		}
+		else
+		{
+			PS->PersistentInventory = PersistentInventory;
+		}
+		//ms
 	}
-	//ms : 다음스테이지에서 인벤토리 유지
-	if (AAO_PlayerState* NewPS = Cast<AAO_PlayerState>(PlayerState))
-	{
-		NewPS->PersistentInventory = PersistentInventory;
-	}
-	//ms
 }
 
 void AAO_PlayerState::ServerRPC_SetCharacterCustomizingData_Implementation(const FCustomizingData& CustomizingData)
@@ -226,4 +233,9 @@ void AAO_PlayerState::RefreshLobbyReadyBoard()
 void AAO_PlayerState::SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv)
 {
 	PersistentInventory = Inv->Slots;
+}
+
+void AAO_PlayerState::ResetStateInventory()
+{
+	PersistentInventory.Empty();
 }

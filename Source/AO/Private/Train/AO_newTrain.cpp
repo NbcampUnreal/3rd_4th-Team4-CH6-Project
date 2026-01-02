@@ -10,6 +10,9 @@ AAO_newTrain::AAO_newTrain()
 	ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
 	ASC->SetIsReplicated(true);
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+
+	InteractionTitle = FText::FromString(TEXT("연료"));
+	InteractionContent = FText::FromString(TEXT("투입"));
 }
 
 void AAO_newTrain::BeginPlay()

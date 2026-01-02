@@ -2,7 +2,6 @@
 
 #include "EngineUtils.h"
 #include "Engine/DataTable.h"
-#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Item/AO_MasterItem.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -19,12 +18,19 @@ AAO_VendingMachine::AAO_VendingMachine()
 	SetRootComponent(StaticMesh);
 	StaticMesh->SetIsReplicated(true);
 	ItemMesh->SetupAttachment(StaticMesh);
+
+	InteractionTitle = FText::FromString(TEXT("상품"));
+	InteractionContent = FText::FromString(TEXT("구매"));
 	
-	InteractableComp = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
-	if (InteractableComp)
-	{
-		InteractableComp->OnInteractionSuccess.AddDynamic(this, &AAO_VendingMachine::HandleInteractionSuccess);
-	}
+	PriceDisplayText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PriceDisplay"));
+	PriceDisplayText->SetupAttachment(RootComponent);
+	PriceDisplayText->SetHorizontalAlignment(EHTA_Center);
+	PriceDisplayText->SetVerticalAlignment(EVRTA_TextCenter);
+	
+	ItemExplainText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("ItemExplainDisplay"));
+	ItemExplainText->SetupAttachment(RootComponent);
+	ItemExplainText->SetHorizontalAlignment(EHTA_Center);
+	ItemExplainText->SetVerticalAlignment(EVRTA_TextCenter);
 }
 
 void AAO_VendingMachine::BeginPlay()
@@ -91,13 +97,22 @@ void AAO_VendingMachine::ApplyItemData()
 			if (int32 TableData = Row->ItemPrice)
 			{
 				ItemPrice = TableData;
+				if (PriceDisplayText)
+				{
+					PriceDisplayText->SetText(FText::FromString(FString::Printf(TEXT("%d"), ItemPrice)));
+				}
 			}
+			FString TableExplainData = Row->ItemExplain;
+			if (!TableExplainData.IsEmpty())
+			ItemExplainText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *TableExplainData)));
 		}
 	}
 }
 
-void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
+void AAO_VendingMachine::OnInteractionSuccess(AActor* Interactor)
 {
+	Super::OnInteractionSuccess(Interactor);
+
 	if (!HasAuthority())
 	{
 		return;
@@ -115,7 +130,7 @@ void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
 void AAO_VendingMachine::SpawnVendingItem()
 {
 	FVector SpawnLocation = StaticMesh->GetComponentLocation()
-		+ GetActorForwardVector() * 40.f;
+		+ GetActorForwardVector() * 100.f;
 
 	FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 

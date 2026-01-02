@@ -41,7 +41,18 @@ public:
 protected:
 	FTimerHandle UnmuteVoiceTimerHandle;
 
+//ms: 패시브 초기화
+protected:
+	UPROPERTY(ReplicatedUsing = OnRep_RunResetTrigger)
+	int32 RunResetTrigger = 0;
+
+	UFUNCTION()
+	void OnRep_RunResetTrigger();
+
 public:
+	void Authority_NotifyGlobalReset();
+	
+	//ms : 선발대 흔적 확인
 	UPROPERTY(Replicated)
 	bool bHint1 = false;
 	UPROPERTY(Replicated)
@@ -51,7 +62,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void FindHint(int32 Num);
-
 	bool CheckHintCount();
-	
+	//-ms
 };

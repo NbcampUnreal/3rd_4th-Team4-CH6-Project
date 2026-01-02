@@ -89,3 +89,8 @@ void UAO_Passive_WorldSubsystem::RestorePlayerGASData(APlayerController* PC)
     
     PlayerSnapshots.Remove(PlayerId);
 }
+
+void UAO_Passive_WorldSubsystem::ClearAllPlayerData()
+{
+    PlayerSnapshots.Empty();
+}
