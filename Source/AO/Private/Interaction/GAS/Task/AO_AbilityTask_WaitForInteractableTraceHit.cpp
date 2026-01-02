@@ -88,6 +88,36 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::PerformTrace()
 		return;
 	}
 
+	if (ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		FGameplayTagContainer BlockTags;
+		BlockTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
+		BlockTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Action.Kidnap")));
+		BlockTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable")));
+		
+		// 하나라도 있으면 차단
+		if (ActorInfo->AbilitySystemComponent->HasAnyMatchingGameplayTags(BlockTags))
+		{
+			// 기존 하이라이트 제거
+			if (CurrentInteractionInfos.Num() > 0)
+			{
+				const bool bShouldOutlineEffect = InteractionQuery.RequestingController.IsValid() 
+					&& InteractionQuery.RequestingController->IsLocalController();
+				
+				if (bShouldOutlineEffect)
+				{
+					HighlightInteractables(CurrentInteractionInfos, false);
+				}
+				
+				// UI 제거
+				CurrentInteractionInfos.Empty();
+				InteractableChanged.Broadcast(CurrentInteractionInfos);
+			}
+			
+			return;
+		}
+	}
+
 	InteractionQuery.RequestingAvatar = AvatarActor;
 	InteractionQuery.RequestingController = ActorInfo->PlayerController.Get();
 	

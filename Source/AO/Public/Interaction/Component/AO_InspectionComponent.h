@@ -69,6 +69,9 @@ public:
 	// 내부 컴포넌트 검사
 	bool IsInternalClickableComponent(UPrimitiveComponent* Component) const;
 
+	UFUNCTION(BlueprintPure)
+	UUserWidget* GetCurrentInspectionUI() const { return CurrentInspectionUI; }
+
 protected:
     virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -91,7 +94,8 @@ private:
     FVector ClampCameraPosition(const FVector& NewPosition) const;
 
     UFUNCTION(Client, Reliable)
-    void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings);
+    void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle,
+    	FAO_InspectionCameraSettings CameraSettings, TSubclassOf<UUserWidget> InspectionUIClass);
 
     UFUNCTION(Client, Reliable)
     void ClientNotifyInspectionEnded(AActor* InspectableActor);
@@ -142,6 +146,9 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyInspectionInput(FVector2D InputValue, float DeltaTime);
 
+	void CreateInspectionUI(TSubclassOf<UUserWidget> UIClass);
+	void RemoveInspectionUI();
+
 	FTimerHandle HoverTraceTimerHandle;
 	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;
     
@@ -174,4 +181,7 @@ private:
 
 	// 태그 변경 감지 핸들
 	TArray<FDelegateHandle> CancelTagDelegateHandles;
+	
+	UPROPERTY()
+	TObjectPtr<UUserWidget> CurrentInspectionUI;
 };

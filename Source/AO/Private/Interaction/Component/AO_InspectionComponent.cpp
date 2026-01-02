@@ -15,6 +15,7 @@
 #include "GameFramework/Character.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Interaction/Interface/AO_Interface_InspectionCameraTypes.h"
 #include "Puzzle/Actor/Cannon/AO_CannonElement.h"
@@ -78,6 +79,8 @@ void UAO_InspectionComponent::BeginPlay()
 
 void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	RemoveInspectionUI();
+	
 	Super::EndPlay(EndPlayReason);
 
 	// 모든 타이머 클리어
@@ -198,14 +201,29 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
     	CameraSettings.bHideCharacter = true;
     }
 
+	TSubclassOf<UUserWidget> InspectionUIClass = nullptr;
+	
+	// UI 가져오기
+	if (IAO_Interface_Interactable* Interactable = Cast<IAO_Interface_Interactable>(InspectableActor))
+	{
+		FAO_InteractionInfo InteractionInfo = Interactable->GetInteractionInfo(FAO_InteractionQuery());
+		InspectionUIClass = InteractionInfo.InspectionUIClass;
+	}
+
     // ClientRPC로 클라이언트도 어빌리티를 활성화할 수 있도록 Handle도 함께 전달
-    ClientNotifyInspectionStarted(InspectableActor, GrantedClickAbilityHandle, CameraSettings);
+    ClientNotifyInspectionStarted(InspectableActor, GrantedClickAbilityHandle, CameraSettings, InspectionUIClass);
     
     // 리슨서버에서 ClientRPC는 호스트 본인에게는 전달되지 않으므로 로컬에서 직접 실행
 	TObjectPtr<APlayerController> LocalPC = Cast<APlayerController>(Owner->GetOwner());
 	if (LocalPC && LocalPC->IsLocalController())
 	{
 		CurrentCameraSettings = CameraSettings;
+
+		if (InspectionUIClass)
+		{
+			CreateInspectionUI(InspectionUIClass);
+		}
+		
 		ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
 	}
 }
@@ -277,7 +295,8 @@ void UAO_InspectionComponent::ExitInspectionMode()
     }
 }
 
-void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings)
+void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle,
+	FAO_InspectionCameraSettings CameraSettings, TSubclassOf<UUserWidget> InspectionUIClass)
 {
     if (!InspectableActor)
     {
@@ -289,6 +308,11 @@ void UAO_InspectionComponent::ClientNotifyInspectionStarted_Implementation(AActo
     // 서버에서 전달받은 Handle 저장
     GrantedClickAbilityHandle = AbilityHandle;
     CurrentCameraSettings = CameraSettings;
+
+	if (InspectionUIClass)
+	{
+		CreateInspectionUI(InspectionUIClass);
+	}
 
     ClientEnterInspection(CameraSettings.CameraLocation, CameraSettings.CameraRotation);
 }
@@ -421,6 +445,8 @@ void UAO_InspectionComponent::ClientExitInspection()
     {
         return;
     }
+
+	RemoveInspectionUI();
 
 	if (TObjectPtr<AAO_CannonElement> Cannon = Cast<AAO_CannonElement>(CurrentInspectedActor))
 	{
@@ -1031,6 +1057,47 @@ bool UAO_InspectionComponent::IsSpacebarMode() const
 	}
 
 	return false;
+}
+
+void UAO_InspectionComponent::CreateInspectionUI(TSubclassOf<UUserWidget> UIClass)
+{
+	// 기존 UI가 있으면 제거
+	RemoveInspectionUI();
+
+	if (!UIClass)
+	{
+		return;
+	}
+
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
+	if (!PC || !PC->IsLocalController())
+	{
+		return;
+	}
+
+	// UI 생성
+	CurrentInspectionUI = CreateWidget<UUserWidget>(PC, UIClass);
+	if (CurrentInspectionUI)
+	{
+		CurrentInspectionUI->AddToViewport();
+		AO_LOG(LogHSJ, Log, TEXT("InspectionComponent: Created UI %s"), *UIClass->GetName());
+	}
+}
+
+void UAO_InspectionComponent::RemoveInspectionUI()
+{
+	if (CurrentInspectionUI)
+	{
+		CurrentInspectionUI->RemoveFromParent();
+		CurrentInspectionUI = nullptr;
+		AO_LOG(LogHSJ, Log, TEXT("InspectionComponent: Removed UI"));
+	}
 }
 
 void UAO_InspectionComponent::ServerNotifyInspectionAction_Implementation()
