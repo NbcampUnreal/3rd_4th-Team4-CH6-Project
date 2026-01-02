@@ -52,10 +52,11 @@ void UAO_DummyCustomComponent::SaveCustomizingData()
 	PlayerState->ServerRPC_SetCharacterCustomizingData(CustomizingData);
 }
 
-void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh)
+void UAO_DummyCustomComponent::ChangeCharacterMeshInBlueprint(ECharacterMesh NewMeshType, USkeletalMesh* NewMesh, float NewCapsuleHeight)
 {
 	CustomizingData.CharacterMeshType = NewMeshType;
 	CustomizingData.CharacterSkeletalMesh = NewMesh;
+	CustomizingData.CapsuleHalfHeight = NewCapsuleHeight;
 	
 	TObjectPtr<UCustomizableObjectInstance> Instance = GetCurrentCustomizableObjectInstanceFromMap();
 	checkf(Instance, TEXT("Instance is invalid"));
