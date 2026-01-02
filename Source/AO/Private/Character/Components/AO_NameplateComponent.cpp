@@ -4,6 +4,7 @@
 
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Player/AO_NameTagWidget.h"
 
@@ -11,6 +12,8 @@ UAO_NameplateComponent::UAO_NameplateComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
+
+	SetIsReplicatedByDefault(true);
 }
 
 void UAO_NameplateComponent::BeginPlay()
@@ -18,14 +21,16 @@ void UAO_NameplateComponent::BeginPlay()
 	Super::BeginPlay();
 
 	EnsureWidgetComponent();
-
 	ApplyDistanceVisuals();
-}
 
-void UAO_NameplateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	CachedPlayerState.Reset();
-	Super::EndPlay(EndPlayReason);
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		TryInitNameFromOwner();
+	}
+	else
+	{
+		ApplyDisplayNameToWidget();
+	}
 }
 
 void UAO_NameplateComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -41,28 +46,83 @@ void UAO_NameplateComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	ApplyDistanceVisuals();
 }
 
-void UAO_NameplateComponent::SetDisplayName(const FText& InName)
+void UAO_NameplateComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
-	EnsureWidgetComponent();
-	if (WidgetInstance)
-	{
-		WidgetInstance->SetPlayerName(InName);
-	}
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UAO_NameplateComponent, DisplayName);
 }
 
 void UAO_NameplateComponent::HandlePlayerStateChanged(APlayerState* NewPlayerState)
 {
-	CachedPlayerState = NewPlayerState;
-
-	if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(NewPlayerState))
+	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
-		RefreshNameFromPlayerState();
-
-		AO_PS->OnPlayerNameReady.AddUObject(this, &UAO_NameplateComponent::SetDisplayName);
+		return;
 	}
-	else
+
+	if (!NewPlayerState)
 	{
-		RefreshNameFromPlayerState();
+		return;
+	}
+
+	const FString PlayerName = NewPlayerState->GetPlayerName();
+	if (!PlayerName.IsEmpty())
+	{
+		SetDisplayName_Server(FText::FromString(PlayerName));
+	}
+	else if (AAO_PlayerState* PS = Cast<AAO_PlayerState>(NewPlayerState))
+	{
+		PS->OnPlayerNameReady.AddUObject(this, &UAO_NameplateComponent::SetDisplayName_Server);
+	}
+}
+
+void UAO_NameplateComponent::OnRep_DisplayName()
+{
+	ApplyDisplayNameToWidget();
+}
+
+void UAO_NameplateComponent::SetDisplayName_Server(const FText& InName)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	if (!DisplayName.EqualTo(InName))
+	{
+		DisplayName = InName;
+
+		ApplyDisplayNameToWidget();
+	}
+}
+
+void UAO_NameplateComponent::ApplyDisplayNameToWidget()
+{
+	EnsureWidgetComponent();
+
+	if (WidgetInstance)
+	{
+		WidgetInstance->SetPlayerName(DisplayName);
+	}
+}
+
+void UAO_NameplateComponent::TryInitNameFromOwner()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	APawn* PawnOwner = Cast<APawn>(GetOwner());
+	if (!PawnOwner)
+	{
+		return;
+	}
+
+	APlayerState* PS = PawnOwner->GetPlayerState();
+	if (PS)
+	{
+		HandlePlayerStateChanged(PS);
 	}
 }
 
@@ -88,26 +148,12 @@ void UAO_NameplateComponent::EnsureWidgetComponent()
 	if (NameplateWidgetClass)
 	{
 		WidgetComponent->SetWidgetClass(NameplateWidgetClass);
+		WidgetComponent->InitWidget();
 	}
 
 	if (UUserWidget* Widget = WidgetComponent->GetUserWidgetObject())
 	{
 		WidgetInstance = Cast<UAO_NameTagWidget>(Widget);
-	}
-}
-
-void UAO_NameplateComponent::RefreshNameFromPlayerState()
-{
-	APlayerState* PS = CachedPlayerState.Get();
-	if (ensure(!PS))
-	{
-		return;
-	}
-
-	const FString PlayerName = PS->GetPlayerName();
-	if (!PlayerName.IsEmpty())
-	{
-		SetDisplayName(FText::FromString(PlayerName));
 	}
 }
 
