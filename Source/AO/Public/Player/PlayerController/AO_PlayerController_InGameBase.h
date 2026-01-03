@@ -57,7 +57,7 @@ public:
 	void Client_StopVoiceChat();
 
 	UFUNCTION(Client, Reliable)
-	void Client_UpdateVoiceMember(AAO_PlayerState* DeadPlayerState);
+	void Client_UpdateVoiceMember(AAO_PlayerState* ChangedPlayerState);
 
 	UFUNCTION(Client, Reliable)
 	void Client_UnmuteVoiceMember(AAO_PlayerState* AlivePlayerState);

@@ -26,7 +26,7 @@ private:
 	
 public:
 	void StopVoiceChatForAllClients() const;
-	void LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& DeadPlayerController);
+	void LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& ChangedPlayerController);
 	void Test_LetUnmuteVoiceMemberForSurvivor(const TObjectPtr<AAO_PlayerController_InGameBase>& AlivePC);
 
 	// JM : 보이스 채팅 크래시 방지를 위한 작업
