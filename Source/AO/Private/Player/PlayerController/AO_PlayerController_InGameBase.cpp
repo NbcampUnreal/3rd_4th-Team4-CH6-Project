@@ -420,8 +420,8 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
 {
 	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
-	// TODO : Pending URL 저장하기
-	// UpdateLoadingMapName(URL);
+
+	UpdateLoadingMapName(URL);	// 로딩화면 맵 이름 지정
 
 	if (ULoadingScreenManager* LoadingScreenManager = GetGameInstance()->GetSubsystem<ULoadingScreenManager>())
 	{
