@@ -16,6 +16,9 @@
 #include "Maps/Traversal/AO_TraversableComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "AO_Log.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
+
+static FGameplayTag TAG_Fail_NotEnoughStamina = FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"));
 
 UAO_GameplayAbility_Traversal::UAO_GameplayAbility_Traversal()
 {
@@ -51,6 +54,23 @@ bool UAO_GameplayAbility_Traversal::CanActivateAbility(const FGameplayAbilitySpe
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		return false;
+	}
+	
+	const float CurrentStamina = AttributeSet->GetStamina();
+	if (CurrentStamina < StaminaCost)
+	{
+		if (OptionalRelevantTags)
+		{
+			OptionalRelevantTags->AddTag(TAG_Fail_NotEnoughStamina);
+			AO_LOG(LogKH, Warning, TEXT("Traversal Ability Failed: NotEnoughStamina"));
+		}
+		return false;
+	}
+	
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;
