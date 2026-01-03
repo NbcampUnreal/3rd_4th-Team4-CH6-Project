@@ -2,6 +2,7 @@
 
 #include "Player/PlayerController/AO_PlayerController_MainMenu.h"
 
+#include "AO_DelegateManager.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "UI/Widget/AO_MainMenuWidget.h"
@@ -66,6 +67,12 @@ void AAO_PlayerController_MainMenu::BeginPlay()
 		}
 	}
 
+	// JM : 초기화 로직이 설청 WBP에 있는 문제... C++로 짰어야 했다..
+	if (UAO_DelegateManager* DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsOpen.Broadcast();
+		DelegateManager->OnSettingsClose.Broadcast();
+	}
 	
 	/* UIStackManager에서 Push/Pop으로 생성/제거
 	// JM 리펙토링 : AO_PlayerController로 생성 로직 이동
