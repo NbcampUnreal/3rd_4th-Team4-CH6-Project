@@ -8,8 +8,6 @@
 #include "Abilities/Tasks/AbilityTask_WaitMovementModeChange.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 
-static FGameplayTag TAG_Fail_NotEnoughStamina = FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"));
-
 UAO_GameplayAbility_Jump::UAO_GameplayAbility_Jump()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -37,7 +35,7 @@ bool UAO_GameplayAbility_Jump::CanActivateAbility(const FGameplayAbilitySpecHand
 	{
 		if (OptionalRelevantTags)
 		{
-			OptionalRelevantTags->AddTag(TAG_Fail_NotEnoughStamina);
+			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
 			AO_LOG(LogKH, Warning, TEXT("Jump Ability Failed: NotEnoughStamina"));
 		}
 		return false;

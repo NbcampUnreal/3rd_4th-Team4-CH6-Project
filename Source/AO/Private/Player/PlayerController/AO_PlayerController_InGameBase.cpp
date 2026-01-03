@@ -25,8 +25,6 @@
 #include "VoipListenerSynthComponent.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 
-static FGameplayTag TAG_Fail_NotEnoughStamina = FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"));
-
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
 	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
@@ -679,7 +677,7 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 
 	checkf(NotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
 
-	if (FailureTags.HasTag(TAG_Fail_NotEnoughStamina))
+	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
 	{
 		AO_LOG(LogKH, Warning, TEXT("Ability Failed: NotEnoughStamina"));
 		

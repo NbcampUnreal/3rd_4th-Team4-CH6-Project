@@ -8,8 +8,6 @@
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-static FGameplayTag TAG_Fail_NotEnoughStamina = FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"));
-
 UAO_GameplayAbility_Sprint::UAO_GameplayAbility_Sprint()
 {
 	const FGameplayTagContainer SprintTag(FGameplayTag::RequestGameplayTag(FName("Ability.Movement.Sprint")));
@@ -38,7 +36,7 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
 	{
 		if (OptionalRelevantTags)
 		{
-			OptionalRelevantTags->AddTag(TAG_Fail_NotEnoughStamina);
+			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
 			AO_LOG(LogKH, Warning, TEXT("Sprint Ability Failed: NotEnoughStamina"));
 		}
 		return false;
