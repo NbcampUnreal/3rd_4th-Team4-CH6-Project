@@ -14,10 +14,12 @@ void AAO_PlayerController::PreClientTravel(const FString& PendingURL, ETravelTyp
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("Client Travel To %s"), *PendingURL), false);	// JM : 디버그용
 	
-	if (IsLocalController())
+	/* JM : 기존 로직 삭제 (이 시점은 너무 늦어서 간혹 제대로 반영 안될 때가 많음
+	 * PC_InGameBase::PrepareClientTravel에서 로딩맵이름 업데이트함
+	 *if (IsLocalController())
 	{
 		UpdateLoadingMapName(PendingURL);
-	}
+	}*/
 
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -48,9 +50,8 @@ UAO_UserWidget* AAO_PlayerController::GetOrCreateSettingsWidgetInstance()
 void AAO_PlayerController::UpdateLoadingMapName(const FString& PendingURL) const
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-	
-	ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
-	if (LSM)
+
+	if (ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>())
 	{
 		LSM->PendingMapName = PendingURL;
 	}

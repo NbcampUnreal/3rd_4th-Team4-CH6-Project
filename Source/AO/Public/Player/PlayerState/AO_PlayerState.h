@@ -87,6 +87,7 @@ private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
 
+	void InitVoiceChat();
 	// 플레이어 이름 준비 완료시 브로드캐스트
 	void BroadcastPlayerNameReady();
 

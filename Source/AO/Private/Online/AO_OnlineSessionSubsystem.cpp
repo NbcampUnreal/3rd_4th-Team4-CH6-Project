@@ -1237,3 +1237,59 @@ void UAO_OnlineSessionSubsystem::UnmuteAllRemoteTalker()
 	}
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
+
+void UAO_OnlineSessionSubsystem::MuteAllDeadRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("Invalid World")))
+	{
+		return;
+	}
+	
+	for (APlayerState* OtherPS : World->GetGameState()->PlayerArray)
+	{
+		if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Invalid")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+		if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		if (AO_OtherPS->bIsAlive)
+		{
+			continue;
+		}
+
+		MuteRemoteTalker(0, AO_OtherPS, false);
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+bool UAO_OnlineSessionSubsystem::IsRemotePlayerTalking(APlayerState* PS)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	{
+		return false;
+	}
+
+	TSharedPtr<const FUniqueNetId> PSId = PS->GetUniqueId().GetUniqueNetId();
+	if (!AO_ENSURE(PSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	{
+		return false;
+	}
+
+	bool result = VoiceInterface->IsRemotePlayerTalking(*PSId); 
+	AO_LOG(LogJM, Log, TEXT("End (return %d)"), result);
+	
+	return result;
+}

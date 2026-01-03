@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Game/GameState/AO_GameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Train/AO_newTrain.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
@@ -38,6 +39,8 @@ void AAO_GameMode_Stage::BeginPlay()
 				AO_LOG(LogJSH, Log, TEXT("Stage BeginPlay: Sync SharedReviveCount GI(%d) -> GS"), ReviveCount);
 			}
 		}
+		// 스테이지 시작 시 부활 대기 큐 초기화
+		PendingReviveQueue.Empty();
 	}
 
 	AO_LOG(LogJM, Log, TEXT("BeginPlay End"));
@@ -246,6 +249,28 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 		*ChangedPlayerState->GetPlayerName(),
 		ChangedPlayerState->GetIsAlive() ? TEXT("true") : TEXT("false")
 	);
+	
+	// bIsAlive 변경에 따라 부활 대기 큐 관리
+	if (ChangedPlayerState->GetIsAlive())
+	{
+		// 다시 살아난 경우 → 큐에서 제거
+		// JSH: 자동 부활 큐에서의 제거는 TryAutoReviveFromQueue() 쪽에서만 처리
+		//RemoveFromPendingRevive(ChangedPlayerState);
+	}
+	else
+	{
+		// 죽은 경우 → 큐에 추가
+		EnqueuePendingRevive(ChangedPlayerState);
+
+		// 죽은 시점에 공용 부활 카운트가 남아 있다면 즉시 자동 부활 시도
+		TryAutoReviveFromQueue();
+	}
+	
+	// JM : 캐릭터 생존 상태 변경 시, 모든 플레이어의 보이스 채팅 Mute 상태 업데이트 (논리적 분리)
+	if (AAO_PlayerController_InGameBase* AO_PC_InGameBase = Cast<AAO_PlayerController_InGameBase>(ChangedPlayerState->GetPlayerController()))
+	{
+		LetUpdateVoiceMemberForAllClients(AO_PC_InGameBase);
+	}
 
 	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
 	EvaluateTeamWipe();
@@ -395,6 +420,198 @@ void AAO_GameMode_Stage::EvaluateTeamWipe()
 		AO_LOG(LogJSH, Log, TEXT("EvaluateTeamWipe: No alive players but revive left (%d) -> Wait"),
 			AO_GI->GetSharedReviveCount());
 	}
+}
+
+void AAO_GameMode_Stage::EnqueuePendingRevive(AAO_PlayerState* DeadPlayerState)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (DeadPlayerState == nullptr)
+	{
+		return;
+	}
+
+	for (const TWeakObjectPtr<AAO_PlayerState>& Entry : PendingReviveQueue)
+	{
+		if (Entry.Get() == DeadPlayerState)
+		{
+			return;
+		}
+	}
+
+	PendingReviveQueue.Add(DeadPlayerState);
+
+	AO_LOG
+	(
+		LogJSH,
+		Log,
+		TEXT("EnqueuePendingRevive: %s added. QueueSize=%d"),
+		*DeadPlayerState->GetPlayerName(),
+		PendingReviveQueue.Num()
+	);
+}
+
+void AAO_GameMode_Stage::RemoveFromPendingRevive(AAO_PlayerState* PlayerState)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (PlayerState == nullptr)
+	{
+		return;
+	}
+
+	int32 Index = 0;
+
+	while (Index < PendingReviveQueue.Num())
+	{
+		if (PendingReviveQueue[Index].Get() == PlayerState)
+		{
+			PendingReviveQueue.RemoveAt(Index);
+
+			AO_LOG
+			(
+				LogJSH,
+				Log,
+				TEXT("RemoveFromPendingRevive: %s removed. QueueSize=%d"),
+				*PlayerState->GetPlayerName(),
+				PendingReviveQueue.Num()
+			);
+
+			continue;
+		}
+
+		++Index;
+	}
+}
+
+void AAO_GameMode_Stage::TryAutoReviveFromQueue()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (bStageEnded)
+	{
+		return;
+	}
+
+	if (PendingReviveQueue.Num() <= 0)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
+	AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+
+	if (AO_GI == nullptr)
+	{
+		return;
+	}
+
+	if (AO_GS == nullptr)
+	{
+		return;
+	}
+
+	if (AO_GI->GetSharedReviveCount() <= 0)
+	{
+		return;
+	}
+
+	AO_LOG
+	(
+		LogJSH,
+		Log,
+		TEXT("TryAutoReviveFromQueue: Start. QueueSize=%d, SharedRevive=%d"),
+		PendingReviveQueue.Num(),
+		AO_GI->GetSharedReviveCount()
+	);
+
+	int32 Index = 0;
+
+	while (Index < PendingReviveQueue.Num())
+	{
+		TWeakObjectPtr<AAO_PlayerState>& Entry = PendingReviveQueue[Index];
+		AAO_PlayerState* DeadPS = Entry.Get();
+
+		if (DeadPS == nullptr)
+		{
+			PendingReviveQueue.RemoveAt(Index);
+			continue;
+		}
+
+		if (DeadPS->GetIsAlive())
+		{
+			PendingReviveQueue.RemoveAt(Index);
+			continue;
+		}
+
+		if (AO_GI->GetSharedReviveCount() <= 0)
+		{
+			break;
+		}
+
+		APlayerController* DeadPC = DeadPS->GetPlayerController();
+		if (DeadPC == nullptr)
+		{
+			++Index;
+			continue;
+		}
+
+		const bool bSuccess = TryRevivePlayer(DeadPC);
+		if (bSuccess)
+		{
+			if (AAO_PlayerController_Stage* StagePC = Cast<AAO_PlayerController_Stage>(DeadPC))
+			{
+				StagePC->Client_OnRevived();
+			}
+
+			PendingReviveQueue.RemoveAt(Index);
+			continue;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	AO_LOG
+	(
+		LogJSH,
+		Log,
+		TEXT("TryAutoReviveFromQueue: End. QueueSize=%d, SharedRevive=%d"),
+		PendingReviveQueue.Num(),
+		AO_GI->GetSharedReviveCount()
+	);
+}
+
+void AAO_GameMode_Stage::HandleSharedReviveCountIncreased()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (bStageEnded)
+	{
+		return;
+	}
+
+	// 관전 중이며 큐에 쌓여 있던 플레이어들을 먼저 죽은 순서대로 자동 부활
+	TryAutoReviveFromQueue();
 }
 
 void AAO_GameMode_Stage::RollbackSessionInGameFlag()

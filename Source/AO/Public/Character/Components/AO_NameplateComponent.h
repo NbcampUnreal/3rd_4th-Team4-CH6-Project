@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Net/VoiceConfig.h"
 #include "AO_NameplateComponent.generated.h"
 
 class UAO_CustomizingComponent;
@@ -27,6 +28,7 @@ protected:
 	
 public:
 	void HandlePlayerStateChanged(APlayerState* NewPlayerState);
+	void SetVOIPTalker(UVOIPTalker* InTalker);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Nameplate|Widget")
@@ -71,6 +73,12 @@ private:
 
 	TWeakObjectPtr<UAO_CustomizingComponent> CachedCustomizingComponent;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UVOIPTalker> CachedVOIPTalker;	// [추가] 위젯이 생성되기 전에 들어올 경우를 대비해 저장해둘 변수
+
+	bool bIsTalking = false;
+
+private:
 	UFUNCTION()
 	void OnRep_DisplayName();
 
@@ -88,4 +96,6 @@ private:
 	void TryInitNameFromOwner();
 	void ApplyDistanceVisuals();
 	bool ShouldHideForSelf() const;
+
+	void UpdateIsTalking();		// JM : 마이크 사용 체크
 };

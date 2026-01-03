@@ -40,7 +40,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AO|Widget")
 	TSubclassOf<UAO_UserWidget> SettingsWidgetClass;
 
-private:
 	UPROPERTY()
 	TObjectPtr<UAO_UserWidget> SettingsWidgetInstance = nullptr;
 	

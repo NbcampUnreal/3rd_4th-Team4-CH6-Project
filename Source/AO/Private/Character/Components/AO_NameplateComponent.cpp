@@ -109,6 +109,15 @@ void UAO_NameplateComponent::HandlePlayerStateChanged(APlayerState* NewPlayerSta
 	}
 }
 
+void UAO_NameplateComponent::SetVOIPTalker(UVOIPTalker* InTalker)
+{
+	AO_LOG(LogJM, Log, TEXT("SetVOIPTalker: %s"), *InTalker->GetName());
+
+	CachedVOIPTalker = InTalker;
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
 void UAO_NameplateComponent::OnRep_DisplayName()
 {
 	ApplyDisplayNameToWidget();
@@ -246,6 +255,9 @@ void UAO_NameplateComponent::ApplyDistanceVisuals()
 	// 멀수록 살짝 위로
 	const float ZOffset = CapsuleHeight + BaseZOffset + FMath::Lerp(0.f, ExtraZOffset, Alpha);
 	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, ZOffset));
+
+	// JM :
+	UpdateIsTalking();
 }
 
 bool UAO_NameplateComponent::ShouldHideForSelf() const
@@ -258,5 +270,29 @@ bool UAO_NameplateComponent::ShouldHideForSelf() const
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 
 	return (Pawn && Pawn->IsLocallyControlled());
+}
+
+void UAO_NameplateComponent::UpdateIsTalking()
+{
+	if (!CachedVOIPTalker)
+	{
+		AO_LOG(LogJM, Warning, TEXT("CachedVOIPTalker is NULL"));
+		return;
+	}
+	
+	if (WidgetInstance)
+	{
+		if (bIsTalking && CachedVOIPTalker->GetVoiceLevel() <= 0.01f)	// JM : 0.01보다 작아져야 스피커 안보이게 함(같은 수치로하면 너무 깜빡깜빡거려서)
+		{
+			bIsTalking = false;
+		}
+		else if (!bIsTalking && CachedVOIPTalker->GetVoiceLevel() > 0.02f)
+		{
+			bIsTalking = true;
+		}
+		// AO_LOG(LogJM, Log, TEXT("Voice Level: %f"), CachedVOIPTalker->GetVoiceLevel());
+		// const bool bIsTalking = (CachedVOIPTalker->GetVoiceLevel() > 0.02f);
+		WidgetInstance->SetPlayerTalkingVisibility(bIsTalking);
+	}
 }
 

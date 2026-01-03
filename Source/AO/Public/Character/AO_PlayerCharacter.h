@@ -217,7 +217,7 @@ private:
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
-	void InitVoiceChat();
+	// void InitVoiceChat();
 	
 public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "AO|VoiceChat")
