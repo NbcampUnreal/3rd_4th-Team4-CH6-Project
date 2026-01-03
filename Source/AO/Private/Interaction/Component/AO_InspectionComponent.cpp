@@ -79,6 +79,36 @@ void UAO_InspectionComponent::BeginPlay()
 
 void UAO_InspectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (bIsInspecting && CurrentInspectedActor)
+	{
+		if (TObjectPtr<UAO_InspectableComponent> InspectableComp = CurrentInspectedActor->FindComponentByClass<UAO_InspectableComponent>())
+		{
+			InspectableComp->SetInspectionLocked(false, nullptr);
+		}
+		
+		// 하이라이트 직접 정리
+		if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor))
+		{
+			// ExternalMeshMappings 직접 순회
+			for (const FAO_ExternalMeshMapping& Mapping : OverwatchPuzzle->ExternalMeshMappings)
+			{
+				if (!Mapping.TargetActor) continue;
+
+				TArray<UPrimitiveComponent*> Comps;
+				Mapping.TargetActor->GetComponents<UPrimitiveComponent>(Comps);
+				
+				for (UPrimitiveComponent* Comp : Comps)
+				{
+					if (Comp && Comp->GetFName() == Mapping.ComponentName)
+					{
+						Comp->SetRenderCustomDepth(false);
+						break;
+					}
+				}
+			}
+		}
+	}
+	
 	RemoveInspectionUI();
 	
 	Super::EndPlay(EndPlayReason);
