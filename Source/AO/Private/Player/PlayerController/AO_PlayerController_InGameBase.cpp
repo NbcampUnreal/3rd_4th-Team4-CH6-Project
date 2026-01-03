@@ -201,27 +201,52 @@ void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AAO_PlayerState* DeadPlayerState)
+void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AAO_PlayerState* ChangedPlayerState)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	if (!AO_ENSURE(DeadPlayerState, TEXT("Dead PS is nullptr")))
+	if (!AO_ENSURE(ChangedPlayerState, TEXT("Dead PS is nullptr")))
 	{
 		return;
 	}
 
-	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
 	if (!AO_ENSURE(OSS, TEXT("OSS is nullptr")))
 	{
 		return;
 	}
 
-	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
-	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+	AAO_PlayerState* AO_MyPS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_MyPS, TEXT("Cast Failed PS -> AO_MyPS")))
 	{
 		return;
 	}
 
+	if (ChangedPlayerState == AO_MyPS)	// 변화한 플레이어가 나인 경우
+	{
+		if (ChangedPlayerState->bIsAlive)	// 내가 부활한 경우
+		{
+			OSS->MuteAllDeadRemoteTalker();	// 죽은 사람들만 Mute
+		}
+		else  // 내가 죽은 경우
+		{
+			OSS->UnmuteAllRemoteTalker();	// 모두 unmute
+		}
+	}
+	else    // 변화한 플레이어가 타인인 경우
+	{
+		// 내가 죽은 상태일 때는 따로 변화 X (아래는 내가 살아있는 경우)
+		if (ChangedPlayerState->bIsAlive)	// 타인이 부활한 경우
+		{
+			OSS->UnmuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+		else								// 타인이 사망한 경우
+		{
+			OSS->MuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+	}
+
+	/*
 	if (DeadPlayerState == AO_PS)	// 내가 죽은 경우, 다른 사람 모두 Unmute
 	{
 		TObjectPtr<UWorld> World = GetWorld();
@@ -255,7 +280,7 @@ void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AA
 	else if (AO_PS->bIsAlive)		// 내가 살아있다면, 죽은 사람 소리 Mute
 	{
 		OSS->MuteRemoteTalker(0, DeadPlayerState, false);
-	}
+	}*/
 
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
@@ -395,6 +420,8 @@ void AAO_PlayerController_InGameBase::Test_Alive()
 void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
 {
 	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
+	// TODO : Pending URL 저장하기
+	// UpdateLoadingMapName(URL);
 
 	if (ULoadingScreenManager* LoadingScreenManager = GetGameInstance()->GetSubsystem<ULoadingScreenManager>())
 	{
