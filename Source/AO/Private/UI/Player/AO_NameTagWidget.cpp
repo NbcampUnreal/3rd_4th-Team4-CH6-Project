@@ -26,6 +26,6 @@ void UAO_NameTagWidget::SetPlayerTalkingVisibility(const bool bIsTalking)
 	}
 	else
 	{
-		Img_IsTalking->SetVisibility(ESlateVisibility::Collapsed);
+		Img_IsTalking->SetVisibility(ESlateVisibility::Hidden);
 	}
 }

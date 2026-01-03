@@ -721,6 +721,12 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 		// InitVoiceChat();
 	}*/
 	
+	// JM : 보이스 사용중임을 판단하기 위함
+	if (NameplateComponent)
+	{
+		NameplateComponent->SetVOIPTalker(VOIPTalker);
+	}
+	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
