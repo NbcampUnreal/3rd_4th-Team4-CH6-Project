@@ -108,11 +108,6 @@ void UAO_GameplayAbility_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 	{
 		CharacterMovement->SetMovementMode(MOVE_Flying);
 	}
-	
-	if (ActorInfo->IsNetAuthority())
-	{
-		CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
-	}
 }
 
 void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -121,14 +116,6 @@ void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle 
 {
 	if (IsEndAbilityValid(Handle, ActorInfo))
 	{
-		if (ActorInfo->IsNetAuthority())
-		{
-			if (CapsuleComponent)
-			{
-				CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, false);
-			}
-		}
-
 		if (CharacterMovement)
 		{
 			if (TraversalResult.ActionType == ETraversalActionType::Vault)
