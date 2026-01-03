@@ -125,9 +125,6 @@ public:
 	TWeakObjectPtr<UPrimitiveComponent> CachedHoverComponent;
 	TWeakObjectPtr<AActor> CachedHoverActor;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<UInputMappingContext> InspectionInputContext;
-
 	UPROPERTY(EditAnywhere, Category = "Inspection")
 	FGameplayTagContainer CancelInspectionTags;
 

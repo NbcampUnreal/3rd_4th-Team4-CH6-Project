@@ -351,16 +351,6 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         return;
     }
 
-	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
-		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-	{
-		// Inspection Context 추가
-		if (InspectionInputContext)
-		{
-			InputSubsystem->AddMappingContext(InspectionInputContext, 0);
-		}
-	}
-
     // 이미 Inspection 카메라가 있으면 스킵(서버일 경우)
     if (InspectionCameraActor)
     {
@@ -465,15 +455,6 @@ void UAO_InspectionComponent::ClientExitInspection()
     {
         return;
     }
-
-	if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem = 
-		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-	{
-		if (InspectionInputContext)
-		{
-			InputSubsystem->RemoveMappingContext(InspectionInputContext);
-		}
-	}
 	
 	//JSH : 일시정지 설정창 언락
 	if (UGameInstance* GI = PC->GetGameInstance())
