@@ -3,8 +3,10 @@
 #include "Character/GAS/Ability/AO_GameplayAbility_Jump.h"
 
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "GameFramework/Character.h"
 #include "Abilities/Tasks/AbilityTask_WaitMovementModeChange.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 
 UAO_GameplayAbility_Jump::UAO_GameplayAbility_Jump()
 {
@@ -22,6 +24,23 @@ bool UAO_GameplayAbility_Jump::CanActivateAbility(const FGameplayAbilitySpecHand
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		return false;
+	}
+	
+	const float CurrentStamina = AttributeSet->GetStamina();
+	if (CurrentStamina < StaminaCost)
+	{
+		if (OptionalRelevantTags)
+		{
+			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
+			AO_LOG(LogKH, Warning, TEXT("Jump Ability Failed: NotEnoughStamina"));
+		}
+		return false;
+	}
+	
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;

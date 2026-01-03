@@ -53,4 +53,7 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sprint|Stamina")
 	TSubclassOf<UGameplayEffect> PostSprintNoRegenEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sprint|Stamina")
+	float StaminaCost = 2.0f;
 };

@@ -52,6 +52,8 @@ protected:
 	float DrawDebugDuration = 5.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Traversal|Stamina")
 	TSubclassOf<UGameplayEffect> PostSprintNoChangeEffectClass;
+	UPROPERTY(EditDefaultsOnly, Category = "Traversal|Stamina")
+	float StaminaCost = 10.0f;
 	
 private:
 	FTraversalCheckResult TraversalResult;

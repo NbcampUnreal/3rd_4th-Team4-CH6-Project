@@ -246,6 +246,12 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedOpenUI()
 
 		CustomizingWidget->AddToViewport();
 	}
+
+	// HUD 위젯 정리
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+	}
 	
 	FadeTimerHandle.Invalidate();
 	
@@ -263,6 +269,13 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy->Destroy();
 		CustomizingDummy = nullptr;
 	}
+	
+	// HUD 위젯 추가
+	if (!HUDWidget)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+	}
+	HUDWidget->AddToViewport();
 
 	Server_CloseWardrobe();
 	

@@ -7,6 +7,7 @@
 #include "Net/VoiceConfig.h"
 #include "AO_NameplateComponent.generated.h"
 
+class UAO_CustomizingComponent;
 class UAO_NameTagWidget;
 class UWidgetComponent;
 
@@ -22,6 +23,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 public:
@@ -48,7 +50,10 @@ protected:
 	float HideDistance = 1500.f;
 
 	UPROPERTY(EditAnywhere, Category = "Nameplate|Offset")
-	float BaseZOffset = 80.f;
+	float CapsuleHeight = 176.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Nameplate|Offset")
+	float BaseZOffset = 5.f;
 
 	UPROPERTY(EditAnywhere, Category = "Nameplate|Offset")
 	float ExtraZOffset = 10.f;
@@ -66,6 +71,8 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayName)
 	FText DisplayName;
 
+	TWeakObjectPtr<UAO_CustomizingComponent> CachedCustomizingComponent;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UVOIPTalker> CachedVOIPTalker;	// [추가] 위젯이 생성되기 전에 들어올 경우를 대비해 저장해둘 변수
 
@@ -74,6 +81,9 @@ private:
 private:
 	UFUNCTION()
 	void OnRep_DisplayName();
+
+	UFUNCTION()
+	void HandleCapsuleSizeChanged(float NewHalfHeight);
 
 	// 서버에서 이름 갱신
 	void SetDisplayName_Server(const FText& InName);

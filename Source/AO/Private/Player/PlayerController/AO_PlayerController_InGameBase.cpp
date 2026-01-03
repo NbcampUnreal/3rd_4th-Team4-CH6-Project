@@ -173,6 +173,20 @@ void AAO_PlayerController_InGameBase::Tick(float DeltaTime)
 	}
 }
 
+void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	BindASCAbilityFailed();
+}
+
+void AAO_PlayerController_InGameBase::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	BindASCAbilityFailed();
+}
+
 void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
@@ -634,4 +648,44 @@ bool AAO_PlayerController_InGameBase::IsVoiceFullyCleanedUp()
 	}
 	AO_LOG(LogJM, Log, TEXT("All remoteTalkers Muted & Component Unregistered"));
 	return true;
+}
+
+void AAO_PlayerController_InGameBase::BindASCAbilityFailed()
+{
+	APawn* MyPawn = GetPawn();
+	if (!ensure(MyPawn))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = MyPawn->FindComponentByClass<UAbilitySystemComponent>();
+	if (!ensure(ASC))
+	{
+		return;
+	}
+
+	ASC->AbilityFailedCallbacks.RemoveAll(this);
+	ASC->AbilityFailedCallbacks.AddUObject(this, &AAO_PlayerController_InGameBase::HandleAbilityFailed);
+}
+
+void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureTags)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	checkf(NotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
+
+	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
+	{
+		AO_LOG(LogKH, Warning, TEXT("Ability Failed: NotEnoughStamina"));
+		
+		const double Now = GetWorld()->GetTimeSeconds();
+		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
+		{
+			LastNotEnoughStaminaSoundTime = Now;
+			UGameplayStatics::PlaySound2D(this, NotEnoughStaminaSound);
+		}
+	}
 }

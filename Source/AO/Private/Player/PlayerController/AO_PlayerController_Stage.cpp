@@ -15,12 +15,15 @@
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_RemoveFuel_GameplayAbility.h"
 #include "EngineUtils.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
+#include "UI/HUD/AO_HealthWidget.h"
+#include "UI/HUD/AO_StaminaWidget.h"
 /*-----------------------------------*/
 
 AAO_PlayerController_Stage::AAO_PlayerController_Stage()
@@ -38,12 +41,6 @@ void AAO_PlayerController_Stage::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		if (HUDWidgetClass)
-		{
-			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-			HUDWidget->AddToViewport();
-		}
-
 		EnsureSpectateCameraActor();
 	}
 
@@ -75,6 +72,52 @@ void AAO_PlayerController_Stage::EndPlay(const EEndPlayReason::Type EndPlayReaso
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::EndPlay(EndPlayReason);
 	AO_LOG(LogJM, Log, TEXT("End"));	
+}
+
+void AAO_PlayerController_Stage::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidget)
+		{
+			HUDWidget->RemoveFromParent();
+			HUDWidget = nullptr;
+		}
+	
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			if (HUDWidget)
+			{
+				HUDWidget->AddToViewport();
+			}
+		}
+	}
+}
+
+void AAO_PlayerController_Stage::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+	
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidget)
+		{
+			HUDWidget->RemoveFromParent();
+			HUDWidget = nullptr;
+		}
+	
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			if (HUDWidget)
+			{
+				HUDWidget->AddToViewport();
+			}
+		}
+	}
 }
 
 void AAO_PlayerController_Stage::Server_RequestStageExit_Implementation()

@@ -41,4 +41,7 @@ protected:
 
 	UFUNCTION()
 	void OnMovementModeChanged(EMovementMode NewMovementMode);
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Traversal|Stamina")
+	float StaminaCost = 10.0f;
 };
