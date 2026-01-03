@@ -24,6 +24,24 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
                                                     const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
                                                     const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		return false;
+	}
+	
+	const float CurrentStamina = AttributeSet->GetStamina();
+	const float MaxStamina = AttributeSet->GetMaxStamina();
+	if (CurrentStamina < StaminaCost)
+	{
+		if (OptionalRelevantTags)
+		{
+			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
+			AO_LOG(LogKH, Warning, TEXT("Sprint Ability Failed: NotEnoughStamina"));
+		}
+		return false;
+	}
+
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;
@@ -55,15 +73,6 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
 	{
 		return false;
 	}
-
-	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
-	if (!AttributeSet)
-	{
-		return false;
-	}
-	
-	const float CurrentStamina = AttributeSet->GetStamina();
-	const float MaxStamina = AttributeSet->GetMaxStamina();
 
 	if (CurrentStamina < MaxStamina * AttributeSet->StaminaLockoutPercent)
 	{

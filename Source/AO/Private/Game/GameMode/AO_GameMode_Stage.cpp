@@ -265,6 +265,12 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 		// 죽은 시점에 공용 부활 카운트가 남아 있다면 즉시 자동 부활 시도
 		TryAutoReviveFromQueue();
 	}
+	
+	// JM : 캐릭터 생존 상태 변경 시, 모든 플레이어의 보이스 채팅 Mute 상태 업데이트 (논리적 분리)
+	if (AAO_PlayerController_InGameBase* AO_PC_InGameBase = Cast<AAO_PlayerController_InGameBase>(ChangedPlayerState->GetPlayerController()))
+	{
+		LetUpdateVoiceMemberForAllClients(AO_PC_InGameBase);
+	}
 
 	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
 	EvaluateTeamWipe();
@@ -329,7 +335,7 @@ bool AAO_GameMode_Stage::TryRevivePlayer(APlayerController* ReviveTargetPC)
 	if (APawn* OldPawn = ReviveTargetPC->GetPawn())
 	{
 		OldPawn->DetachFromControllerPendingDestroy();
-		OldPawn->Destroy();
+		//OldPawn->Destroy();
 	}
 
 	// 시작 지점에서 리스폰 (기본 PlayerStart 사용)

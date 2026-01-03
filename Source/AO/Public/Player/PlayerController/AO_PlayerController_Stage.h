@@ -29,6 +29,8 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	// JM : 생명주기 테스트용
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnRep_Pawn() override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;

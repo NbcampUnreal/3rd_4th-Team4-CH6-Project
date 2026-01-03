@@ -13,6 +13,8 @@ class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterCapsuleChanged, float /*NewCapsuleHalfHeight*/);
+
 USTRUCT(BlueprintType)
 struct FParameterOptionName
 {
@@ -65,6 +67,8 @@ public:
 
 	const FCustomizingData& GetCustomizingData() const;
 
+	FOnCharacterCapsuleChanged OnCapsuleChangedDelegate;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -96,6 +100,4 @@ private:
 
 	UFUNCTION()
 	void OnMeshUpdateFinished(const FUpdateContext& Context);
-
-	FOnSetCharacterCapsule SetCharacterCapsuleDelegate;
 };
