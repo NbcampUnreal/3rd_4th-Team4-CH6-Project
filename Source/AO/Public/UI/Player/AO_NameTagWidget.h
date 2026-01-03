@@ -6,6 +6,7 @@
 #include "UI/Widget/AO_UserWidget.h"
 #include "AO_NameTagWidget.generated.h"
 
+class UImage;
 class UTextBlock;
 
 UCLASS()
@@ -19,8 +20,14 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetUIScale(float InScale);
+
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerTalkingVisibility(const bool bIsTalking);
 	
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_Name;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> Img_IsTalking;
 };

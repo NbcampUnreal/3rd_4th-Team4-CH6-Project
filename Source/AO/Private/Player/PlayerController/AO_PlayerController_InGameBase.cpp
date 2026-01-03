@@ -47,10 +47,10 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	Super::BeginPlay();
 
-	if (IsLocalPlayerController())
+	/*if (IsLocalPlayerController())
 	{
 		Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
-	}
+	}*/
 
 	if (IsLocalPlayerController())
 	{
@@ -72,7 +72,7 @@ void AAO_PlayerController_InGameBase::BeginPlay()
 			}
 		}
 
-		Client_StartVoiceChat_Implementation();
+		// Client_StartVoiceChat_Implementation();
 	}
 		
 	AO_LOG(LogJM, Log, TEXT("End"));
