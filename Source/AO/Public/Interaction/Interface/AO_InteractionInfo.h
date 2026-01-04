@@ -55,6 +55,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animation")
 	bool bWaitForAnimationNotify = false;
 
+	// Inspection일 때 필요로 하는 UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> InspectionUIClass;
+
 	// Motion Warping용 Transform (손이 가야 할 위치)
 	UPROPERTY(BlueprintReadWrite)
 	FTransform InteractionTransform;

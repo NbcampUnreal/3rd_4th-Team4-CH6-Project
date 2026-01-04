@@ -18,6 +18,8 @@ UAO_GameplayAbility_Jump::UAO_GameplayAbility_Jump()
 
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Jump")));
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Debuff.NoStaminaChange")));
+
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Inspecting")));
 }
 
 bool UAO_GameplayAbility_Jump::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,

@@ -121,6 +121,7 @@ protected:
 
 private:
     void CollectCandidateDecals();
+	void CollectVFXPoints();
     void SelectRandomCandidates();
     
     void StartPuzzleDelayed();
@@ -181,6 +182,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GasRoom|Password Hints")
     TObjectPtr<UMaterialInterface> NumberDecalMaterial;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="GasRoom|VFX")
+	TArray<TObjectPtr<USceneComponent>> VFXPoints;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GasRoom|VFX")
+	FString VFXPointPrefix = TEXT("VFX_");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GasRoom|Settings")
     FGameplayTag CompletionTag;

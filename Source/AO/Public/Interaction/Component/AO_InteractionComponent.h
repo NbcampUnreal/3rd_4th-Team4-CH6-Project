@@ -25,6 +25,9 @@ public:
 
 	void SetupInputBinding(UInputComponent* PlayerInputComponent);
 
+	// UI 초기화
+	void InitializeInteractionUI(APlayerController* PC);
+
 	// 상호작용하는 타겟 관리
 	void SetCurrentInteractTarget(AActor* Target) { CurrentInteractTarget = Target; }
 	AActor* GetCurrentInteractTarget() const { return CurrentInteractTarget; }
@@ -63,9 +66,6 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-	// UI 초기화
-	void InitializeInteractionUI(APlayerController* PC);
 
 	UPROPERTY(EditDefaultsOnly, Category="UI")
 	TSubclassOf<UAO_InteractionWidget> InteractionWidgetClass;
