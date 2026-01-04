@@ -136,6 +136,7 @@ private:
 	void RegisterCancelTags();
 	void UnregisterCancelTags();
 	void OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount);
+	void CleanupInspectionLocal(bool bWasDeathTriggered = false);
 	bool IsSpacebarMode() const;
 
 	UFUNCTION(Server, Reliable)
@@ -181,4 +182,7 @@ private:
 	
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CurrentInspectionUI;
+	
+	UPROPERTY()
+	TObjectPtr<APlayerController> CachedPlayerController;
 };

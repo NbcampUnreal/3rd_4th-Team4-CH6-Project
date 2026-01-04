@@ -247,6 +247,7 @@ void UAO_InspectionComponent::EnterInspectionMode(AActor* InspectableActor)
 	TObjectPtr<APlayerController> LocalPC = Cast<APlayerController>(Owner->GetOwner());
 	if (LocalPC && LocalPC->IsLocalController())
 	{
+		CachedPlayerController = LocalPC;
 		CurrentCameraSettings = CameraSettings;
 
 		if (InspectionUIClass)
@@ -381,11 +382,15 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
         return;
     }
 
+	CachedPlayerController = PC;
+
     // 이미 Inspection 카메라가 있으면 스킵(서버일 경우)
     if (InspectionCameraActor)
     {
         return;
     }
+
+	RegisterCancelTags();
 
 	TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
     if (Character && CurrentCameraSettings.bHideCharacter)
@@ -461,81 +466,14 @@ void UAO_InspectionComponent::ClientEnterInspection(const FVector& CameraLocatio
 // Inspection 나가기 처리 (카메라 복원, UI 설정)
 void UAO_InspectionComponent::ClientExitInspection()
 {
-    if (!InspectionCameraActor)
-    {
-        return;
-    }
-
-	RemoveInspectionUI();
-
-	if (TObjectPtr<AAO_CannonElement> Cannon = Cast<AAO_CannonElement>(CurrentInspectedActor))
+	if (!InspectionCameraActor || !IsValid(InspectionCameraActor))
 	{
-		Cannon->OnInspectionEnded();
+		UnregisterCancelTags();
+		return;
 	}
 
-	// Hover trace 중지 및 하이라이트 해제
-	StopHoverTrace();
-
-	TObjectPtr<AActor> Owner = GetOwner();
-	checkf(Owner, TEXT("Owner is null in ClientExitInspection"));
-
-    TObjectPtr<APlayerController> PC = Cast<APlayerController>(Owner->GetOwner());
-    
-    if (!PC || !PC->IsLocalController())
-    {
-        return;
-    }
-	
-	//JSH : 일시정지 설정창 언락
-	if (UGameInstance* GI = PC->GetGameInstance())
-	{
-		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
-		{
-			UIStack->UnlockPauseMenu();
-		}
-	}
-
-    // 플레이어 카메라로 복귀
-    TransitionToPlayerCamera();
-
-    TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
-    if (Character && CurrentCameraSettings.bHideCharacter)
-    {
-        // 숨겼던 컴포넌트들 다시 표시
-        for (TObjectPtr<UPrimitiveComponent> Comp : HiddenComponents)
-        {
-            if (Comp)
-            {
-                Comp->SetHiddenInGame(false);
-            }
-        }
-        HiddenComponents.Empty();
-
-        // 애니메이션 복구
-        TObjectPtr<USkeletalMeshComponent> Mesh = Character->GetMesh();
-        if (Mesh)
-        {
-            Mesh->SetComponentTickEnabled(true);
-        }
-    }
-
-    // 마우스 커서 숨김, GameOnly 모드로 전환
-    PC->bShowMouseCursor = false;
-    FInputModeGameOnly InputMode;
-    PC->SetInputMode(InputMode);
-
-    // Inspection 카메라 파괴 및 정리
-    if (InspectionCameraActor)
-    {
-        InspectionCameraActor->Destroy();
-        InspectionCameraActor = nullptr;
-    }
-    
-    OriginalViewTarget = nullptr;
-
-    // 설정 초기화
-    CurrentCameraSettings = FAO_InspectionCameraSettings();
-    InitialCameraLocation = FVector::ZeroVector;
+	UnregisterCancelTags();
+	CleanupInspectionLocal(false);
 }
 
 void UAO_InspectionComponent::OnExitPressed()
@@ -987,7 +925,7 @@ bool UAO_InspectionComponent::IsValidExternalClickTarget(AActor* HitActor, UPrim
 void UAO_InspectionComponent::RegisterCancelTags()
 {
 	TObjectPtr<AActor> Owner = GetOwner();
-	if (!Owner || !Owner->HasAuthority())
+	if (!Owner)
 	{
 		return;
 	}
@@ -1051,8 +989,127 @@ void UAO_InspectionComponent::OnCancelTagChanged(const FGameplayTag Tag, int32 N
 	// 태그가 추가되었을 때만 (NewCount > 0) 취소
 	if (NewCount > 0 && bIsInspecting)
 	{
-		ExitInspectionMode();
+		if (CurrentInspectedActor && IsValid(CurrentInspectedActor))
+		{
+			if (TObjectPtr<AAO_OverwatchInspectionPuzzle> OverwatchPuzzle = Cast<AAO_OverwatchInspectionPuzzle>(CurrentInspectedActor))
+			{
+				OverwatchPuzzle->ClearAllExternalHighlights();
+			}
+		}
+		
+		FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+		bool bWasDeathTriggered = (Tag == DeathTag);
+        
+		CleanupInspectionLocal(bWasDeathTriggered);
+		
+		TObjectPtr<AActor> Owner = GetOwner();
+		if (Owner && !Owner->HasAuthority())
+		{
+			ServerNotifyInspectionEnded();
+		}
+		else if (Owner && Owner->HasAuthority())
+		{
+			ExitInspectionMode();
+		}
 	}
+}
+
+void UAO_InspectionComponent::CleanupInspectionLocal(bool bWasDeathTriggered)
+{
+	TObjectPtr<AActor> Owner = GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	TObjectPtr<APlayerController> PC = CachedPlayerController;
+	
+	if (!PC || !IsValid(PC))
+	{
+		PC = Cast<APlayerController>(Owner->GetOwner());
+	}
+	
+	if (!PC || !IsValid(PC))
+	{
+		if (TObjectPtr<APawn> Pawn = Cast<APawn>(Owner))
+		{
+			PC = Cast<APlayerController>(Pawn->GetController());
+		}
+	}
+	
+	StopHoverTrace();
+	RemoveInspectionUI();
+	
+	if (CurrentInspectedActor && IsValid(CurrentInspectedActor))
+	{
+		if (TObjectPtr<AAO_CannonElement> Cannon = Cast<AAO_CannonElement>(CurrentInspectedActor))
+		{
+			Cannon->OnInspectionEnded();
+		}
+	}
+	
+	if (!PC || !IsValid(PC) || !PC->IsLocalController())
+	{
+		OriginalViewTarget = nullptr;
+		CurrentCameraSettings = FAO_InspectionCameraSettings();
+		InitialCameraLocation = FVector::ZeroVector;
+		CachedPlayerController = nullptr;
+		return;
+	}
+	
+	if (InspectionCameraActor && IsValid(InspectionCameraActor))
+	{
+		bool bNeedViewTargetChange = (PC->GetViewTarget() == InspectionCameraActor);
+		
+		if (bNeedViewTargetChange)
+		{
+			TObjectPtr<APawn> CurrentPawn = PC->GetPawn();
+			if (CurrentPawn && IsValid(CurrentPawn))
+			{
+				PC->SetViewTargetWithBlend(CurrentPawn, CameraBlendTime);
+			}
+		}
+		
+		InspectionCameraActor->Destroy();
+		InspectionCameraActor = nullptr;
+	}
+	
+	// 메시 복구
+	TObjectPtr<ACharacter> Character = Cast<ACharacter>(Owner);
+	if (Character && HiddenComponents.Num() > 0)
+	{
+		for (TObjectPtr<UPrimitiveComponent> Comp : HiddenComponents)
+		{
+			if (Comp && IsValid(Comp))
+			{
+				Comp->SetHiddenInGame(false);
+			}
+		}
+		HiddenComponents.Empty();
+
+		TObjectPtr<USkeletalMeshComponent> Mesh = Character->GetMesh();
+		if (Mesh && IsValid(Mesh))
+		{
+			Mesh->SetComponentTickEnabled(true);
+		}
+	}
+	
+	PC->bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	PC->SetInputMode(InputMode);
+	
+	if (UGameInstance* GI = PC->GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->UnlockPauseMenu();
+		}
+	}
+	
+	OriginalViewTarget = nullptr;
+	CurrentCameraSettings = FAO_InspectionCameraSettings();
+	InitialCameraLocation = FVector::ZeroVector;
+	CachedPlayerController = nullptr;
 }
 
 bool UAO_InspectionComponent::IsSpacebarMode() const
