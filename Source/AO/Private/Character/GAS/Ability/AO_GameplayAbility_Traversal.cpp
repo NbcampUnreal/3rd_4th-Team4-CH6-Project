@@ -16,6 +16,7 @@
 #include "Maps/Traversal/AO_TraversableComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "AO_Log.h"
+#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 
 UAO_GameplayAbility_Traversal::UAO_GameplayAbility_Traversal()
 {
@@ -51,6 +52,23 @@ bool UAO_GameplayAbility_Traversal::CanActivateAbility(const FGameplayAbilitySpe
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
+	const UAO_PlayerCharacter_AttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UAO_PlayerCharacter_AttributeSet>();
+	if (!AttributeSet)
+	{
+		return false;
+	}
+	
+	const float CurrentStamina = AttributeSet->GetStamina();
+	if (CurrentStamina < StaminaCost)
+	{
+		if (OptionalRelevantTags)
+		{
+			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
+			AO_LOG(LogKH, Warning, TEXT("Traversal Ability Failed: NotEnoughStamina"));
+		}
+		return false;
+	}
+	
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;
@@ -108,11 +126,6 @@ void UAO_GameplayAbility_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 	{
 		CharacterMovement->SetMovementMode(MOVE_Flying);
 	}
-	
-	if (ActorInfo->IsNetAuthority())
-	{
-		CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, true);
-	}
 }
 
 void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -121,14 +134,6 @@ void UAO_GameplayAbility_Traversal::EndAbility(const FGameplayAbilitySpecHandle 
 {
 	if (IsEndAbilityValid(Handle, ActorInfo))
 	{
-		if (ActorInfo->IsNetAuthority())
-		{
-			if (CapsuleComponent)
-			{
-				CapsuleComponent->IgnoreComponentWhenMoving(TraversalResult.HitComponent, false);
-			}
-		}
-
 		if (CharacterMovement)
 		{
 			if (TraversalResult.ActionType == ETraversalActionType::Vault)

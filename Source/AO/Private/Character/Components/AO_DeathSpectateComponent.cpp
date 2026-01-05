@@ -200,7 +200,12 @@ void UAO_DeathSpectateComponent::OnOwnerDied()
 	}
 	
 	AAO_PlayerState* PS = OwnerCharacter->GetPlayerState<AAO_PlayerState>();
-	checkf(PS, TEXT("PlayerState is NULL"));
+
+	// HSJ : 죽은 Pawn이 데미지 존에 있는 경우 PS를 못 찾아 크래시 발생, check말고 if로 처리
+	if (!PS)
+	{
+		return;
+	}
 
 	if (!PS->GetIsAlive())
 	{

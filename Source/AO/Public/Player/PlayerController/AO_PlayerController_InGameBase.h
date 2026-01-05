@@ -31,6 +31,8 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void Tick(float DeltaTime) override;	// JM : 보이스 챗 크래쉬 방지 확인용
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnRep_Pawn() override;
 
 protected:
 	UPROPERTY(Transient)
@@ -51,6 +53,14 @@ protected:
 	UPROPERTY()
 	UAO_ConfirmReturnToMenuWidget* ConfirmReturnToMenuWidget;
 
+	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
+	TObjectPtr<USoundBase> NotEnoughStaminaSound;
+
+	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
+	float NotEnoughStaminaSoundInterval = 5.0f;
+
+	double LastNotEnoughStaminaSoundTime = -1e9;
+
 public:
 	TSubclassOf<UAO_PauseMenuWidget> GetPauseMenuWidgetClass() const { return PauseMenuClass; }
 	
@@ -65,7 +75,7 @@ public:
 	void Client_StopVoiceChat();
 
 	UFUNCTION(Client, Reliable)
-	void Client_UpdateVoiceMember(AAO_PlayerState* DeadPlayerState);
+	void Client_UpdateVoiceMember(AAO_PlayerState* ChangedPlayerState);
 
 	UFUNCTION(Client, Reliable)
 	void Client_UnmuteVoiceMember(AAO_PlayerState* AlivePlayerState);
@@ -128,6 +138,13 @@ private:
 	
 	/** 모든 보이스 자원이 정리되었는지 확인 */
 	bool IsVoiceFullyCleanedUp();
+
+	// ASC Ability 실패 시 바인딩
+	void BindASCAbilityFailed();
+
+	// 스태미나 부족으로 Ability 실패할 때 발생하는 함수
+	UFUNCTION()
+	void HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureTags);
 
 private:
 	bool bIsCheckingVoiceCleanup = false;

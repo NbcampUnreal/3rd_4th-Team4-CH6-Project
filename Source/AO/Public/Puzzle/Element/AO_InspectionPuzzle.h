@@ -114,6 +114,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|Info")
 	bool bHideCharacter = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|UI")
+	TSubclassOf<UUserWidget> InspectionUIClass;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inspection|Elements")
     TArray<FAO_InspectionElementMapping> ElementMappings;
 

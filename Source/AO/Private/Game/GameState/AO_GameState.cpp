@@ -64,9 +64,11 @@ void AAO_GameState::UnmuteVoiceOnAddPlayerState(APlayerState* PlayerState)
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
+
 void AAO_GameState::OnRep_SharedReviveCount()
 {
 	AO_LOG(LogJSH, Log, TEXT("AO_GameState::OnRep_SharedReviveCount -> %d"), SharedReviveCount);
+	OnSharedReviveCountChanged.Broadcast(SharedReviveCount);	// JM : WBP_RevivalChip 업데이트하기 위함
 }
 
 void AAO_GameState::SetSharedReviveCount(int32 InValue)
@@ -89,6 +91,11 @@ void AAO_GameState::SetSharedReviveCount(int32 InValue)
 	}
 
 	SharedReviveCount = NewValue;
+
+	if (HasAuthority())		// JM : 서버에서는 OnRep 함수가 실행되지 않기 때문에 개별적으로 호출해줌 (UI 업데이트 해야함) 
+	{
+		OnRep_SharedReviveCount();
+	}
 
 	AO_LOG(LogJSH, Log, TEXT("AO_GameState::SetSharedReviveCount -> %d"), SharedReviveCount);
 }

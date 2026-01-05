@@ -69,6 +69,9 @@ public:
 	// 내부 컴포넌트 검사
 	bool IsInternalClickableComponent(UPrimitiveComponent* Component) const;
 
+	UFUNCTION(BlueprintPure)
+	UUserWidget* GetCurrentInspectionUI() const { return CurrentInspectionUI; }
+
 protected:
     virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -91,7 +94,8 @@ private:
     FVector ClampCameraPosition(const FVector& NewPosition) const;
 
     UFUNCTION(Client, Reliable)
-    void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle, FAO_InspectionCameraSettings CameraSettings);
+    void ClientNotifyInspectionStarted(AActor* InspectableActor, FGameplayAbilitySpecHandle AbilityHandle,
+    	FAO_InspectionCameraSettings CameraSettings, TSubclassOf<UUserWidget> InspectionUIClass);
 
     UFUNCTION(Client, Reliable)
     void ClientNotifyInspectionEnded(AActor* InspectableActor);
@@ -121,12 +125,6 @@ public:
 	TWeakObjectPtr<UPrimitiveComponent> CachedHoverComponent;
 	TWeakObjectPtr<AActor> CachedHoverActor;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<UInputMappingContext> InspectionInputContext;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	int32 InspectionInputPriority = 10;
-
 	UPROPERTY(EditAnywhere, Category = "Inspection")
 	FGameplayTagContainer CancelInspectionTags;
 
@@ -138,12 +136,16 @@ private:
 	void RegisterCancelTags();
 	void UnregisterCancelTags();
 	void OnCancelTagChanged(const FGameplayTag Tag, int32 NewCount);
+	void CleanupInspectionLocal(bool bWasDeathTriggered = false);
 	bool IsSpacebarMode() const;
 
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyInspectionAction();
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyInspectionInput(FVector2D InputValue, float DeltaTime);
+
+	void CreateInspectionUI(TSubclassOf<UUserWidget> UIClass);
+	void RemoveInspectionUI();
 
 	FTimerHandle HoverTraceTimerHandle;
 	TWeakObjectPtr<UPrimitiveComponent> CurrentHoveredComponent;
@@ -177,4 +179,10 @@ private:
 
 	// 태그 변경 감지 핸들
 	TArray<FDelegateHandle> CancelTagDelegateHandles;
+	
+	UPROPERTY()
+	TObjectPtr<UUserWidget> CurrentInspectionUI;
+	
+	UPROPERTY()
+	TObjectPtr<APlayerController> CachedPlayerController;
 };

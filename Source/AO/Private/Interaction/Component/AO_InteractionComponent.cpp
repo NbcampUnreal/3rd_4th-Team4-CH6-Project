@@ -7,6 +7,7 @@
 #include "MotionWarpingComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/Character.h"
+#include "Interaction/GAS/Ability/AO_InteractionGameplayAbility.h"
 #include "Interaction/GAS/Tag/AO_InteractionGameplayTags.h"
 #include "Interaction/UI/AO_InteractionWidget.h"
 #include "Interaction/UI/AO_InteractionWidgetController.h"
@@ -140,7 +141,16 @@ void UAO_InteractionComponent::GiveDefaultAbilities()
 		}
 
 		FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
-		ASC->GiveAbility(Spec);
+		FGameplayAbilitySpecHandle SpecHandle = ASC->GiveAbility(Spec);
+		
+		// OnSpawn 정책이면 즉시 활성화
+		if (TObjectPtr<UAO_InteractionGameplayAbility> Ability = Cast<UAO_InteractionGameplayAbility>(Spec.Ability))
+		{
+			if (Ability->GetActivationPolicy() == EAOAbilityActivationPolicy::OnSpawn)
+			{
+				ASC->TryActivateAbility(SpecHandle);
+			}
+		}
 	}
 }
 

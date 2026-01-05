@@ -6,7 +6,7 @@
 
 UAO_InteractionGameplayAbility::UAO_InteractionGameplayAbility()
 {
-	ActivationPolicy = ECYAbilityActivationPolicy::OnInputTriggered;
+	ActivationPolicy = EAOAbilityActivationPolicy::OnInputTriggered;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
@@ -15,7 +15,7 @@ void UAO_InteractionGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo
 	Super::OnAvatarSet(ActorInfo, Spec);
 
 	// OnSpawn 정책인 경우 부여 즉시 자동 활성화
-	if (ActivationPolicy == ECYAbilityActivationPolicy::OnSpawn)
+	if (ActivationPolicy == EAOAbilityActivationPolicy::OnSpawn)
 	{
 		bool bSuccess = ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
 	}

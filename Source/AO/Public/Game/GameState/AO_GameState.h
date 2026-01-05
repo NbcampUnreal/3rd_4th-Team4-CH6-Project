@@ -6,6 +6,7 @@
 #include "GameFramework/GameState.h"
 #include "AO_GameState.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSharedReviveCountChanged, int32, NewCount);
 /**
  * 
  */
@@ -37,6 +38,10 @@ protected:
 public:
 	UPROPERTY(ReplicatedUsing = OnRep_SharedReviveCount, VisibleAnywhere, BlueprintReadOnly, Category = "AO|Revive")
 	int32 SharedReviveCount;
+
+public:
+	UPROPERTY(BlueprintAssignable, Category = "AO|Revive")
+	FOnSharedReviveCountChanged OnSharedReviveCountChanged;
 
 protected:
 	FTimerHandle UnmuteVoiceTimerHandle;
