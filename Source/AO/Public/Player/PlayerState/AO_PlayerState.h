@@ -113,4 +113,11 @@ public:
 
 	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
 	void ResetStateInventory();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bInsideTravelSafeZone = false;
+	UPROPERTY()
+	bool bInventoryShouldPersist = false;
+	bool bIsTraveling = false;
+	void SetSafeZoneState(bool bInZone);
 };
