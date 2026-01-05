@@ -28,8 +28,12 @@ public:
 	/* 스테이지 출발 상호작용 시 서버에서 호출할 함수 */
 	void HandleStageExitRequest(AController* Requester);
 
-	/* 게임 실패 처리 */
+	/* JM수정 : 게임 실패 하면 위젯만 띄우도록 */
 	void HandleStageFail(AController* Requester);
+
+	/* JM : 실제 게임 실패 후 로비로 이동 */
+	UFUNCTION(BlueprintCallable, Category = "AO|GameMode|Stage")
+	void ResetGameAndGoToLobby(AController* Requester);
 	
 	/* 부활 카운트 증가 */
 	void HandleSharedReviveCountIncreased();

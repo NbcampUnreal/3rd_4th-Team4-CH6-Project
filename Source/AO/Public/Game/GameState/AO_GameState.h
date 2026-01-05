@@ -7,6 +7,9 @@
 #include "AO_GameState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSharedReviveCountChanged, int32, NewCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStageFailed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameCleared);
+
 /**
  * 
  */
@@ -24,24 +27,50 @@ public:
 
 public:
 	void SetSharedReviveCount(int32 InValue);
-
+	void SetStageFailed();
+	void SetGameClear();
+	
 	UFUNCTION()
 	void UnmuteVoiceOnAddPlayerState(APlayerState* PlayerState);	// JM : 플레이어 입장하면 해당 플레이어를 언뮤트 시킴
 
 	UFUNCTION(BlueprintCallable, Category = "AO|Revive")
 	int32 GetSharedReviveCount() const;
 
+	UFUNCTION(BlueprintCallable, Category = "AO|GameFlow")
+	bool IsStageFailed() const { return bIsStageFailed; }
+
+	UFUNCTION(BlueprintCallable, Category = "AO|GameFlow")
+	bool IsGameCleared() const { return bIsGameCleared; }
+
 protected:
 	UFUNCTION()
 	void OnRep_SharedReviveCount();
+
+	UFUNCTION()
+	void OnRep_IsStageFailed();
+
+	UFUNCTION()
+	void OnRep_IsGameCleared();
 	
 public:
 	UPROPERTY(ReplicatedUsing = OnRep_SharedReviveCount, VisibleAnywhere, BlueprintReadOnly, Category = "AO|Revive")
 	int32 SharedReviveCount;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsStageFailed, VisibleAnywhere, BlueprintReadOnly, Category = "AO|GameFlow")
+	bool bIsStageFailed;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsGameCleared, VisibleAnywhere, BlueprintReadOnly, Category = "AO|GameFlow")
+	bool bIsGameCleared;
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "AO|Revive")
 	FOnSharedReviveCountChanged OnSharedReviveCountChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "AO|GameFlow")
+	FOnStageFailed OnStageFailed;
+
+	UPROPERTY(BlueprintAssignable, Category = "AO|GameFlow")
+	FOnGameCleared OnGameCleared;
 
 protected:
 	FTimerHandle UnmuteVoiceTimerHandle;
