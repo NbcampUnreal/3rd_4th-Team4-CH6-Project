@@ -2,7 +2,6 @@
 
 #include "EngineUtils.h"
 #include "Engine/DataTable.h"
-#include "Interaction/Component/AO_InteractableComponent.h"
 #include "Item/AO_MasterItem.h"
 #include "Item/AO_struct_FItemBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -19,12 +18,19 @@ AAO_VendingMachine::AAO_VendingMachine()
 	SetRootComponent(StaticMesh);
 	StaticMesh->SetIsReplicated(true);
 	ItemMesh->SetupAttachment(StaticMesh);
+
+	InteractionTitle = FText::FromString(TEXT("상품"));
+	InteractionContent = FText::FromString(TEXT("구매"));
 	
-	InteractableComp = CreateDefaultSubobject<UAO_InteractableComponent>(TEXT("InteractableComponent"));
-	if (InteractableComp)
-	{
-		InteractableComp->OnInteractionSuccess.AddDynamic(this, &AAO_VendingMachine::HandleInteractionSuccess);
-	}
+	PriceDisplayText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("PriceDisplay"));
+	PriceDisplayText->SetupAttachment(RootComponent);
+	PriceDisplayText->SetHorizontalAlignment(EHTA_Center);
+	PriceDisplayText->SetVerticalAlignment(EVRTA_TextCenter);
+	
+	ItemExplainText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("ItemExplainDisplay"));
+	ItemExplainText->SetupAttachment(RootComponent);
+	ItemExplainText->SetHorizontalAlignment(EHTA_Center);
+	ItemExplainText->SetVerticalAlignment(EVRTA_TextCenter);
 }
 
 void AAO_VendingMachine::BeginPlay()
@@ -33,20 +39,13 @@ void AAO_VendingMachine::BeginPlay()
 
 	if (HasAuthority())
 	{
-		// ShopManager가 미지정이면 자동 검색
 		if (!ShopManager)
 		{
 			for (TActorIterator<AAO_ShopManager> It(GetWorld()); It; ++It)
 			{
 				ShopManager = *It;
-				UE_LOG(LogTemp, Warning, TEXT("[VM] Found ShopManager on server."));
 				break;
 			}
-		}
-
-		if (!ShopManager)
-		{
-			UE_LOG(LogTemp, Error, TEXT("[VM] FAILED to find ShopManager"));
 		}
 
 		ApplyItemData();
@@ -98,45 +97,40 @@ void AAO_VendingMachine::ApplyItemData()
 			if (int32 TableData = Row->ItemPrice)
 			{
 				ItemPrice = TableData;
+				if (PriceDisplayText)
+				{
+					PriceDisplayText->SetText(FText::FromString(FString::Printf(TEXT("%d"), ItemPrice)));
+				}
 			}
+			FString TableExplainData = Row->ItemExplain;
+			if (!TableExplainData.IsEmpty())
+			ItemExplainText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *TableExplainData)));
 		}
-	}
-	else
-	{
 	}
 }
 
-void AAO_VendingMachine::HandleInteractionSuccess(AActor* Interactor)
+void AAO_VendingMachine::OnInteractionSuccess(AActor* Interactor)
 {
-	UE_LOG(LogShop, Warning, TEXT("[VM] HandleInteractionSuccess Called. Authority=%s"),
-		HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
+	Super::OnInteractionSuccess(Interactor);
 
 	if (!HasAuthority())
 	{
-		UE_LOG(LogShop, Warning, TEXT("[VM] NO AUTHORITY → EXIT"));
 		return;
 	}
 
 	if (!ShopManager)
 	{
-		UE_LOG(LogShop, Error, TEXT("[VM] ShopManager is NULL!"));
 		return;
 	}
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Request Buy Item. Price=%d"), ItemPrice);
-
+	
 	ShopManager->Server_BuyItem(ItemPrice, this);
 }
 
 
 void AAO_VendingMachine::SpawnVendingItem()
 {
-	UE_LOG(LogShop, Warning, TEXT("[VM] SpawnVendingItem Executed"));
-
 	FVector SpawnLocation = StaticMesh->GetComponentLocation()
-		+ GetActorForwardVector() * 40.f;
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Spawn Location = %s"), *SpawnLocation.ToString());
+		+ GetActorForwardVector() * 100.f;
 
 	FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 
@@ -168,9 +162,7 @@ void AAO_VendingMachine::Server_RequestBuy_Implementation(AActor* Interactor)
 
 	if (!ShopManager)
 		return;
-
-	UE_LOG(LogShop, Warning, TEXT("[VM] Server_RequestBuy"));
-
+	
 	ShopManager->Server_BuyItem(ItemPrice, this);
 }
 

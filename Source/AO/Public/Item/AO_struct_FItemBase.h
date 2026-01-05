@@ -33,6 +33,9 @@ public:
 	FString ItemName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ItemExplain;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FuelAmount = 0.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
