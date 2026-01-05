@@ -149,19 +149,15 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		PS->CharacterCustomizingData = this->CharacterCustomizingData;
 		//ms : 다음스테이지에서 인벤토리 유지
-		UE_LOG(LogTemp, Warning, TEXT("[Travel] CopyProperties 시작: OldPS(%s) -> NewPS(%s)"), *GetName(), *PS->GetName());
-		UE_LOG(LogTemp, Warning, TEXT("[Travel] 상태체크: bPersist(%s), InvCount(%d)"), 
-			bInventoryShouldPersist ? TEXT("True") : TEXT("False"), PersistentInventory.Num());
-
-		if (bInventoryShouldPersist)
+		UAO_GameInstance* GI = GetGameInstance<UAO_GameInstance>();
+        
+		if (GI && GI->CurrentStageIndex == 0)
 		{
-			PS->PersistentInventory = this->PersistentInventory;
-			UE_LOG(LogTemp, Warning, TEXT("[Travel] 데이터 복사 완료: NewPS InvCount(%d)"), PS->PersistentInventory.Num());
+			PS->PersistentInventory.Empty();
 		}
 		else
 		{
-			PS->PersistentInventory.Empty();
-			UE_LOG(LogTemp, Error, TEXT("[Travel] 유지 조건 미충족: 데이터를 비웠습니다."));
+			PS->PersistentInventory = PersistentInventory;
 		}
 		//ms
 	}
@@ -245,9 +241,4 @@ void AAO_PlayerState::SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv)
 void AAO_PlayerState::ResetStateInventory()
 {
 	PersistentInventory.Empty();
-}
-
-void AAO_PlayerState::SetSafeZoneState(bool bInZone)
-{
-	bInsideTravelSafeZone = bInZone;
 }
