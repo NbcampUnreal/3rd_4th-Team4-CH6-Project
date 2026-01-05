@@ -176,6 +176,9 @@ private:
 		return FName(TEXT("/Game/AVaOut/Maps/LV_Lobby"));
 	}
 	
+	static FString EncodeRoomNameForSession(const FString& InRoomName);
+	static FString DecodeRoomNameFromSession(const FString& InEncoded);
+	
 	static FString ToMD5(const FString& In);
 
 	/* 네트워크 연결 실패 에러 */
