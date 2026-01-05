@@ -1,7 +1,7 @@
 #include "Item/RevivealChipContainer/AO_RevivealChipContainer.h"
 
 #include "Game/GameInstance/AO_GameInstance.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 
 AAO_RevivealChipContainer::AAO_RevivealChipContainer()
 {

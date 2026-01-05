@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "GameFramework/PlayerState.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "AO_PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
@@ -114,4 +114,11 @@ public:
 
 	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
 	void ResetStateInventory();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bInsideTravelSafeZone = false;
+	UPROPERTY()
+	bool bInventoryShouldPersist = false;
+	bool bIsTraveling = false;
+	void SetSafeZoneState(bool bInZone);
 };

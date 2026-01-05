@@ -87,12 +87,6 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	{
 		return;
 	}
-	
-	if (bStageEnded)
-	{
-		return;
-	}
-	bStageEnded = true;
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -156,6 +150,12 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
 	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
+	
 	FName TargetMapName;
 
 	// 마지막 스테이지면 → 로비로 귀환
@@ -190,7 +190,35 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	const FString Path = TargetMapName.ToString() + TEXT("?listen");
 	// World->ServerTravel(Path);
-	// JM : crash 
+	// JM : crash
+
+	//ms 다음레벨 이동
+	if (!GameState)
+	{
+		return;
+	}
+
+	if (AAO_GameState* AO_GS = Cast<AAO_GameState>(GameState))
+	{
+		for (APlayerState* P : AO_GS->PlayerArray)
+		{
+			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(P))
+			{
+				AO_PS->bIsTraveling = true;
+				
+				if (APawn* MyPawn = AO_PS->GetPawn())
+				{
+					if (UAO_InventoryComponent* InvComp = MyPawn->FindComponentByClass<UAO_InventoryComponent>())
+					{
+						AO_PS->SaveInventoryBeforeTravel(InvComp);
+					}
+				}
+				HandlePlayerTravel(AO_PS);
+			}
+		}
+	}
+	//ms
+	
 	RequestSynchronizedServerTravel(Path);
 }
 
