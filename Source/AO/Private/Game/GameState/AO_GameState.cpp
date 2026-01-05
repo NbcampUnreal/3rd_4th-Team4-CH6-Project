@@ -7,6 +7,7 @@
 AAO_GameState::AAO_GameState()
 {
 	SharedReviveCount = 0;
+	bIsStageFailed = false;		// JM : 초기화
 }
 
 void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -14,6 +15,7 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
+	DOREPLIFETIME(AAO_GameState, bIsStageFailed);
 }
 
 void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -71,6 +73,20 @@ void AAO_GameState::OnRep_SharedReviveCount()
 	OnSharedReviveCountChanged.Broadcast(SharedReviveCount);	// JM : WBP_RevivalChip 업데이트하기 위함
 }
 
+void AAO_GameState::OnRep_IsStageFailed()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	if (bIsStageFailed)
+	{
+		AO_LOG_ROLE(LogJM, Log, TEXT("Broadcast Delegate(OnStageFailed)"));
+		if (OnStageFailed.IsBound())
+		{
+			OnStageFailed.Broadcast();
+		}
+	}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
 void AAO_GameState::SetSharedReviveCount(int32 InValue)
 {
 	if (HasAuthority() == false)
@@ -98,6 +114,26 @@ void AAO_GameState::SetSharedReviveCount(int32 InValue)
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("AO_GameState::SetSharedReviveCount -> %d"), SharedReviveCount);
+}
+
+void AAO_GameState::SetStageFailed()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (bIsStageFailed)
+	{
+		return;
+	}
+
+	bIsStageFailed = true;
+
+	OnRep_IsStageFailed();		// JM : Host는 OnRep이 자동으로 호출되지 않으므로 수동 호출
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
 }
 
 int32 AAO_GameState::GetSharedReviveCount() const

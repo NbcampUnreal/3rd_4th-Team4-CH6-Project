@@ -169,16 +169,37 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 {
-	if(!HasAuthority())
-	{
-		return;
-	}
-	
+	AO_LOG(LogJM, Log, TEXT("Start"));
 	if (bStageEnded)
 	{
 		return;
 	}
 	bStageEnded = true;
+
+	AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+	if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+	{
+		return;
+	}
+
+	AO_GS->SetStageFailed();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+// TODO: JM : Requester 쓸 필요가없는데..? 그냥 지우죠?
+void AAO_GameMode_Stage::ResetGameAndGoToLobby(AController* Requester)
+{
+	if(!HasAuthority())
+	{
+		return;
+	}
+	
+	/*if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;*/
 
 	UWorld* World = GetWorld();
 	if(World == nullptr)
@@ -193,10 +214,11 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 		return;
 	}
 
-	AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
+	/* 로그 찍으려고 Requester가 필요한건가?
+	 *AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
 		Requester ? *Requester->GetName() : TEXT("None"),
 		AO_GI->SharedTrainFuel,
-		AO_GI->CurrentStageIndex);
+		AO_GI->CurrentStageIndex);*/
 
 	// 다음 판은 항상 처음부터
 	AO_GI->ResetRun();
