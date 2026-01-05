@@ -7,7 +7,7 @@
 #include "AO_PlayerCharacter_MovementEnums.h"
 #include "AbilitySystemInterface.h"
 #include "Foley/AO_FoleyAudioBankInterface.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "Item/PassiveContainer/AO_PassiveComponent.h"
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"

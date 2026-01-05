@@ -69,7 +69,7 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 		return;
 	}
 
-	//ms
+	//ms 다음레벨 이동시 인벤토리 유지
 	if (!GameState)
 	{
 		return;
@@ -80,7 +80,7 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 		if (AAO_PlayerState* PS = Cast<AAO_PlayerState>(It->Get()->PlayerState))
 		{
 			PS->bIsTraveling = true;
-			HandlePlayerTravel(PS); // 상속받은 Base의 함수 호출 (휴게소 예외처리 작동)
+			HandlePlayerTravel(PS);
 		}
 	}
 	//ms

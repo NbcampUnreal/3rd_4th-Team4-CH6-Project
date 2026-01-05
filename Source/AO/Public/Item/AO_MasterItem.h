@@ -1,9 +1,3 @@
-// base interect item 상속. add fuel기능과 crab 상호작용을 component화 시켜서 적용해보려함
-
-// this item can.
-// 1) interection with Press F
-// 2) Can Be Fuel
-
 #pragma once
 
 #include "CoreMinimal.h"

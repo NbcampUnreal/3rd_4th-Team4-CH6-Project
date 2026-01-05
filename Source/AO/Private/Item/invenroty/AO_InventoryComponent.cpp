@@ -1,12 +1,12 @@
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "AbilitySystemComponent.h"
-#include "Item/invenroty/AO_InventorySubsystem.h"
+#include "Public/Item/inventory/AO_InventorySubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 #include "Item/AO_MasterItem.h"
-#include "Item/invenroty/AO_InventoryListener.h"
+#include "Public/Item/inventory/AO_InventoryListener.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 
@@ -22,52 +22,50 @@ UAO_InventoryComponent::UAO_InventoryComponent()
     }
 
     SelectedSlotIndex = 1;
-    EmptySlotList = {1, 2, 3, 4};
-
-	bDroppedOnDeath = false;
+    bDroppedOnDeath = false;
 }
 
 void UAO_InventoryComponent::BeginPlay()
 {
-	Super::BeginPlay();
-		
-	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (!OwnerPawn) return;
+    Super::BeginPlay();
+       
+    APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    if (!OwnerPawn) return;
 
-	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController());
-	if (!PC || !PC->IsLocalController())
-		return;
+    APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController());
+    if (!PC || !PC->IsLocalController())
+       return;
 
-	if (ULocalPlayer* LP = PC->GetLocalPlayer())
-	{
-		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
-		{
-			Subsystem->RegisterInventory(this);
-		}
-	}
+    if (ULocalPlayer* LP = PC->GetLocalPlayer())
+    {
+       if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
+       {
+          Subsystem->RegisterInventory(this);
+       }
+    }
 }
 
 void UAO_InventoryComponent::RegisterToSubsystem()
 {
-	APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!Pawn) return;
+    APawn* Pawn = Cast<APawn>(GetOwner());
+    if (!Pawn) return;
 
-	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-	if (!PC || !PC->IsLocalController())
-		return;
+    APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+    if (!PC || !PC->IsLocalController())
+       return;
 
-	if (ULocalPlayer* LP = PC->GetLocalPlayer())
-	{
-		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
-		{
-			Subsystem->RegisterInventory(this);
-		}
-	}
+    if (ULocalPlayer* LP = PC->GetLocalPlayer())
+    {
+       if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
+       {
+          Subsystem->RegisterInventory(this);
+       }
+    }
 }
 
 void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
 {
-	if (Slots.Num() == 0) return;
+    if (Slots.Num() == 0) return;
 
     if (!PlayerInputComponent) return;
     UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
@@ -80,8 +78,6 @@ void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputCompo
 
 void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex)
 {
-	if (Slots.Num() == 0) return;
-
     if (!IsValidSlotIndex(NewIndex)) return;
     SelectedSlotIndex = NewIndex;
     
@@ -91,172 +87,167 @@ void UAO_InventoryComponent::ServerSetSelectedSlot_Implementation(int32 NewIndex
 
 void UAO_InventoryComponent::OnLeftClick()
 {
-    if (GetOwnerRole() < ROLE_Authority) UseInventoryItem_Server();
-    else UseInventoryItem_Server_Implementation();
+    UseInventoryItem_Server();
 }
 
 void UAO_InventoryComponent::OnRightClick()
 {
-    if (GetOwnerRole() < ROLE_Authority) DropInventoryItem_Server();
-    else DropInventoryItem_Server_Implementation();
+    DropInventoryItem_Server();
+}
+
+int32 UAO_InventoryComponent::FindEmptySlotIndex() const
+{
+    for (int32 i = 1; i < Slots.Num(); ++i)
+    {
+        if (Slots[i].ItemID == "empty")
+        {
+            return i;
+        }
+    }
+    return INDEX_NONE;
 }
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
-    if (!IsValidSlotIndex(SelectedSlotIndex) || GetOwnerRole() != ROLE_Authority) return;
+    // 1. 서버 권한 및 유효성 체크
+    if (GetOwnerRole() != ROLE_Authority) return;
     
-    FInventorySlot OldSlot = Slots[SelectedSlotIndex];
-    if (OldSlot.ItemID != "empty")
+    // 2. 가장 작은 인덱스부터 빈 슬롯(0, 1, 2...) 찾기
+    int32 TargetIndex = FindEmptySlotIndex();
+
+    // 3. 빈 슬롯을 찾은 경우 (0번부터 순차적으로 채워짐)
+    if (TargetIndex != INDEX_NONE)
     {
-       if (EmptySlotList.Num() > 0)
-       {
-          int32 findEmptyNum = EmptySlotList[0];
-          EmptySlotList.Remove(findEmptyNum);
-          Slots[findEmptyNum] = IncomingItem;
-       }
-       else
-       {        
-          Slots[SelectedSlotIndex] = IncomingItem;
-          EmptySlotList.Remove(SelectedSlotIndex);
-          
-       	FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 40.f;
-       	FRotator SpawnRotation = FRotator::ZeroRotator;
-       	FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-
-       	AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-			   DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
-			   SpawnTransform,
-			   nullptr,
-			   nullptr,
-			   ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-		   );
-
-       	if (DropItem)
-       	{
-       		DropItem->ItemID = OldSlot.ItemID;
-       		UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-       	}
-       }
+        Slots[TargetIndex] = IncomingItem;
+        
+        // 월드에 놓여있던 아이템 액터 제거
+        if (Instigator) 
+        {
+            Instigator->Destroy();
+        }
     }
+    // 4. 인벤토리가 완전히 꽉 찬 경우
     else
     {
-       Slots[SelectedSlotIndex] = IncomingItem;
-       EmptySlotList.Remove(SelectedSlotIndex);
-       if (Instigator) Instigator->Destroy();
+        // 꽉 찼을 때는 현재 들고 있는(SelectedSlotIndex) 아이템과 교체합니다.
+        if (IsValidSlotIndex(SelectedSlotIndex))
+        {
+            FInventorySlot OldSlot = Slots[SelectedSlotIndex];
+            Slots[SelectedSlotIndex] = IncomingItem;
+
+            // 기존에 있던 아이템을 캐릭터 앞에 드랍
+            FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
+            FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
+            AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+                 DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+                 SpawnTransform,
+                 GetOwner(),
+                 nullptr,
+                 ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+            );
+
+            if (DropItem)
+            {
+                DropItem->ItemID = OldSlot.ItemID;
+                UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+            }
+
+            // 주운 아이템 액터 제거
+            if (Instigator)
+            {
+                Instigator->Destroy();
+            }
+        }
     }
     
+    // 5. 클라이언트에 복제 및 UI 업데이트 알림
     NotifyListeners();
     OnInventoryUpdated.Broadcast(Slots);
 }
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
-	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
-	{
-		static const FString Context00(TEXT("Inventory Item Use"));
-		float AddAmount = 0.0f;
-		const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
-		Slots[SelectedSlotIndex].ItemID, 
-		Context00      
-		);
+    if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+    if (Slots[SelectedSlotIndex].ItemID == "empty") return;
 
-		if (ItemData)
-		{
-			AddAmount = ItemData->PassiveAmount;
-		}
-		const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive")); 
-    
-		FGameplayEventData EventData;
-		EventData.EventTag = ActivationEventTag;
-		EventData.EventMagnitude = AddAmount;
-		
-		AActor* OwnerActor = GetOwner();
-		if (!OwnerActor) return;
-		UAbilitySystemComponent* ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
-		if (!ASC) return;
-		static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item"));    
-		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();  
-		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AddHealthClass, 1.f, Context);    
-		if (SpecHandle.IsValid())  
-		{
-			SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, EventData.EventMagnitude);  
-			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-		}
-		
-		ClearSlot();
-	}
-	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
-	{
-		FHitResult Hit;
-		FVector Start = GetOwner()->GetActorLocation();
-		FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
+    if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
+    {
+       static const FString Context00(TEXT("Inventory Item Use"));
+       float AddAmount = 0.0f;
+       const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
+           Slots[SelectedSlotIndex].ItemID, 
+           Context00      
+       );
 
-		FCollisionQueryParams Params;
-		Params.AddIgnoredActor(GetOwner());
+       if (ItemData)
+       {
+          AddAmount = ItemData->PassiveAmount;
+       }
+       
+       AActor* OwnerActor = GetOwner();
+       UAbilitySystemComponent* ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+       
+       if (ASC)
+       {
+           static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item"));    
+           FGameplayEffectContextHandle Context = ASC->MakeEffectContext();  
+           FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AddHealthClass, 1.f, Context);    
+           if (SpecHandle.IsValid())  
+           {
+              SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, AddAmount);  
+              ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+           }
+       }
+       
+       ClearSlot();
+    }
+    else if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
+    {
+       FHitResult Hit;
+       FVector Start = GetOwner()->GetActorLocation();
+       FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
 
-		bool bHit = GetWorld()->LineTraceSingleByChannel(
-			Hit,
-			Start,
-			End,
-			ECC_Visibility,
-			Params
-		);
+       FCollisionQueryParams Params;
+       Params.AddIgnoredActor(GetOwner());
 
-		if (bHit)
-		{
-			if (AActor* HitActor = Hit.GetActor())
-			{
-				UGameplayStatics::ApplyPointDamage(
-					HitActor,
-					1.0f,
-					(End - Start).GetSafeNormal(),
-					Hit,
-					GetOwner()->GetInstigatorController(),
-			GetOwner(),   
-					UDamageType::StaticClass()
-				);
-			}
-			DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
-		}
-
-	}
+       if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+       {
+          if (AActor* HitActor = Hit.GetActor())
+          {
+             UGameplayStatics::ApplyPointDamage(HitActor, 1.0f, (End - Start).GetSafeNormal(), Hit, GetOwner()->GetInstigatorController(), GetOwner(), UDamageType::StaticClass());
+          }
+          DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
+       }
+    }
 }
 
 void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
 {
-	if (!IsValidSlotIndex(SelectedSlotIndex)) return;
-	if (GetOwnerRole() != ROLE_Authority) return;
-	
-	const FInventorySlot& CurrentSlot = Slots[SelectedSlotIndex];
+    if (!IsValidSlotIndex(SelectedSlotIndex)) return;
+    
+    const FInventorySlot& CurrentSlot = Slots[SelectedSlotIndex];
 
-	if (CurrentSlot.ItemID != "empty")
-	{
-		FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.f;
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FTransform SpawnTransform(SpawnRotation, SpawnLocation);
-		
-		 FActorSpawnParameters Params;
-		Params.SpawnCollisionHandlingOverride =
-		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    if (CurrentSlot.ItemID != "empty")
+    {
+       FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.f;
+       FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+       
+       AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+           DroppableItemClass,
+           SpawnTransform,
+           GetOwner(),
+           nullptr,
+           ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+       );
 
-		Params.Owner = GetOwner();
-
-		AAO_MasterItem* DropItem =
-	GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-		DroppableItemClass,
-		SpawnTransform,
-		GetOwner(),
-		nullptr,
-		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-	);
-
-		if (DropItem)
-		{
-			DropItem->ItemID = CurrentSlot.ItemID;
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-		}
-		ClearSlot();
-	}
+       if (DropItem)
+       {
+          DropItem->ItemID = CurrentSlot.ItemID;
+          UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+       }
+       ClearSlot();
+    }
 }
 
 void UAO_InventoryComponent::OnRep_Slots()
@@ -275,7 +266,7 @@ void UAO_InventoryComponent::BindInvenCompListener(UObject* Listener)
     if (!IsValid(Listener) || !Listener->GetClass()->ImplementsInterface(UAO_InventoryListener::StaticClass())) return;
 
     InvenCompListeners.AddUnique(Listener);
-	
+    
     IAO_InventoryListener::Execute_OnSelectChanged(Listener, SelectedSlotIndex);
     IAO_InventoryListener::Execute_OnSlotChanged(Listener, Slots);
 }
@@ -305,106 +296,74 @@ void UAO_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void UAO_InventoryComponent::ClearSlot()
 {
-    Slots[SelectedSlotIndex] = FInventorySlot();
-    EmptySlotList.Add(SelectedSlotIndex);
-    NotifyListeners();
-    if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
+    if (IsValidSlotIndex(SelectedSlotIndex))
+    {
+        Slots[SelectedSlotIndex] = FInventorySlot();
+        NotifyListeners();
+        if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
+    }
 }
 
 void UAO_InventoryComponent::SelectInventorySlot(const FInputActionValue& Value)
 {
     int32 SlotIndex = FMath::RoundToInt(Value.Get<float>()); 
-    ServerSetSelectedSlot(SlotIndex);
-    OnSelectSlotUpdated.Broadcast(SlotIndex);
+    if (IsValidSlotIndex(SlotIndex))
+    {
+        ServerSetSelectedSlot(SlotIndex);
+        OnSelectSlotUpdated.Broadcast(SlotIndex);
+    }
 }
 
 void UAO_InventoryComponent::CharDead()
 {
-	if (bDroppedOnDeath)
-		return;
+    if (bDroppedOnDeath || GetOwnerRole() != ROLE_Authority) return;
 
-	bDroppedOnDeath = true;
-	
-	if (GetOwnerRole() != ROLE_Authority)
-		return;
+    bDroppedOnDeath = true;
+    
+    for (int32 i = 0; i < Slots.Num(); i++)
+    {
+       if (Slots[i].ItemID == "empty") continue;
+       
+       FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.f + FVector(0.f, i * 20.f, 0.f);
+       FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 
-	for (int32 i = 0; i < Slots.Num(); i++)
-	{
-		if (!IsValidSlotIndex(i))
-			continue;
+       AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+             DroppableItemClass,
+             SpawnTransform,
+             GetOwner(),
+             nullptr,
+             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+       );
 
-		const FInventorySlot& CurrentSlot = Slots[i];
-
-		if (CurrentSlot.ItemID == "empty")
-			continue;
-		
-		FVector SpawnLocation =
-		GetOwner()->GetActorLocation() +
-		GetOwner()->GetActorForwardVector() * 50.f +
-		FVector(0.f, i * 20.f, 0.f);
-
-		FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
-
-		FActorSpawnParameters Params;
-		Params.Owner = GetOwner();
-		Params.SpawnCollisionHandlingOverride =
-			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		AAO_MasterItem* DropItem =
-			GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-				DroppableItemClass,
-				SpawnTransform,
-				GetOwner(),
-				nullptr,
-				Params.SpawnCollisionHandlingOverride
-			);
-
-		if (DropItem)
-		{
-			DropItem->ItemID = CurrentSlot.ItemID;
-			UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-
-			Slots[i].ItemID = "empty";
-		}
-	}
+       if (DropItem)
+       {
+          DropItem->ItemID = Slots[i].ItemID;
+          UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+          Slots[i] = FInventorySlot();
+       }
+    }
+    NotifyListeners();
 }
 
 void UAO_InventoryComponent::StoreToPlayerState()
 {
-	if (GetOwnerRole() != ROLE_Authority)
-		return;
+    if (GetOwnerRole() != ROLE_Authority) return;
 
-	if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
-	{
-		if (APlayerState* PS = Character->GetPlayerState())
-		{
-			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
-			{
-				AO_PS->PersistentInventory = Slots;
-			}
-		}
-	}
+    if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+    {
+       if (AAO_PlayerState* AO_PS = Character->GetPlayerState<AAO_PlayerState>())
+       {
+          AO_PS->PersistentInventory = Slots;
+       }
+    }
 }
 
-void UAO_InventoryComponent::ApplySlotsFromSave(
-	const TArray<FInventorySlot>& NewSlots)
+void UAO_InventoryComponent::ApplySlotsFromSave(const TArray<FInventorySlot>& NewSlots)
 {
-	if (NewSlots.Num() == 0)
-	{
-		return;
-	}
+    if (NewSlots.Num() == 0) return;
 
-	Slots = NewSlots;
-	EmptySlotList.Empty();
+    Slots = NewSlots;
 
-	for (int32 i = 0; i < Slots.Num(); ++i)
-	{
-		if (Slots[i].ItemID == "empty")
-			EmptySlotList.Add(i);
-	}
-
-	NotifyListeners();
-
-	if (OnInventoryUpdated.IsBound())
-		OnInventoryUpdated.Broadcast(Slots);
+    NotifyListeners();
+    if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
 }

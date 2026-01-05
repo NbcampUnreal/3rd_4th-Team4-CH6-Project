@@ -281,13 +281,13 @@ void AAO_GameMode_InGameBase::LetStartVoiceChat(AController*& TargetController)
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
+//ms : 인벤토리 유지 영역 확인
 bool AAO_GameMode_InGameBase::CheckPlayerInsideSafeZone(class AAO_PlayerState* PS)
 {
 	if (!PS || !PS->GetPawn()) return false;
 
 	FVector PlayerLocation = PS->GetPawn()->GetActorLocation();
-
-	// GameMode가 직접 월드 내의 세이프존을 탐색합니다.
+	
 	for (TActorIterator<AAO_InventorySaveZone> It(GetWorld()); It; ++It)
 	{
 		if (AAO_InventorySaveZone* SafeZone = *It)

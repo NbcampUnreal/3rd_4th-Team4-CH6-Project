@@ -84,4 +84,18 @@ public:
 
 	//ms : 패시브 초기화
 	void PassiveReset();
+
+	//ms: 연료량 data asset
+private:
+	UPROPERTY()
+	class UBP_FuelDataAsset* CachedTrainFuelAsset;
+
+	// 내부적으로 사용하거나 외부 노출 여부에 따라 public/private 결정
+	UBP_FuelDataAsset* GetTrainFuelAsset();
+
+public:
+	// 상수 데이터라면 BlueprintPure가 적합할 수 있습니다.
+	UFUNCTION(BlueprintCallable, Category = "Train")
+	float GetInitialFuel();
+
 };

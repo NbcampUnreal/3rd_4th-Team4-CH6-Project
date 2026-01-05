@@ -4,7 +4,7 @@
 #include "Abilities/GameplayAbilityTypes.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 AAO_PassiveContainer::AAO_PassiveContainer()

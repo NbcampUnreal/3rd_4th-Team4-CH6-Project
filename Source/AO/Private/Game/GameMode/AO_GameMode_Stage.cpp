@@ -183,7 +183,7 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	// World->ServerTravel(Path);
 	// JM : crash
 
-	//ms
+	//ms 다음레벨 이동
 	if (!GameState)
 	{
 		return;
@@ -195,20 +195,15 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		{
 			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(P))
 			{
-				// 1. 먼저 트래블 플래그 설정
 				AO_PS->bIsTraveling = true;
-
-				// 2. [추가] 캐릭터로부터 현재 인벤토리 데이터를 PS로 긁어오기
+				
 				if (APawn* MyPawn = AO_PS->GetPawn())
 				{
 					if (UAO_InventoryComponent* InvComp = MyPawn->FindComponentByClass<UAO_InventoryComponent>())
 					{
-						AO_PS->SaveInventoryBeforeTravel(InvComp); // 여기서 실제 슬롯 데이터가 PS에 담김
+						AO_PS->SaveInventoryBeforeTravel(InvComp);
 					}
-					UE_LOG(LogTemp, Log, TEXT("[GameMode] 플레이어(%s) - SafeZoneStatus(%s)"), 
-						*AO_PS->GetPlayerName(), AO_PS->bInsideTravelSafeZone ? TEXT("In") : TEXT("Out"));
 				}
-				// 3. 유지 여부 결정 (이제 PersistentInventory에 데이터가 있으므로 Empty 여부 결정)
 				HandlePlayerTravel(AO_PS);
 			}
 		}

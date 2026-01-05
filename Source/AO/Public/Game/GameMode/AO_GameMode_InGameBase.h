@@ -42,6 +42,7 @@ private:
 	
 	bool bIsTravelSyncInProgress = false;
 	FString PendingTravelURL;
+//ms : 인벤토리 유지 영역확인	
 protected:
 	bool CheckPlayerInsideSafeZone(class AAO_PlayerState* PS);
 };

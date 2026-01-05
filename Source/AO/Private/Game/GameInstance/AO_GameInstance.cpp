@@ -196,4 +196,35 @@ void UAO_GameInstance::PassiveReset()
 		PassiveSub->ClearAllPlayerData();
 	}	
 }
-//-ms
+
+//ms: 최초 연료량
+UBP_FuelDataAsset* UAO_GameInstance::GetTrainFuelAsset()
+{
+	// 이미 캐싱되어 있다면 바로 반환
+	if (CachedTrainFuelAsset)
+	{
+		return CachedTrainFuelAsset;
+	}
+
+	// 하드코딩된 경로는 나중에 관리하기 힘들 수 있으니 주의하세요.
+	static const FString AssetPath = TEXT("/Game/AVaOut/Train/Data/BP_FuelDataAsset.BP_FuelDataAsset");
+    
+	// 로드 및 캐싱
+	CachedTrainFuelAsset = Cast<UBP_FuelDataAsset>(StaticLoadObject(UBP_FuelDataAsset::StaticClass(), nullptr, *AssetPath));
+    
+	return CachedTrainFuelAsset;
+}
+
+float UAO_GameInstance::GetInitialFuel()
+{
+	// const 함수이므로 안전하게 체크 후 반환
+	if (CachedTrainFuelAsset)
+	{
+		return CachedTrainFuelAsset->InitialFuel;
+	}
+
+	// 만약 로드가 안 된 상태에서도 자동으로 가져오게 하고 싶다면 
+	// const_cast를 쓰거나, GetTrainFuelAsset()을 비-const로 설계해야 합니다.
+	return 0.0f;
+}
+// ms
