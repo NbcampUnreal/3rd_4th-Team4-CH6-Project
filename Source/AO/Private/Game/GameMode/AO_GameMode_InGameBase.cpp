@@ -105,12 +105,12 @@ void AAO_GameMode_InGameBase::StopVoiceChatForAllClients() const
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& DeadPlayerController)
+void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const TObjectPtr<AAO_PlayerController_InGameBase>& ChangedPlayerController)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
 
-	TObjectPtr<AAO_PlayerState> DeadPlayerState = Cast<AAO_PlayerState>(DeadPlayerController->PlayerState);
-	if (!AO_ENSURE(DeadPlayerState, TEXT("Cast Failed PS -> AAO_PS")))
+	TObjectPtr<AAO_PlayerState> ChangedPlayerState = Cast<AAO_PlayerState>(ChangedPlayerController->PlayerState);
+	if (!AO_ENSURE(ChangedPlayerState, TEXT("Cast Failed PS -> AAO_PS")))
 	{
 		return;
 	}
@@ -127,7 +127,7 @@ void AAO_GameMode_InGameBase::LetUpdateVoiceMemberForAllClients(const TObjectPtr
 		{
 			if (TObjectPtr<AAO_PlayerController_InGameBase> AO_PC_InGame = Cast<AAO_PlayerController_InGameBase>(PC))
 			{
-				AO_PC_InGame->Client_UpdateVoiceMember(DeadPlayerState);
+				AO_PC_InGame->Client_UpdateVoiceMember(ChangedPlayerState);
 			}
 			else
 			{

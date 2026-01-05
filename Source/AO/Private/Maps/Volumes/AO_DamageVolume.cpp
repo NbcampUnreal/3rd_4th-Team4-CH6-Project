@@ -40,6 +40,13 @@ void AAO_DamageVolume::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActo
 	UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
 	checkf(ASC, TEXT("ASC is NULL!"));
 
+	// HSJ : 죽은 Pawn에는 데미지를 안 줌
+	FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+	if (ASC->HasMatchingGameplayTag(DeathTag))
+	{
+		return;
+	}
+
 	checkf(DamageEffectClass, TEXT("DamageEffectClass is NULL!"));
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();

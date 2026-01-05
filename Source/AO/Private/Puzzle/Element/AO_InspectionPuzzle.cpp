@@ -73,6 +73,7 @@ FAO_InteractionInfo AAO_InspectionPuzzle::GetInteractionInfo(const FAO_Interacti
     Info.Content = InspectionContent;
     Info.Duration = InteractionDuration;
     Info.AbilityToGrant = AbilityToGrant;
+	Info.InspectionUIClass = InspectionUIClass;
     return Info;
 }
 

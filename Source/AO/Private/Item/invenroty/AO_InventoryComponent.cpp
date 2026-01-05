@@ -109,33 +109,25 @@ int32 UAO_InventoryComponent::FindEmptySlotIndex() const
 
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
-    // 1. 서버 권한 및 유효성 체크
     if (GetOwnerRole() != ROLE_Authority) return;
-    
-    // 2. 가장 작은 인덱스부터 빈 슬롯(0, 1, 2...) 찾기
+	
     int32 TargetIndex = FindEmptySlotIndex();
-
-    // 3. 빈 슬롯을 찾은 경우 (0번부터 순차적으로 채워짐)
+	
     if (TargetIndex != INDEX_NONE)
     {
         Slots[TargetIndex] = IncomingItem;
-        
-        // 월드에 놓여있던 아이템 액터 제거
         if (Instigator) 
         {
             Instigator->Destroy();
         }
     }
-    // 4. 인벤토리가 완전히 꽉 찬 경우
     else
     {
-        // 꽉 찼을 때는 현재 들고 있는(SelectedSlotIndex) 아이템과 교체합니다.
         if (IsValidSlotIndex(SelectedSlotIndex))
         {
             FInventorySlot OldSlot = Slots[SelectedSlotIndex];
             Slots[SelectedSlotIndex] = IncomingItem;
-
-            // 기존에 있던 아이템을 캐릭터 앞에 드랍
+        	
             FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
             FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 
@@ -152,8 +144,7 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
                 DropItem->ItemID = OldSlot.ItemID;
                 UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
             }
-
-            // 주운 아이템 액터 제거
+        	
             if (Instigator)
             {
                 Instigator->Destroy();
@@ -161,7 +152,6 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
         }
     }
     
-    // 5. 클라이언트에 복제 및 UI 업데이트 알림
     NotifyListeners();
     OnInventoryUpdated.Broadcast(Slots);
 }
@@ -366,4 +356,20 @@ void UAO_InventoryComponent::ApplySlotsFromSave(const TArray<FInventorySlot>& Ne
 
     NotifyListeners();
     if (OnInventoryUpdated.IsBound()) OnInventoryUpdated.Broadcast(Slots);
+}
+
+bool UAO_InventoryComponent::CanInventoryAction() const
+{
+	if (TObjectPtr<AActor> Owner = GetOwner())
+	{
+		if (TObjectPtr<UAbilitySystemComponent> ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
+		{
+			// Inspection 중이면 인벤토리 액션 불가
+			if (ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Action.Inspecting"))))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }

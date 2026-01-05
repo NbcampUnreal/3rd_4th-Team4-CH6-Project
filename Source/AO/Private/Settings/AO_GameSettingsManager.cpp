@@ -10,16 +10,8 @@ void UAO_GameSettingsManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
-	{
-		Settings->ApplySettings(false);		// 엔진 기본 설정 적용 (그래픽, 해상도 등)
-		Settings->ApplyCustomSettings();								// 사용자 정의 설정 적용 (볼륨, 마우스 감도 등)
-	}
-	else
-	{
-		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
-		return;
-	}
+	InitUserSettings();
+	
 }
 
 void UAO_GameSettingsManager::Deinitialize()
@@ -371,6 +363,24 @@ void UAO_GameSettingsManager::SetAudioVolume(const EAudioType AudioType, const f
 	{
 		AO_ENSURE(false, TEXT("Failed go Get Game User Settings"));
 	}
+}
+
+void UAO_GameSettingsManager::InitUserSettings()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (TObjectPtr<UAO_GameUserSettings> Settings = GetGameUserSettings())
+	{
+		Settings->ApplySettings(false);		// 엔진 기본 설정 적용 (그래픽, 해상도 등)
+		Settings->ApplyCustomSettings();								// 사용자 정의 설정 적용 (볼륨, 마우스 감도 등)
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Failed to Get GameUserSettings"));
+		return;
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
 const TArray<FResolutionInfo>& UAO_GameSettingsManager::GetResolutionInfoList()

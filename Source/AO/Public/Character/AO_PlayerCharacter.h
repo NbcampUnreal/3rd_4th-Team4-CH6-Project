@@ -84,6 +84,7 @@ public:
 	// 승조 : Inspect하는 중인지 확인
 	UFUNCTION(BlueprintPure, Category = "PlayerCharacter|Inspection")
 	bool IsInspecting() const;
+	virtual void OnRep_Controller() override;
 
 	void StartSprint_GAS(bool bShouldSprint);
 	
@@ -217,7 +218,7 @@ private:
 private:
 	void TryRegisterVoiceTalker();
 	void RegisterVoiceTalker();
-	void InitVoiceChat();
+	// void InitVoiceChat();
 	
 public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "AO|VoiceChat")
