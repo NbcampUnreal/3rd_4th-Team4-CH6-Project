@@ -896,7 +896,14 @@ bool UAO_OnlineSessionSubsystem::VerifyPasswordAgainstIndex(int32 Index, const F
 	{
 		return PlainPassword.IsEmpty();
 	}
-	return SavedHash.Equals(ToMD5(PlainPassword), ESearchCase::IgnoreCase);
+	
+	FString Pw = PlainPassword;
+	if (Pw.Len() > 4)
+	{
+		Pw.LeftInline(4, EAllowShrinking::No);
+	}
+	
+	return SavedHash.Equals(ToMD5(Pw), ESearchCase::IgnoreCase);
 }
 
 /* ==================== 초대 ==================== */
