@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// AO_PlayerController_Lobby.cpp
 
 
 #include "Player/PlayerController/AO_PlayerController_Lobby.h"
@@ -34,6 +34,16 @@ void AAO_PlayerController_Lobby::BeginPlay()
 	AO_LOG(LogJSH, Log, TEXT("Lobby PC BeginPlay: InputMode reset to GameOnly (%s)"), *GetName());
 
 	PlayerCharacter = Cast<AAO_PlayerCharacter>(GetCharacter());
+
+	// HUD 위젯 추가
+	if (IsLocalPlayerController())
+	{
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+			HUDWidget->AddToViewport();
+		}
+	}
 }
 
 void AAO_PlayerController_Lobby::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -181,6 +191,11 @@ void AAO_PlayerController_Lobby::OpenWardrobe()
 
 void AAO_PlayerController_Lobby::CloseWardrobe()
 {
+	if (FadeTimerHandle.IsValid())
+	{
+		return;
+	}
+	
 	FadeIn();
 
 	GetWorldTimerManager().SetTimer(FadeTimerHandle, this, &AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI,
@@ -231,6 +246,14 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedOpenUI()
 
 		CustomizingWidget->AddToViewport();
 	}
+
+	// HUD 위젯 정리
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+	}
+	
+	FadeTimerHandle.Invalidate();
 	
 	FadeOut();
 }
@@ -246,6 +269,13 @@ void AAO_PlayerController_Lobby::OnFadeInFinishedCloseUI()
 		CustomizingDummy->Destroy();
 		CustomizingDummy = nullptr;
 	}
+	
+	// HUD 위젯 추가
+	if (!HUDWidget)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+	}
+	HUDWidget->AddToViewport();
 
 	Server_CloseWardrobe();
 	

@@ -5,6 +5,7 @@
 #include "AO_Log.h"
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
+#include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
 {
@@ -143,6 +144,7 @@ int32 UAO_GameInstance::GetSharedReviveCount() const
 
 void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
 {
+	const int32 OldValue = SharedReviveCount;
 	const int32 NewValue = SharedReviveCount + Delta;
 
 	if (NewValue < 0)
@@ -155,6 +157,19 @@ void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("GI: SharedReviveCount changed to %d"), SharedReviveCount);
+	
+	// 값이 증가한 경우에만 스테이지 GameMode에 알림
+	if (SharedReviveCount > OldValue)
+	{
+		UWorld* World = GetWorld();
+		if (World != nullptr)
+		{
+			if (AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>())
+			{
+				StageGM->HandleSharedReviveCountIncreased();
+			}
+		}
+	}
 }
 
 bool UAO_GameInstance::TryConsumeSharedReviveCount()

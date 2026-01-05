@@ -112,6 +112,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
 	void UnmuteAllRemoteTalker();
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void MuteAllDeadRemoteTalker();
+	
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	bool IsRemotePlayerTalking(APlayerState* PS);
 	
 
 protected:

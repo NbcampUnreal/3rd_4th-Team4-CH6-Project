@@ -20,10 +20,6 @@ public:
 	UAO_GameplayAbility_Sprint();
 
 protected:
-	virtual void OnAvatarSet(
-		const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilitySpec& Spec) override;
-	
 	virtual bool CanActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -57,10 +53,7 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sprint|Stamina")
 	TSubclassOf<UGameplayEffect> PostSprintNoRegenEffectClass;
-	
-private:
-	UPROPERTY()
-	TObjectPtr<AAO_PlayerCharacter> Character = nullptr;
-	UPROPERTY()
-	TObjectPtr<UCharacterMovementComponent> CharacterMovement = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sprint|Stamina")
+	float StaminaCost = 2.0f;
 };

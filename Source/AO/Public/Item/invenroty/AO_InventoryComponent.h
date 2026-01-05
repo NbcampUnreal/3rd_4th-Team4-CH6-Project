@@ -117,5 +117,8 @@ public:
     
     void StoreToPlayerState();
     void ApplySlotsFromSave(const TArray<FInventorySlot>& NewSlots);
+
+private:
+	bool CanInventoryAction() const;
     
 };

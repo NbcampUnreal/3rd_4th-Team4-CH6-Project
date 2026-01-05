@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AO_DelegateManager.h"
 #include "Components/ActorComponent.h"
 #include "AO_CustomizingComponent.generated.h"
 
@@ -11,6 +12,8 @@ class AAO_PlayerState;
 class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterCapsuleChanged, float /*NewCapsuleHalfHeight*/);
 
 USTRUCT(BlueprintType)
 struct FParameterOptionName
@@ -40,6 +43,8 @@ struct FCustomizingData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ECharacterMesh CharacterMeshType = ECharacterMesh::Elsa;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CapsuleHalfHeight = 81.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USkeletalMesh* CharacterSkeletalMesh = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FParameterOptionName HairOptionData;
@@ -62,12 +67,17 @@ public:
 
 	const FCustomizingData& GetCustomizingData() const;
 
+	FOnCharacterCapsuleChanged OnCapsuleChangedDelegate;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Customizing")
 	TMap<ECharacterMesh, TObjectPtr<UCustomizableObject>> CustomizableObjectMap;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Customizing")
+	TMap<ECharacterMesh, TObjectPtr<USkeletalMesh>> SkeletalMeshMap;
 
 private:
 	UPROPERTY()

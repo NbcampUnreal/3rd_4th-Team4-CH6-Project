@@ -12,7 +12,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsCloseDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnResetAllSettings);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnKeybindUpdated);
 
-
 /* 전역 델리게이트 매니저*/
 UCLASS()
 class AO_API UAO_DelegateManager : public UGameInstanceSubsystem

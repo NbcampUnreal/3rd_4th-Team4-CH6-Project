@@ -41,6 +41,7 @@ void AAO_GasRoomPuzzle::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
     CollectCandidateDecals();
+	CollectVFXPoints();
 }
 
 void AAO_GasRoomPuzzle::CollectCandidateDecals()
@@ -64,6 +65,27 @@ void AAO_GasRoomPuzzle::CollectCandidateDecals()
     {
         return A.GetName() < B.GetName();
     });
+}
+
+void AAO_GasRoomPuzzle::CollectVFXPoints()
+{
+	VFXPoints.Empty();
+
+	TArray<USceneComponent*> ChildComponents;
+	GetRootComponent()->GetChildrenComponents(true, ChildComponents);
+
+	for (USceneComponent* Child : ChildComponents)
+	{
+		if (Child && Child->GetName().StartsWith(VFXPointPrefix))
+		{
+			VFXPoints.Add(Child);
+		}
+	}
+
+	VFXPoints.Sort([](const USceneComponent& A, const USceneComponent& B)
+	{
+		return A.GetName() < B.GetName();
+	});
 }
 
 void AAO_GasRoomPuzzle::BeginPlay()
@@ -515,10 +537,11 @@ void AAO_GasRoomPuzzle::MulticastOpenDoors_Implementation()
 
 void AAO_GasRoomPuzzle::MulticastSpawnGasEffects_Implementation()
 {
-    if (!GetWorld())
-    {
-    	return;
-    }
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
 
 	for (FAO_GasEffectSpawnedActors& SpawnedActor : SpawnedEffects)
 	{
@@ -537,33 +560,41 @@ void AAO_GasRoomPuzzle::MulticastSpawnGasEffects_Implementation()
 	}
     SpawnedEffects.Empty();
 
-    for (const FAO_GasEffectSpawnInfo& SpawnInfo : GasEffectSpawnInfos)
-    {
-        FAO_GasEffectSpawnedActors SpawnedActor;
+	const int32 NumEffects = FMath::Min(GasEffectSpawnInfos.Num(), VFXPoints.Num());
+	SpawnedEffects.SetNum(NumEffects);
+
+	for (int32 i = 0; i < NumEffects; ++i)
+	{
+		const FAO_GasEffectSpawnInfo& SpawnInfo = GasEffectSpawnInfos[i];
+		USceneComponent* VFXPoint = VFXPoints[i];
         
-        const FTransform SpawnTransform = GetActorTransform();
-        const FVector WorldLocation = SpawnTransform.TransformPosition(SpawnInfo.RelativeLocation);
-        const FRotator WorldRotation = (SpawnTransform.GetRotation() * SpawnInfo.RelativeRotation.Quaternion()).Rotator();
+		if (!VFXPoint)
+		{
+			continue;
+		}
 
-        if (SpawnInfo.NiagaraEffect)
-        {
-            SpawnedActor.NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-                GetWorld(), SpawnInfo.NiagaraEffect, WorldLocation, WorldRotation, SpawnInfo.VFXScale);
-        }
-        else if (SpawnInfo.CascadeEffect)
-        {
-            SpawnedActor.CascadeComponent = UGameplayStatics::SpawnEmitterAtLocation(
-                GetWorld(), SpawnInfo.CascadeEffect, WorldLocation, WorldRotation, SpawnInfo.VFXScale);
-        }
+		FAO_GasEffectSpawnedActors& SpawnedActor = SpawnedEffects[i];
+        
+		const FVector Location = VFXPoint->GetComponentLocation();
+		const FRotator Rotation = VFXPoint->GetComponentRotation();
 
-        if (SpawnInfo.LoopingSound)
-        {
-            SpawnedActor.AudioComponent = UGameplayStatics::SpawnSoundAtLocation(
-                GetWorld(), SpawnInfo.LoopingSound, WorldLocation, WorldRotation, SpawnInfo.SoundVolumeMultiplier);
-        }
+		if (SpawnInfo.NiagaraEffect)
+		{
+			SpawnedActor.NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				World, SpawnInfo.NiagaraEffect, Location, Rotation, SpawnInfo.VFXScale);
+		}
+		else if (SpawnInfo.CascadeEffect)
+		{
+			SpawnedActor.CascadeComponent = UGameplayStatics::SpawnEmitterAtLocation(
+				World, SpawnInfo.CascadeEffect, Location, Rotation, SpawnInfo.VFXScale);
+		}
 
-        SpawnedEffects.Add(SpawnedActor);
-    }
+		if (SpawnInfo.LoopingSound)
+		{
+			SpawnedActor.AudioComponent = UGameplayStatics::SpawnSoundAtLocation(
+				World, SpawnInfo.LoopingSound, Location, Rotation, SpawnInfo.SoundVolumeMultiplier);
+		}
+	}
 }
 
 void AAO_GasRoomPuzzle::MulticastCleanupGasEffects_Implementation()

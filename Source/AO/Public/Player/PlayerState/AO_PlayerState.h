@@ -87,6 +87,10 @@ private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
 
+	void InitVoiceChat();
+	// 플레이어 이름 준비 완료시 브로드캐스트
+	void BroadcastPlayerNameReady();
+
 // JM : 생존 여부 판단용 변수 추가 (임시)
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)

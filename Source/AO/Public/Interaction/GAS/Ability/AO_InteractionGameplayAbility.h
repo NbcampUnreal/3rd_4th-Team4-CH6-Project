@@ -12,7 +12,7 @@
  * - OnSpawn: 어빌리티 부여 즉시 자동 활성화
  */
 UENUM(BlueprintType)
-enum class ECYAbilityActivationPolicy : uint8
+enum class EAOAbilityActivationPolicy : uint8
 {
 	Manual,
 	OnInputTriggered,
@@ -47,7 +47,7 @@ public:
 		return CurrentActorInfo ? Cast<T>(CurrentActorInfo->AvatarActor.Get()) : nullptr;
 	}
 	
-	ECYAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
+	EAOAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 
 	// Owner 체인을 따라 Controller를 찾아 반환, PlayerController → Controller → Pawn의 Controller 순서로 탐색
 	UFUNCTION(BlueprintCallable, Category = "AO|Ability")
@@ -55,5 +55,5 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AbilityActivation")
-	ECYAbilityActivationPolicy ActivationPolicy;
+	EAOAbilityActivationPolicy ActivationPolicy;
 };

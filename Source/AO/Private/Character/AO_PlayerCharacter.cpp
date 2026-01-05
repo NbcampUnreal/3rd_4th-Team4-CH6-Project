@@ -61,6 +61,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
+	GetCharacterMovement()->CrouchedHalfHeight = 69.f;
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
@@ -148,6 +149,17 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 	if (NameplateComponent)
 	{
 		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
+	}
+
+	if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(NewController))
+	{
+		if (PC->IsLocalController())
+		{
+			if (TObjectPtr<UAO_InteractionComponent> InteractionComp = FindComponentByClass<UAO_InteractionComponent>())
+			{
+				InteractionComp->InitializeInteractionUI(PC);
+			}
+		}
 	}
 }
 
@@ -294,6 +306,7 @@ void AAO_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		{
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 1);
 			EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputReleased, 1);
+			EIC->BindAction(IA_Outline_Train, ETriggerEvent::Started, this, &AAO_PlayerCharacter::HandleGameplayAbilityInputPressed, 2);
 		}			
 	}
 	
@@ -320,6 +333,23 @@ void AAO_PlayerCharacter::OnRep_PlayerState()
 	if (NameplateComponent)
 	{
 		NameplateComponent->HandlePlayerStateChanged(GetPlayerState());
+	}
+}
+
+void AAO_PlayerCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	
+	// 클라이언트 InteractionComponent UI 초기화
+	if (TObjectPtr<APlayerController> PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->IsLocalController())
+		{
+			if (TObjectPtr<UAO_InteractionComponent> InteractionComp = FindComponentByClass<UAO_InteractionComponent>())
+			{
+				InteractionComp->InitializeInteractionUI(PC);
+			}
+		}
 	}
 }
 
@@ -714,16 +744,23 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 	VOIPTalker->Settings.ComponentToAttachTo = GetMesh();
 	VOIPTalker->Settings.AttenuationSettings = SA_VoiceChat;
 
-	if (IsLocallyControlled())
+	/*if (IsLocallyControlled())
 	{
-		InitVoiceChat();
+		// InitVoiceChat();
+	}*/
+	
+	// JM : 보이스 사용중임을 판단하기 위함
+	if (NameplateComponent)
+	{
+		NameplateComponent->SetVOIPTalker(VOIPTalker);
 	}
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_PlayerCharacter::InitVoiceChat()
+/*void AAO_PlayerCharacter::InitVoiceChat()
 {
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
 	UAO_GameUserSettings* GameUserSettings = GetGameInstance()->GetSubsystem<UAO_GameSettingsManager>()->GetGameUserSettings();
 	if (!AO_ENSURE(GameUserSettings, TEXT("Can't Get GameUserSettings")))
 	{
@@ -736,12 +773,14 @@ void AAO_PlayerCharacter::InitVoiceChat()
 		return;
 	}
 
+	AO_LOG_ROLE(LogJM, Log, TEXT("PS(%s) Voice Enabled (%d)"), *GetName(), GameUserSettings->bIsEnableVoiceChat);
 	if (GameUserSettings->bIsEnableVoiceChat)
 	{
 		OSS->StartVoiceChat();
 		OSS->UnmuteAllRemoteTalker();
 	}
-}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}*/
 
 //ms: 사망시 아이템 버리기
 void AAO_PlayerCharacter::HandlePlayerDeath()
