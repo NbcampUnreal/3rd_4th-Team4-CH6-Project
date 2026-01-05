@@ -81,4 +81,7 @@ public:
 
 	// 부활 시도: 0보다 크면 1 소모 후 true, 0이면 false
 	bool TryConsumeSharedReviveCount();
+
+	//ms : 패시브 초기화
+	void PassiveReset();
 };
