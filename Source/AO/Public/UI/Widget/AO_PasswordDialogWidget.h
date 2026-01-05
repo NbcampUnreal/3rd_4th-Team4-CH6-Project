@@ -41,6 +41,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable) void OnClicked_Ok();
 	UFUNCTION(BlueprintCallable) void OnClicked_Back();
+	UFUNCTION() void OnPasswordChanged(const FText& InText);
 
 private:
 	UPROPERTY() TWeakObjectPtr<UAO_LobbyListWidget> ParentList;
