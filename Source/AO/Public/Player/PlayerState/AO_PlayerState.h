@@ -113,5 +113,4 @@ public:
 	TArray<FInventorySlot> PersistentInventory;
 
 	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
-	void ResetStateInventory();
 };

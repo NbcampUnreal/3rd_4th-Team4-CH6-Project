@@ -25,7 +25,6 @@
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Item/invenroty/AO_InventoryComponent.h"
 #include "Item/invenroty/AO_InputModifier.h"
-#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "Settings/AO_GameSettingsManager.h"
@@ -129,19 +128,6 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 		BindGameplayEffects();
 		
 		BindAttributeDelegates();
-
-		//ms : 부활시 패시브 연동
-		GetWorldTimerManager().SetTimerForNextTick([this, NewController]()
-		{
-			if (APlayerController* PC = Cast<APlayerController>(NewController))
-			{
-				if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
-				{
-					Subsystem->RestorePlayerGASData(PC);
-				}
-			}
-		});
-		//ms
 	}
 
 	//ms: 부활시 인벤토리 ui 연동 + 다음레벨 이동시 인벤토리 유지
@@ -379,20 +365,6 @@ void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		VOIPTalker->DestroyComponent();
 		VOIPTalker = nullptr;
 	}
-
-	//ms : 패시브 다음레벨 이동
-	if (HasAuthority() && EndPlayReason == EEndPlayReason::LevelTransition)
-	{
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
-		{
-			if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
-			{
-				Subsystem->SnapshotPlayerData(PC);
-			}
-		}
-	}
-	//ms
-	
 	Super::EndPlay(EndPlayReason);
 }
 

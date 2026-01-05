@@ -5,7 +5,6 @@
 #include "AO_Log.h"
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
-#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
@@ -186,14 +185,3 @@ bool UAO_GameInstance::TryConsumeSharedReviveCount()
 
 	return true;
 }
-
-//ms : 패시브 초기화
-void UAO_GameInstance::PassiveReset()
-{
-	UAO_Passive_WorldSubsystem* PassiveSub = GetSubsystem<UAO_Passive_WorldSubsystem>();
-	if (PassiveSub)
-	{
-		PassiveSub->ClearAllPlayerData();
-	}	
-}
-//-ms

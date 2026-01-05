@@ -2,7 +2,6 @@
 
 #include "Net/UnrealNetwork.h"
 #include "AO_Log.h"
-#include "Game/GameInstance/AO_GameInstance.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_GameState::AAO_GameState()
@@ -15,7 +14,6 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
-	DOREPLIFETIME(AAO_GameState, RunResetTrigger); // ms:패시브 초기화
 }
 
 void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -106,42 +104,3 @@ int32 AAO_GameState::GetSharedReviveCount() const
 {
 	return SharedReviveCount;
 }
-
-//ms: 패시브 초기화
-
-void AAO_GameState::Authority_NotifyGlobalReset()
-{
-	if (HasAuthority())
-	{
-		RunResetTrigger++;
-	}
-}
-
-void AAO_GameState::OnRep_RunResetTrigger()
-{
-	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
-	{
-		GI->PassiveReset(); 
-	}
-}
-
-//ms : 선발대 흔적 확인
-void AAO_GameState::FindHint(int32 Num)
-{
-	if (!HasAuthority()) return;
-	
-	switch (Num)
-	{
-	case 1: bHint1 = true; break;
-	case 2: bHint2 = true; break;
-	case 3: bHint3 = true; break;
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
-}
-
-bool AAO_GameState::CheckHintCount()
-{
-	return bHint1 && bHint2 && bHint3;
-}
-//-ms

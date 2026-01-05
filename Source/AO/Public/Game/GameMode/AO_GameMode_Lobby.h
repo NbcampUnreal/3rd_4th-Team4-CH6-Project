@@ -17,7 +17,7 @@ class AO_API AAO_GameMode_Lobby : public AAO_GameMode_InGameBase
 public:
 	AAO_GameMode_Lobby();
 
-	virtual void BeginPlay() override;
+public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void Logout(AController* Exiting) override;

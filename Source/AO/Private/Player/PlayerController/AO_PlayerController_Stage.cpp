@@ -20,7 +20,6 @@
 #include "Camera/CameraComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
-#include "Game/GameState/AO_GameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "UI/HUD/AO_HealthWidget.h"
@@ -765,13 +764,4 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("ReviveTest: UI restored for %s"), *GetName());
-}
-
-void AAO_PlayerController_Stage::Server_NotifyHintFound_Implementation(int32 HintNum)
-{
-	AAO_GameState* GS = GetWorld()->GetGameState<AAO_GameState>();
-	if (GS)
-	{
-		GS->FindHint(HintNum);
-	}
 }

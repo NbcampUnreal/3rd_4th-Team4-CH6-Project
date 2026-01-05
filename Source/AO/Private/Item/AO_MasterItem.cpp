@@ -78,10 +78,12 @@ void AAO_MasterItem::ApplyItemData()
 {
 	if (!ItemDataTable)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemDataTable is NULL. ItemID: %s"), *ItemID.ToString());
 		return;
 	}
 	if (ItemID.IsNone())
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData failed: ItemID is None."));
 		return;
 	}
 
@@ -89,6 +91,7 @@ void AAO_MasterItem::ApplyItemData()
 
 	if (const FAO_struct_FItemBase* Row = ItemDataTable->FindRow<FAO_struct_FItemBase>(ItemID, Context))
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData SUCCESS for ItemID: %s"), *ItemID.ToString());
 		ItemTags = Row->ItemTags;
 		FuelAmount = Row->FuelAmount;
 		
@@ -105,6 +108,10 @@ void AAO_MasterItem::ApplyItemData()
 				}
 			}
 		}
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Error, TEXT("ApplyItemData FAILED to find row for ItemID: %s"), *ItemID.ToString());
 	}
 }
 
@@ -158,7 +165,7 @@ void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
 			ItemToAdd.ItemType = Row->ItemType;
 		}
 	}
-	
+	//UE_LOG(LogTemp, Warning, TEXT("DEBUG: Adding item to inventory. FuelAmount = %f"), ServerFuelAmount);
 	Inventory->PickupItem(ItemToAdd, this);
 
 	Destroy();
