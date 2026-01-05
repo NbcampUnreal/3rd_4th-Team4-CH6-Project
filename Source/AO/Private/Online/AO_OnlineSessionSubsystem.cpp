@@ -339,6 +339,7 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.Set(KEY_SERVER_NAME, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_PASSWORD_MD5, ToMD5(Password), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_CURRENT_PLAYERS, 1, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_IN_GAME, false, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(SEARCH_LOBBIES, true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
@@ -904,6 +905,59 @@ bool UAO_OnlineSessionSubsystem::VerifyPasswordAgainstIndex(int32 Index, const F
 	}
 	
 	return SavedHash.Equals(ToMD5(Pw), ESearchCase::IgnoreCase);
+}
+
+int32 UAO_OnlineSessionSubsystem::GetCurrentPlayersByIndex(int32 Index) const
+{
+	if(Index < 0)
+	{
+		return -1;
+	}
+
+	if(LastSearchResults.Num() <= Index)
+	{
+		return -1;
+	}
+
+	const FOnlineSessionSearchResult& Result = LastSearchResults[Index];
+
+	int32 CurrentPlayers = -1;
+
+	const FOnlineSessionSettings& Settings = Result.Session.SessionSettings;
+
+	if(Settings.Get(KEY_CURRENT_PLAYERS, CurrentPlayers))
+	{
+		return CurrentPlayers;
+	}
+
+	return -1;
+}
+
+void UAO_OnlineSessionSubsystem::UpdateCurrentPlayers(int32 CurrentPlayers)
+{
+	IOnlineSessionPtr SessionInterface = GetSessionInterface();
+	if(!SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if(NamedSession == nullptr)
+	{
+		return;
+	}
+
+	FOnlineSessionSettings& Settings = NamedSession->SessionSettings;
+
+	Settings.Set(
+		KEY_CURRENT_PLAYERS,
+		CurrentPlayers,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+
+	const FName SessionName = NamedSession->SessionName;
+
+	SessionInterface->UpdateSession(SessionName, Settings);
 }
 
 /* ==================== 초대 ==================== */

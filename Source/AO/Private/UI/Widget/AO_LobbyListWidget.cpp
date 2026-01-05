@@ -382,9 +382,29 @@ void UAO_LobbyListWidget::RebuildList()
 				Entry->SetParentLobby(this);
 
 				const FString RoomName = Sub->GetServerNameByIndex(ResultIndex);
-				const int32 OpenSlots = Sub->GetOpenPublicConnectionsByIndex(ResultIndex);
-				const int32 MaxSlots  = Sub->GetMaxPublicConnectionsByIndex(ResultIndex);
-				const bool  bHasPw    = Sub->IsPasswordRequiredByIndex(ResultIndex);
+				const bool bHasPw = Sub->IsPasswordRequiredByIndex(ResultIndex);
+
+				const int32 MaxSlots = Sub->GetMaxPublicConnectionsByIndex(ResultIndex);
+
+				int32 CurrentPlayers = Sub->GetCurrentPlayersByIndex(ResultIndex);
+
+				if(CurrentPlayers < 0)
+				{
+					const int32 FallbackOpenSlots = Sub->GetOpenPublicConnectionsByIndex(ResultIndex);
+					CurrentPlayers = MaxSlots - FallbackOpenSlots;
+				}
+
+				if(CurrentPlayers < 0)
+				{
+					CurrentPlayers = 0;
+				}
+
+				if(CurrentPlayers > MaxSlots)
+				{
+					CurrentPlayers = MaxSlots;
+				}
+
+				const int32 OpenSlots = MaxSlots - CurrentPlayers;
 
 				Entry->Setup(ResultIndex, RoomName, OpenSlots, MaxSlots, bHasPw);
 				Scroll_SessionList->AddChild(Entry);
