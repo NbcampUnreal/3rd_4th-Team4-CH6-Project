@@ -143,11 +143,20 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	// 마지막 스테이지면 → 로비로 귀환
 	if(AO_GI->IsLastStage())
 	{
-		TargetMapName = AO_GI->GetLobbyMap();
+		AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+		if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+		{
+			return;
+		}
+
+		AO_GS->SetGameClear();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+		
+		/* JM : 로직 겹쳐서 지움 (ui 에서 버튼 클릭하면 로비로 돌아가도록 할 예정)
+		 *TargetMapName = AO_GI->GetLobbyMap();
 
 		// 다음 판은 다시 처음부터
 		AO_GI->ResetRun();
-		RollbackSessionInGameFlag();
+		RollbackSessionInGameFlag();*/
 	}
 	else
 	{
@@ -187,7 +196,7 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-// TODO: JM : Requester 쓸 필요가없는데..? 그냥 지우죠?
+// TODO: JM : Requester 쓸 필요가없는데..? 그냥 지울까요?
 void AAO_GameMode_Stage::ResetGameAndGoToLobby(AController* Requester)
 {
 	if(!HasAuthority())
