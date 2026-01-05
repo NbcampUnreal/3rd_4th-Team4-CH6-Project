@@ -4,9 +4,12 @@
 #include "Game/GameMode/AO_GameMode_InGameBase.h"
 
 #include "AO_Log.h"
+<<<<<<< feat-kms
 #include "EngineUtils.h"
 #include "Components/BoxComponent.h"
 #include "Item/InventoryTravelSafeZone/AO_InventorySaveZone.h"
+=======
+>>>>>>> develop
 #include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "Player/PlayerController/AO_PlayerController_InGameBase.h"
 #include "Player/PlayerState/AO_PlayerState.h"
@@ -21,6 +24,23 @@ AAO_GameMode_InGameBase::AAO_GameMode_InGameBase()
 void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
+<<<<<<< feat-kms
+=======
+
+	//ms : 패시브 유지
+	if (APlayerController* PC = Cast<APlayerController>(C))
+	{
+		if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
+		{
+			Subsystem->SnapshotPlayerData(PC);
+		}
+	}
+	//ms
+	
+	Super::HandleSeamlessTravelPlayer(C);
+
+	// LetStartVoiceChat(C);	// 강제로 실행할 필요 없음. 그냥 사용자 설정에 맞게 반영	// 레벨 이동시 VoiceChat이 종료되어서 다시 실행시킴
+>>>>>>> develop
 
 	//ms : 패시브 유지
 	if (APlayerController* PC = Cast<APlayerController>(C))

@@ -114,6 +114,7 @@ public:
 
 	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
 	void ResetStateInventory();
+<<<<<<< feat-kms
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bInsideTravelSafeZone = false;
@@ -121,4 +122,6 @@ public:
 	bool bInventoryShouldPersist = false;
 	bool bIsTraveling = false;
 	void SetSafeZoneState(bool bInZone);
+=======
+>>>>>>> develop
 };

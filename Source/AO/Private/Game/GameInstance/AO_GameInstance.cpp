@@ -6,7 +6,10 @@
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
 #include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
+<<<<<<< feat-kms
 #include "Train/Data/AO_FuelData.h"
+=======
+>>>>>>> develop
 #include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
@@ -210,6 +213,7 @@ void UAO_GameInstance::PassiveReset()
 		PassiveSub->ClearAllPlayerData();
 	}	
 }
+<<<<<<< feat-kms
 
 //ms: 연료 값을 가져오는 로직
 float UAO_GameInstance::GetInitialFuel()
@@ -237,3 +241,6 @@ float UAO_GameInstance::GetInitialFuelValue()
 	return 40.0f;
 }
 // ms
+=======
+//-ms
+>>>>>>> develop

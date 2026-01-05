@@ -54,6 +54,7 @@ void UAO_InventoryComponent::RegisterToSubsystem()
     if (!PC || !PC->IsLocalController())
        return;
 
+<<<<<<< feat-kms
     if (ULocalPlayer* LP = PC->GetLocalPlayer())
     {
        if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
@@ -61,6 +62,15 @@ void UAO_InventoryComponent::RegisterToSubsystem()
           Subsystem->RegisterInventory(this);
        }
     }
+=======
+	if (ULocalPlayer* LP = PC->GetLocalPlayer())
+	{
+		if (auto* Subsystem = LP->GetSubsystem<UAO_InventorySubsystem>())
+		{
+			Subsystem->RegisterInventory(this);
+		}
+	}
+>>>>>>> develop
 }
 
 void UAO_InventoryComponent::SetupInputBinding(UInputComponent* PlayerInputComponent)
@@ -158,6 +168,7 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 
 void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 {
+<<<<<<< feat-kms
     if (!IsValidSlotIndex(SelectedSlotIndex)) return;
     if (Slots[SelectedSlotIndex].ItemID == "empty") return;
 
@@ -200,6 +211,75 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
 
        FCollisionQueryParams Params;
        Params.AddIgnoredActor(GetOwner());
+=======
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Consumable)
+	{
+		static const FString Context00(TEXT("Inventory Item Use"));
+		float AddAmount = 0.0f;
+		const FAO_struct_FItemBase* ItemData = ItemDataTable->FindRow<FAO_struct_FItemBase>(
+		Slots[SelectedSlotIndex].ItemID, 
+		Context00      
+		);
+
+		if (ItemData)
+		{
+			AddAmount = ItemData->PassiveAmount;
+		}
+		const FGameplayTag ActivationEventTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive")); 
+    
+		FGameplayEventData EventData;
+		EventData.EventTag = ActivationEventTag;
+		EventData.EventMagnitude = AddAmount;
+		
+		AActor* OwnerActor = GetOwner();
+		if (!OwnerActor) return;
+		UAbilitySystemComponent* ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+		if (!ASC) return;
+		static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item"));    
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();  
+		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AddHealthClass, 1.f, Context);    
+		if (SpecHandle.IsValid())  
+		{
+			SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, EventData.EventMagnitude);  
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+		
+		ClearSlot();
+	}
+	if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
+	{
+		FHitResult Hit;
+		FVector Start = GetOwner()->GetActorLocation();
+		FVector End = Start + (GetOwner()->GetActorForwardVector() * 10000.f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(GetOwner());
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(
+			Hit,
+			Start,
+			End,
+			ECC_Visibility,
+			Params
+		);
+
+		if (bHit)
+		{
+			if (AActor* HitActor = Hit.GetActor())
+			{
+				UGameplayStatics::ApplyPointDamage(
+					HitActor,
+					1.0f,
+					(End - Start).GetSafeNormal(),
+					Hit,
+					GetOwner()->GetInstigatorController(),
+			GetOwner(),   
+					UDamageType::StaticClass()
+				);
+			}
+			DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
+		}
+>>>>>>> develop
 
        if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
        {

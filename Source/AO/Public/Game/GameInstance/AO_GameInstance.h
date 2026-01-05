@@ -86,6 +86,7 @@ public:
 
 	//ms : 패시브 초기화
 	void PassiveReset();
+<<<<<<< feat-kms
 
 	//ms: 연료량 data asset
 protected:
@@ -103,3 +104,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	float GetInitialFuelValue();
 };
+=======
+};
+>>>>>>> develop

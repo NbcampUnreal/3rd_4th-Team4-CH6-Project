@@ -142,6 +142,10 @@ void AAO_GameState::FindHint(int32 Num)
 
 bool AAO_GameState::CheckHintCount()
 {
+<<<<<<< feat-kms
 	return bHint1 || bHint2 || bHint3;
+=======
+	return bHint1 && bHint2 && bHint3;
+>>>>>>> develop
 }
 //-ms

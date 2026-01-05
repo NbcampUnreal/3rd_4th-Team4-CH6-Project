@@ -152,6 +152,7 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		PS->CharacterCustomizingData = this->CharacterCustomizingData;
 		//ms : 다음스테이지에서 인벤토리 유지
+<<<<<<< feat-kms
 		if (bInventoryShouldPersist)
 		{
 			PS->PersistentInventory = this->PersistentInventory;
@@ -159,6 +160,17 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 		else
 		{
 			PS->PersistentInventory.Empty();
+=======
+		UAO_GameInstance* GI = GetGameInstance<UAO_GameInstance>();
+        
+		if (GI && GI->CurrentStageIndex == 0)
+		{
+			PS->PersistentInventory.Empty();
+		}
+		else
+		{
+			PS->PersistentInventory = PersistentInventory;
+>>>>>>> develop
 		}
 		//ms
 	}
@@ -275,8 +287,11 @@ void AAO_PlayerState::ResetStateInventory()
 {
 	PersistentInventory.Empty();
 }
+<<<<<<< feat-kms
 
 void AAO_PlayerState::SetSafeZoneState(bool bInZone)
 {
 	bInsideTravelSafeZone = bInZone;
 }
+=======
+>>>>>>> develop
