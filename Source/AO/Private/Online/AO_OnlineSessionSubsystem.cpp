@@ -18,6 +18,10 @@
 #include "Interfaces/VoiceInterface.h"	// JM : VoiceInterface
 #include "Player/PlayerState/AO_PlayerState.h"
 
+#include "Misc/Base64.h"
+#include "Containers/StringConv.h"
+#include "Misc/Char.h"
+
 namespace
 {
 	static bool IsNullOSS()
@@ -97,6 +101,39 @@ void UAO_OnlineSessionSubsystem::Deinitialize()
 }
 
 /* ==================== 유틸 ==================== */
+FString UAO_OnlineSessionSubsystem::EncodeRoomNameForSession(const FString& InRoomName)
+{
+	FTCHARToUTF8 Utf8(*InRoomName);
+
+	const uint8* Source = reinterpret_cast<const uint8*>(Utf8.Get());
+	const uint32 Length = static_cast<uint32>(Utf8.Length());
+	
+	return FBase64::Encode(Source, Length);
+}
+
+FString UAO_OnlineSessionSubsystem::DecodeRoomNameFromSession(const FString& InEncoded)
+{
+	if (InEncoded.IsEmpty())
+	{
+		return FString();
+	}
+
+	TArray<uint8> Bytes;
+	if (!FBase64::Decode(InEncoded, Bytes) || Bytes.Num() == 0)
+	{
+		// Base64 가 아니면 그냥 원본 문자열을 그대로 사용
+		return InEncoded;
+	}
+
+	// UTF-8 문자열 널 종료
+	Bytes.Add(0);
+
+	const char* Utf8Ptr = reinterpret_cast<const char*>(Bytes.GetData());
+	const TCHAR* WidePtr = UTF8_TO_TCHAR(Utf8Ptr);
+
+	return FString(WidePtr);
+}
+
 FString UAO_OnlineSessionSubsystem::ToMD5(const FString& In)
 {
 	return FMD5::HashAnsiString(*In);
@@ -336,9 +373,10 @@ void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool 
 	Settings.bUseLobbiesIfAvailable = true;
 
 	const bool bHasPassword = !Password.IsEmpty();
-	Settings.Set(KEY_SERVER_NAME, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_SERVER_NAME, EncodeRoomNameForSession(RoomName), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_PASSWORD_MD5, ToMD5(Password), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_CURRENT_PLAYERS, 1, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(KEY_IN_GAME, false, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	Settings.Set(SEARCH_LOBBIES, true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
@@ -527,8 +565,9 @@ void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 				bool bLobbyTag = false;
 				S.SessionSettings.Get(SEARCH_LOBBIES, bLobbyTag);
 
-				FString RoomName;
-				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, RoomName);
+				FString EncodedRoomName;
+				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, EncodedRoomName);
+				const FString RoomName = DecodeRoomNameFromSession(EncodedRoomName);
 
 				const bool bBad =
 					!bLobbyTag ||
@@ -856,9 +895,17 @@ FString UAO_OnlineSessionSubsystem::GetServerNameByIndex(int32 Index) const
 	{
 		return FString();
 	}
-	FString Name;
-	LastSearchResults[Index].Session.SessionSettings.Get(KEY_SERVER_NAME, Name);
-	return Name;
+
+	FString EncodedName;
+	const bool bHasName =
+		LastSearchResults[Index].Session.SessionSettings.Get(KEY_SERVER_NAME, EncodedName);
+
+	if (!bHasName || EncodedName.IsEmpty())
+	{
+		return FString();
+	}
+
+	return DecodeRoomNameFromSession(EncodedName);
 }
 
 bool UAO_OnlineSessionSubsystem::IsInGameByIndex(int32 Index) const
@@ -896,7 +943,67 @@ bool UAO_OnlineSessionSubsystem::VerifyPasswordAgainstIndex(int32 Index, const F
 	{
 		return PlainPassword.IsEmpty();
 	}
-	return SavedHash.Equals(ToMD5(PlainPassword), ESearchCase::IgnoreCase);
+	
+	FString Pw = PlainPassword;
+	if (Pw.Len() > 4)
+	{
+		Pw.LeftInline(4, EAllowShrinking::No);
+	}
+	
+	return SavedHash.Equals(ToMD5(Pw), ESearchCase::IgnoreCase);
+}
+
+int32 UAO_OnlineSessionSubsystem::GetCurrentPlayersByIndex(int32 Index) const
+{
+	if(Index < 0)
+	{
+		return -1;
+	}
+
+	if(LastSearchResults.Num() <= Index)
+	{
+		return -1;
+	}
+
+	const FOnlineSessionSearchResult& Result = LastSearchResults[Index];
+
+	int32 CurrentPlayers = -1;
+
+	const FOnlineSessionSettings& Settings = Result.Session.SessionSettings;
+
+	if(Settings.Get(KEY_CURRENT_PLAYERS, CurrentPlayers))
+	{
+		return CurrentPlayers;
+	}
+
+	return -1;
+}
+
+void UAO_OnlineSessionSubsystem::UpdateCurrentPlayers(int32 CurrentPlayers)
+{
+	IOnlineSessionPtr SessionInterface = GetSessionInterface();
+	if(!SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if(NamedSession == nullptr)
+	{
+		return;
+	}
+
+	FOnlineSessionSettings& Settings = NamedSession->SessionSettings;
+
+	Settings.Set(
+		KEY_CURRENT_PLAYERS,
+		CurrentPlayers,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+
+	const FName SessionName = NamedSession->SessionName;
+
+	SessionInterface->UpdateSession(SessionName, Settings);
 }
 
 /* ==================== 초대 ==================== */

@@ -31,6 +31,8 @@ protected:
 	/* 입력 변화 콜백 (실시간 버튼 상태 갱신) */
 	UFUNCTION() void OnRoomNameChanged(const FText& Text);
 	UFUNCTION() void OnRoomNameCommitted(const FText& Text, ETextCommit::Type Method);
+	
+	UFUNCTION() void OnPasswordChanged(const FText& Text);
 
 	/* 모달 입력 적용 (커서만 표시, 포커스: 방 이름 상자) */
 	void ApplyModalInput();
