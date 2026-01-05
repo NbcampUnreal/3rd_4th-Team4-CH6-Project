@@ -5,6 +5,7 @@
 #include "AO_Log.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -192,6 +193,33 @@ void UAO_DeathSpectateComponent::NotifySpectators_TargetInvalidated()
 	}
 }
 
+void UAO_DeathSpectateComponent::MulticastRPC_EnterRagdoll_Implementation()
+{
+	USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+	if (!ensure(MeshComp))
+	{
+		return;
+	}
+
+	// 이미 래그돌이면 방지
+	if (MeshComp->IsSimulatingPhysics())
+	{
+		return;
+	}
+
+	if (UCharacterMovementComponent* MovementComponent = OwnerCharacter->GetCharacterMovement())
+	{
+		MovementComponent->StopMovementImmediately();
+		MovementComponent->DisableMovement();
+	}
+	
+	MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+	MeshComp->SetAllBodiesSimulatePhysics(true);
+	MeshComp->SetSimulatePhysics(true);
+	MeshComp->WakeAllRigidBodies();
+	MeshComp->bBlendPhysics = true;
+}
+
 void UAO_DeathSpectateComponent::OnOwnerDied()
 {
 	if (!OwnerCharacter || !OwnerCharacter->HasAuthority())
@@ -212,9 +240,17 @@ void UAO_DeathSpectateComponent::OnOwnerDied()
 		return;
 	}
 
+	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+	if (ASC && ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death"))))
+	{
+		return;
+	}
+	
+	AO_LOG(LogKH, Log, TEXT("Death: %s"), *OwnerCharacter->GetName());
+
 	PS->SetIsAlive(false);
 
-	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
+	if (ASC)
 	{
 		FGameplayTagContainer DeathTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
 		ASC->TryActivateAbilitiesByTag(DeathTag);

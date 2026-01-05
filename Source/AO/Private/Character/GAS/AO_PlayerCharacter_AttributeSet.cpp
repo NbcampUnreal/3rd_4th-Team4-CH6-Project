@@ -2,6 +2,7 @@
 
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 
+#include "AO_Log.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 
@@ -39,6 +40,9 @@ void UAO_PlayerCharacter_AttributeSet::PreAttributeChange(const FGameplayAttribu
 void UAO_PlayerCharacter_AttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+	
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponentChecked();
+	const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
@@ -46,11 +50,15 @@ void UAO_PlayerCharacter_AttributeSet::PostGameplayEffectExecute(const struct FG
 		
 		if (NewHealth <= 0.f)
 		{
-			if (AActor* Owner = GetOwningActor())
+			if (!ASC->HasMatchingGameplayTag(DeathTag))
 			{
-				if (Owner->HasAuthority())
+				if (AActor* Owner = GetOwningActor())
 				{
-					OnPlayerDeath.Broadcast();
+					if (Owner->HasAuthority())
+					{
+						AO_LOG(LogKH, Log, TEXT("Player Death"));
+						OnPlayerDeath.Broadcast();
+					}
 				}
 			}
 		}

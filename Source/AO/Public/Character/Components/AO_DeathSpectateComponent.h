@@ -49,6 +49,10 @@ public:
 
 	void NotifySpectators_TargetInvalidated();
 
+	// Ragdoll 처리
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_EnterRagdoll();
+	
 private:
 	UFUNCTION()
 	void OnOwnerDied();

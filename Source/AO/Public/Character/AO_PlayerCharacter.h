@@ -12,6 +12,7 @@
 #include "Net/VoiceConfig.h"				// JM : VOIPTalker
 #include "AO_PlayerCharacter.generated.h"
 
+class UPostProcessComponent;
 class UAO_NameplateComponent;
 class UAO_DeathSpectateComponent;
 class UAO_PlayerCharacter_AttributeDefaults;
@@ -108,6 +109,8 @@ protected:
 	TObjectPtr<UAO_DeathSpectateComponent> DeathSpectateComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
 	TObjectPtr<UAO_NameplateComponent> NameplateComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacter|Components")
+	TObjectPtr<UPostProcessComponent> PostProcessComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	TObjectPtr<UAO_InventoryComponent> InventoryComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
