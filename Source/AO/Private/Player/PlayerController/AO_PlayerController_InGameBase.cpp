@@ -147,7 +147,7 @@ UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget
 
 	// 델리게이트 바인딩 1회
 	PauseMenu->OnRequestSettings.AddDynamic(this, &ThisClass::OnPauseMenu_RequestSettings);
-	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby);
+	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby_OpenConfirm);
 	PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame);
 	PauseMenu->OnRequestResume.AddDynamic(this, &ThisClass::OnPauseMenu_RequestResume);
 
@@ -529,6 +529,100 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 
 	AO_LOG(LogJSH, Warning, TEXT("UIStackManager not found. Resume ignored."));
 	ApplyInGameInputDefaults();
+}
+
+void AAO_PlayerController_InGameBase::OpenConfirmReturnToMenuWidget()
+{
+	if (ConfirmReturnToMenuWidget == nullptr)
+	{
+		if (ConfirmReturnToMenuWidgetClass == nullptr)
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OpenConfirmReturnToMenuWidget: ConfirmReturnToMenuWidgetClass is null"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget = CreateWidget<UAO_ConfirmReturnToMenuWidget>(this, ConfirmReturnToMenuWidgetClass);
+		if (ConfirmReturnToMenuWidget == nullptr)
+		{
+			AO_LOG(LogJSH, Error, TEXT("OpenConfirmReturnToMenuWidget: Failed to create widget"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget->OnConfirmLeaveToMenu.AddDynamic(this, &ThisClass::OnConfirmReturnToMenu);
+		ConfirmReturnToMenuWidget->OnCancelLeaveToMenu.AddDynamic(this, &ThisClass::OnCancelReturnToMenu);
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			FAOUIStackPolicy Policy;
+			Policy.InputMode = EAOUIStackInputMode::UIOnly;
+			Policy.bShowMouseCursor = true;
+			Policy.MouseLockMode = EMouseLockMode::DoNotLock;
+			Policy.bHideCursorDuringCapture = false;
+			Policy.InitialFocusWidget = ConfirmReturnToMenuWidget;
+
+			UIStack->PushWidgetInstance(this, ConfirmReturnToMenuWidget, Policy);
+			return;
+		}
+	}
+
+	// UIStack 못 찾았을 때 최소 동작용 fallback
+	ConfirmReturnToMenuWidget->AddToViewport(200);
+
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(ConfirmReturnToMenuWidget->TakeWidget());
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby_OpenConfirm()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnPauseMenu_RequestReturnLobby_OpenConfirm: Open confirm dialog"));
+	OpenConfirmReturnToMenuWidget();
+}
+
+void AAO_PlayerController_InGameBase::OnConfirmReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnConfirmReturnToMenu: Confirmed, returning to menu"));
+
+	// 먼저 팝업을 Stack에서 제거
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+		}
+	}
+	else if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
+
+	// 기존 "메뉴로 돌아가기" 실제 로직 실행 (세션 정리 + 맵 이동)
+	OnPauseMenu_RequestReturnLobby();
+}
+
+void AAO_PlayerController_InGameBase::OnCancelReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnCancelReturnToMenu: Cancelled"));
+
+	// 팝업만 닫고 PauseMenu로 포커스 복구
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
 }
 
 UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const

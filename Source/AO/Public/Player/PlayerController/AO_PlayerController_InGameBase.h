@@ -7,10 +7,12 @@
 #include "GameFramework/PlayerController.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Widget/AO_UserWidget.h"
+#include "UI/Widget/AO_ConfirmReturnToMenuWidget.h"
 #include "AO_PlayerController_InGameBase.generated.h"
 
 class UAO_CameraManagerComponent;
 class UAO_PauseMenuWidget;
+class UAO_ConfirmReturnToMenuWidget;
 class UAO_OnlineSessionSubsystem;
 
 /**
@@ -42,6 +44,12 @@ protected:
 
 	UPROPERTY()
 	UAO_PauseMenuWidget* PauseMenu;
+	
+	UPROPERTY(EditAnywhere, Category="AO|UI")
+	TSubclassOf<UAO_ConfirmReturnToMenuWidget> ConfirmReturnToMenuWidgetClass;
+
+	UPROPERTY()
+	UAO_ConfirmReturnToMenuWidget* ConfirmReturnToMenuWidget;
 
 public:
 	TSubclassOf<UAO_PauseMenuWidget> GetPauseMenuWidgetClass() const { return PauseMenuClass; }
@@ -99,6 +107,18 @@ protected:
 
 	UFUNCTION()
 	void OnPauseMenu_RequestResume();
+	
+	UFUNCTION()
+	void OpenConfirmReturnToMenuWidget();
+
+	UFUNCTION()
+	void OnConfirmReturnToMenu();
+
+	UFUNCTION()
+	void OnCancelReturnToMenu();
+
+	UFUNCTION()
+	void OnPauseMenu_RequestReturnLobby_OpenConfirm();
 
 	UAO_OnlineSessionSubsystem* GetOnlineSessionSub() const;
 
