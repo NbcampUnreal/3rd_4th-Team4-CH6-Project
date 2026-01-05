@@ -6,24 +6,38 @@
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
 #include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
+#include "Train/Data/AO_FuelData.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
 {
-	SharedTrainFuel = 40.0f;
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
 
 	// 최초 기본 부활 횟수
 	InitialSharedReviveCount = 5;
 	SharedReviveCount = InitialSharedReviveCount;
+
+	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
+}
+
+void UAO_GameInstance::Init()
+{
+	Super::Init();
+    
+	// 게임 시작 시 BP에서 할당한 에셋으로부터 연료 값을 가져옵니다.
+	SharedTrainFuel = GetInitialFuel();
+    
+	UE_LOG(LogTemp, Log, TEXT("UAO_GameInstance::Init - Initial Fuel: %f"), SharedTrainFuel);
 }
 
 void UAO_GameInstance::ResetRun()
 {
 	CurrentStageIndex = 0;
-	SharedTrainFuel = 40.0f;
+	SharedTrainFuel = GetInitialFuelValue();
 	SharedReviveCount = InitialSharedReviveCount;
+    
+	UE_LOG(LogTemp, Log, TEXT("Run Reset: SharedTrainFuel set to %f"), SharedTrainFuel);
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -143,7 +157,7 @@ int32 UAO_GameInstance::GetSharedReviveCount() const
 	return SharedReviveCount;
 }
 
-void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
+ void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
 {
 	const int32 OldValue = SharedReviveCount;
 	const int32 NewValue = SharedReviveCount + Delta;
@@ -197,34 +211,29 @@ void UAO_GameInstance::PassiveReset()
 	}	
 }
 
-//ms: 최초 연료량
-UBP_FuelDataAsset* UAO_GameInstance::GetTrainFuelAsset()
-{
-	// 이미 캐싱되어 있다면 바로 반환
-	if (CachedTrainFuelAsset)
-	{
-		return CachedTrainFuelAsset;
-	}
-
-	// 하드코딩된 경로는 나중에 관리하기 힘들 수 있으니 주의하세요.
-	static const FString AssetPath = TEXT("/Game/AVaOut/Train/Data/BP_FuelDataAsset.BP_FuelDataAsset");
-    
-	// 로드 및 캐싱
-	CachedTrainFuelAsset = Cast<UBP_FuelDataAsset>(StaticLoadObject(UBP_FuelDataAsset::StaticClass(), nullptr, *AssetPath));
-    
-	return CachedTrainFuelAsset;
-}
-
+//ms: 연료 값을 가져오는 로직
 float UAO_GameInstance::GetInitialFuel()
 {
-	// const 함수이므로 안전하게 체크 후 반환
-	if (CachedTrainFuelAsset)
+	// BP에서 지정한 에셋이 있다면 그 값을 반환
+	if (FuelDataAsset)
 	{
-		return CachedTrainFuelAsset->InitialFuel;
+		return FuelDataAsset->InitialFuel;
 	}
+    
+	// 에셋이 없으면 생성자에서 정한 기본값 반환
+	return SharedTrainFuel;
+}
 
-	// 만약 로드가 안 된 상태에서도 자동으로 가져오게 하고 싶다면 
-	// const_cast를 쓰거나, GetTrainFuelAsset()을 비-const로 설계해야 합니다.
-	return 0.0f;
+float UAO_GameInstance::GetInitialFuelValue()
+{
+	// 1. 에디터에서 지정한 에셋(BP_FuelDataAsset)이 있는지 확인
+	if (FuelDataAsset)
+	{
+		// 2. 에셋 내부의 InitialFuel 변수 값을 반환 (예: 80.0)
+		return FuelDataAsset->InitialFuel;
+	}
+    
+	// 3. 만약 에셋을 안 꽂았다면 방어용으로 기본값 반환
+	return 40.0f;
 }
 // ms

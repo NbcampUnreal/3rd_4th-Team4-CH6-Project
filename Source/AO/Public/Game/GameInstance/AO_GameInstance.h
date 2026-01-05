@@ -6,6 +6,8 @@
 #include "Engine/GameInstance.h"
 #include "AO_GameInstance.generated.h"
 
+class UAO_FuelData;
+
 UCLASS()
 class AO_API UAO_GameInstance : public UGameInstance
 {
@@ -86,16 +88,18 @@ public:
 	void PassiveReset();
 
 	//ms: 연료량 data asset
-private:
-	UPROPERTY()
-	class UBP_FuelDataAsset* CachedTrainFuelAsset;
-
-	// 내부적으로 사용하거나 외부 노출 여부에 따라 public/private 결정
-	UBP_FuelDataAsset* GetTrainFuelAsset();
+protected:
+	// 에디터에서 선택할 수 있도록 변수를 만듭니다.
+	// TSoftObjectPtr 대신 일반 포인터를 써서 게임 시작 시 즉시 사용 가능하게 합니다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Train")
+	TObjectPtr<class UAO_FuelData> FuelDataAsset;
 
 public:
-	// 상수 데이터라면 BlueprintPure가 적합할 수 있습니다.
-	UFUNCTION(BlueprintCallable, Category = "Train")
+	virtual void Init() override;
+
+	UFUNCTION(BlueprintPure, Category = "Train")
 	float GetInitialFuel();
 
+	UFUNCTION(BlueprintPure)
+	float GetInitialFuelValue();
 };

@@ -87,12 +87,6 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	{
 		return;
 	}
-	
-	if (bStageEnded)
-	{
-		return;
-	}
-	bStageEnded = true;
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -155,6 +149,12 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	}
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
+	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
 	
 	FName TargetMapName;
 
