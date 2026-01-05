@@ -23,6 +23,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	
 public:
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor) override;
@@ -56,5 +58,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UAO_PickupComponent* PickupComponent;
+
+	UPROPERTY(Replicated)
+	FString CachedItemName;
 
 };

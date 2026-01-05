@@ -62,6 +62,19 @@ void AAO_MasterItem::OnConstruction(const FTransform& Transform)
 #endif
 }
 
+FAO_InteractionInfo AAO_MasterItem::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
+{
+	FAO_InteractionInfo Info = Super::GetInteractionInfo(InteractionQuery);
+    
+	// ItemData의 ItemName으로 Title 변경
+	if (!CachedItemName.IsEmpty())
+	{
+		Info.Title = FText::FromString(CachedItemName);
+	}
+    
+	return Info;
+}
+
 void AAO_MasterItem::OnRep_ItemID()
 {
 	if (!HasActorBegunPlay())
@@ -94,6 +107,8 @@ void AAO_MasterItem::ApplyItemData()
 		//UE_LOG(LogTemp, Warning, TEXT("ApplyItemData SUCCESS for ItemID: %s"), *ItemID.ToString());
 		ItemTags = Row->ItemTags;
 		FuelAmount = Row->FuelAmount;
+		HighlightStencilValue = Row->GetHighlightStencilValue();
+		CachedItemName = Row->ItemName;
 		
 		if (!Row->WorldMesh.IsNull())
 		{
@@ -141,6 +156,7 @@ void AAO_MasterItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AAO_MasterItem, ItemTags);
 	DOREPLIFETIME(AAO_MasterItem, FuelAmount);
 	DOREPLIFETIME(AAO_MasterItem, ItemID);	
+	DOREPLIFETIME(AAO_MasterItem, CachedItemName);
 }
 
 void AAO_MasterItem::Server_HandleInteraction_Implementation(AActor* Interactor)
