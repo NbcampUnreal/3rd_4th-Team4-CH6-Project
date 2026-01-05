@@ -10,7 +10,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogShop, Log, All);
 
 UCLASS()
-class AO_API AAO_VendingMachine : public AAO_BaseInteractable
+class AO_API AAO_VendingMachine : public AActor
 {
 	GENERATED_BODY()
 
@@ -32,12 +32,16 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mesh")
 	TObjectPtr<UStaticMeshComponent> ItemMesh;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interact")
+	class UAO_InteractableComponent* InteractableComp;
 
 	UPROPERTY(EditDefaultsOnly, Category="Inventory") 
 	TSubclassOf<AAO_MasterItem> DroppableItemClass;
 	
 	void ApplyItemData();
-	void OnInteractionSuccess(AActor* Interactor);
+	UFUNCTION()
+	void HandleInteractionSuccess(AActor* Interactor);
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(Server, Reliable)
@@ -53,11 +57,6 @@ protected:
 	int32 Cash;
 	int32 ItemPrice;
 
-	UPROPERTY(VisibleAnywhere)
-	UTextRenderComponent* PriceDisplayText;
-	UPROPERTY(VisibleAnywhere)
-	UTextRenderComponent* ItemExplainText;
-	
 public:
 	void SpawnVendingItem();
 };

@@ -68,6 +68,7 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 	FInventorySlot& Slot = Inventory->Slots[Inventory->SelectedSlotIndex];
 
 	EItemType ItemType = Slot.ItemType;
+	//UE_LOG(LogTemp, Warning, TEXT("Slot ItemType: %d, ItemID: %s"), (int32)Slot.ItemType, *Slot.ItemID.ToString());
 	
 	if (ItemType != EItemType::Passive)
 	{
@@ -85,6 +86,10 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 	if (ItemData)
 	{
 		AddPassive = ItemData->PassiveAmount;
+	}
+	else
+	{
+	//UE_LOG(LogTemp, Error, TEXT("Failed to find data for ItemID: %s"), *Slot.ItemID.ToString());
 	}
 
 	FGameplayTag ActivationEventTag;

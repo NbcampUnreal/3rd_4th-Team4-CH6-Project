@@ -8,10 +8,17 @@ UAO_Fuel_AttributeSet::UAO_Fuel_AttributeSet()
 
 void UAO_Fuel_AttributeSet::InitFromGameInstance()
 {
+	//UE_LOG(LogTemp, Error, TEXT("[FuelSet] InitFromGameInstance"));
+
 	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	//UE_LOG(LogTemp, Error, TEXT("[FuelSet] ASC: %s"), ASC ? TEXT("VALID") : TEXT("NULL"));
 	if (!ASC) return;
 
 	AActor* OwnerActor = ASC->GetOwnerActor();
+
+	/*UE_LOG(LogTemp, Error, TEXT("[FuelSet] OwnerActor: %s (%s)"),
+		*GetNameSafe(OwnerActor),
+		OwnerActor ? *OwnerActor->GetClass()->GetName() : TEXT("[FuelSet] NULL"));*/
 
 	if (!OwnerActor) return;
 
