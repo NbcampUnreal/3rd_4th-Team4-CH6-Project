@@ -13,9 +13,10 @@ UAO_GameInstance::UAO_GameInstance()
 {
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
+	TeamDeathCount = 0;
 
 	// 최초 기본 부활 횟수
-	InitialSharedReviveCount = 5;
+	InitialSharedReviveCount = 1;
 	SharedReviveCount = InitialSharedReviveCount;
 
 	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
@@ -36,6 +37,9 @@ void UAO_GameInstance::ResetRun()
 	CurrentStageIndex = 0;
 	SharedTrainFuel = GetInitialFuelValue();
 	SharedReviveCount = InitialSharedReviveCount;
+	TeamDeathCount = 0;		// JM : 게임 초기화 시 팀 데스 수 초기화
+	GameStartTime = 0;
+	GameEndTime = 0;
     
 	UE_LOG(LogTemp, Log, TEXT("Run Reset: SharedTrainFuel set to %f"), SharedTrainFuel);
 }
