@@ -11,8 +11,8 @@ AAO_newTrain::AAO_newTrain()
 	ASC->SetIsReplicated(true);
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
-	InteractionTitle = FText::FromString(TEXT("연료"));
-	InteractionContent = FText::FromString(TEXT("투입"));
+	InteractionTitle = FText::FromString(TEXT("[F]"));
+	InteractionContent = FText::FromString(TEXT("Fuel Insert"));
 }
 
 void AAO_newTrain::BeginPlay()

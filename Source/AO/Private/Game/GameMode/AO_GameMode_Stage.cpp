@@ -12,6 +12,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Train/AO_newTrain.h"
+#include "Train/Data/AO_FuelData.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
@@ -140,7 +141,7 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	// 가져온 연료를 GI에 1회 저장
 	AO_GI->SharedTrainFuel = Fuel;
 	
-	constexpr float RequiredFuel = 20.0f;
+	const float RequiredFuel = GetRuquireFuelValue();
 
 	if(Fuel < RequiredFuel)
 	{
@@ -709,4 +710,13 @@ void AAO_GameMode_Stage::RollbackSessionInGameFlag()
 	{
 		Sub->SetSessionInGame(false);
 	}
+}
+
+float AAO_GameMode_Stage::GetRuquireFuelValue()
+{
+	if (FuelDataAsset)
+	{
+		return FuelDataAsset->RequireNextStage;
+	}
+	return 40.0f;
 }

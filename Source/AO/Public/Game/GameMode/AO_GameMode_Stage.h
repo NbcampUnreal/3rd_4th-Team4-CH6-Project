@@ -73,4 +73,12 @@ protected:
 protected:
 	/* 스테이지 종료 여부 */
 	bool bStageEnded = false;
+	
+	//ms
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Train")
+	TObjectPtr<class UAO_FuelData> FuelDataAsset;
+
+	UFUNCTION(BlueprintPure)
+	float GetRuquireFuelValue();
 };
