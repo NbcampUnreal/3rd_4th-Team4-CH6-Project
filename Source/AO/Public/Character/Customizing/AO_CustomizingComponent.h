@@ -12,6 +12,7 @@ class AAO_PlayerState;
 class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
+class UAO_PlayerSoundDataAsset;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterCapsuleChanged, float /*NewCapsuleHalfHeight*/);
 
@@ -68,6 +69,9 @@ public:
 	const FCustomizingData& GetCustomizingData() const;
 
 	FOnCharacterCapsuleChanged OnCapsuleChangedDelegate;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<UAO_PlayerSoundDataAsset> PlayerSoundDataAsset;
 
 protected:
 	virtual void BeginPlay() override;

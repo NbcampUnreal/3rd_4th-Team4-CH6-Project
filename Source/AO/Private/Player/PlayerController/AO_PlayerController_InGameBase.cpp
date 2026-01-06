@@ -23,6 +23,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "LoadingScreenManager.h"
 #include "VoipListenerSynthComponent.h"
+#include "Character/Sound/AO_PlayerSoundDataAsset.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
@@ -770,7 +771,7 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 		return;
 	}
 
-	checkf(NotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
+	checkf(DefaultNotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
 
 	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
 	{
@@ -780,7 +781,59 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
 		{
 			LastNotEnoughStaminaSoundTime = Now;
-			UGameplayStatics::PlaySound2D(this, NotEnoughStaminaSound);
+
+			if (USoundBase* SoundToPlay = GetNotEnoughStaminaSound())
+			{
+				UGameplayStatics::PlaySound2D(this, SoundToPlay);
+			}
+			else
+			{
+				AO_LOG(LogKH, Warning, TEXT("NotEnoughStaminaSound not found"));
+			}
 		}
 	}
+}
+
+ECharacterMesh AAO_PlayerController_InGameBase::GetLocalCharacterMesh() const
+{
+	APawn* P = GetPawn();
+	if (!P)
+	{
+		return ECharacterMesh::Elsa;
+	}
+
+	if (UAO_CustomizingComponent* CustomizingComponent = P->FindComponentByClass<UAO_CustomizingComponent>())
+	{
+		return CustomizingComponent->GetCustomizingData().CharacterMeshType;
+	}
+
+	return ECharacterMesh::Elsa;
+}
+
+USoundBase* AAO_PlayerController_InGameBase::GetNotEnoughStaminaSound() const
+{
+	APawn* P = GetPawn();
+	if (!P)
+	{
+		return DefaultNotEnoughStaminaSound;
+	}
+	
+	if (UAO_CustomizingComponent* CustomizingComponent = P->FindComponentByClass<UAO_CustomizingComponent>())
+	{
+		if (UAO_PlayerSoundDataAsset* PlayerSoundDA = CustomizingComponent->PlayerSoundDataAsset)
+		{
+			const ECharacterMesh MeshType = GetLocalCharacterMesh();
+
+			FCharacterSoundSet SoundSet;
+			if (PlayerSoundDA->TryGetSoundSet(MeshType, SoundSet))
+			{
+				if (SoundSet.NotEnoughStamina)
+				{
+					return SoundSet.NotEnoughStamina;
+				}
+			}
+		}
+	}
+
+	return DefaultNotEnoughStaminaSound;
 }
