@@ -39,10 +39,13 @@ public:
 
 	// JM : 게임 통계
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
-	float StartTime;		// LV_Meadow_Main 레벨 블루프린트에서 Begin Play에서 기록 
+	float GameStartTime;		// LV_Meadow_Main 레벨 블루프린트에서 Begin Play에서 기록 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
-	float EndTime;			// GS::OnRep_Clear 에서 기록
+	float GameEndTime;			// GS::OnRep_Clear 에서 기록
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	int32 TeamDeathCount;
 
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
