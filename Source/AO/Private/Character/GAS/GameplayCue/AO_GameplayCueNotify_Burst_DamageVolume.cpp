@@ -44,7 +44,8 @@ void UAO_GameplayCueNotify_Burst_DamageVolume::PlayDamageReactSound(AActor* Targ
 	UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>();
 	checkf(SoundSubsystem, TEXT("Failed to get SoundSubsystem"));
 
-	USoundBase* DamageReactSound = SoundSubsystem->GetDamageReactSoundFromActor(Target);
+	USoundBase* DamageReactSound = SoundSubsystem->GetSoundFromActor(Target,
+		FGameplayTag::RequestGameplayTag(FName("Sound.Player.DamageReact")));
 	if (!ensure(DamageReactSound))
 	{
 		return;
