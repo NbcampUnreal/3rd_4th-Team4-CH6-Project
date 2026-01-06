@@ -67,6 +67,12 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	FName WarpTargetName = NAME_None;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Highlight")
+	uint8 HighlightStencilValue = 250;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	FLinearColor TitleTextColor = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
 	// 모든 멤버 변수를 비교하여 완전히 동일한 경우에만 true 반환, 상호작용 정보 변화 감지에 사용
 	FORCEINLINE bool operator==(const FAO_InteractionInfo& Other) const
 	{
@@ -76,7 +82,9 @@ public:
 			Duration == Other.Duration &&
 			AbilityToGrant == Other.AbilityToGrant &&
 			ActiveHoldMontage == Other.ActiveHoldMontage &&
-			ActiveMontage == Other.ActiveMontage;
+			ActiveMontage == Other.ActiveMontage &&
+			HighlightStencilValue == Other.HighlightStencilValue &&
+			TitleTextColor == Other.TitleTextColor;
 	}
 
 	FORCEINLINE bool operator!=(const FAO_InteractionInfo& Other) const

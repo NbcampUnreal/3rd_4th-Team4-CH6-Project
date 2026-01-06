@@ -17,14 +17,16 @@
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Player/PlayerState/AO_PlayerState.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
-#include "Item/invenroty/AO_InputModifier.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InputModifier.h"
+#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "MuCO/CustomizableSkeletalComponent.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "Settings/AO_GameSettingsManager.h"
@@ -61,7 +63,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
-	GetCharacterMovement()->CrouchedHalfHeight = 69.f;
+	GetCharacterMovement()->SetCrouchedHalfHeight(69.f);
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
@@ -104,6 +106,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	// KSJ : Perception Stimuli Source
 	AIPerceptionStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("AIPerceptionStimuliSource"));
 	AIPerceptionStimuliSource->bAutoRegister = true;
+
+	// Post Process Component : For Outline Effect
+	PostProcessComponent = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostProcessComponent"));
+	PostProcessComponent->SetupAttachment(RootComponent);
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -128,6 +134,19 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 		BindGameplayEffects();
 		
 		BindAttributeDelegates();
+
+		//ms : 부활시 패시브 연동
+		GetWorldTimerManager().SetTimerForNextTick([this, NewController]()
+		{
+			if (APlayerController* PC = Cast<APlayerController>(NewController))
+			{
+				if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
+				{
+					Subsystem->RestorePlayerGASData(PC);
+				}
+			}
+		});
+		//ms
 	}
 
 	//ms: 부활시 인벤토리 ui 연동 + 다음레벨 이동시 인벤토리 유지
@@ -233,7 +252,6 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority() && AbilitySystemComponent)
 	// KSJ : Register as source for Sight and Hearing
 	if (AIPerceptionStimuliSource)
 	{
@@ -242,7 +260,7 @@ void AAO_PlayerCharacter::BeginPlay()
 		AIPerceptionStimuliSource->RegisterWithPerceptionSystem();
 	}
 
-	if (AbilitySystemComponent)
+	if (!HasAuthority() && AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
@@ -365,6 +383,20 @@ void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		VOIPTalker->DestroyComponent();
 		VOIPTalker = nullptr;
 	}
+
+	//ms : 패시브 다음레벨 이동
+	if (HasAuthority() && EndPlayReason == EEndPlayReason::LevelTransition)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
+			{
+				Subsystem->SnapshotPlayerData(PC);
+			}
+		}
+	}
+	//ms
+	
 	Super::EndPlay(EndPlayReason);
 }
 

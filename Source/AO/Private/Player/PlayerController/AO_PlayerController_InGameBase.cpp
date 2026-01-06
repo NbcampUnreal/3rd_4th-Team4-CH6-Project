@@ -23,6 +23,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "LoadingScreenManager.h"
 #include "VoipListenerSynthComponent.h"
+#include "Character/Sound/AO_PlayerSoundDataAsset.h"
+#include "Character/Sound/AO_PlayerSoundSubsystem.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 #include "UI/Widget/AO_ConfirmQuitGameWidget.h"
 
@@ -784,6 +786,7 @@ void AAO_PlayerController_InGameBase::InitCameraManager(APawn* InPawn)
 	checkf(PlayerCharacter, TEXT("Character not found"));
 
 	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
+	CameraManagerComponent->ResetCameraState();
 	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
 
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
@@ -864,18 +867,25 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 	{
 		return;
 	}
-
-	checkf(NotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
-
+	
 	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Ability Failed: NotEnoughStamina"));
-		
 		const double Now = GetWorld()->GetTimeSeconds();
 		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
 		{
 			LastNotEnoughStaminaSoundTime = Now;
-			UGameplayStatics::PlaySound2D(this, NotEnoughStaminaSound);
+
+			if (UGameInstance* GI = GetGameInstance())
+			{
+				if (UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>())
+				{
+					USoundBase* Sound = SoundSubsystem->GetNotEnoughStaminaSoundFromActor(GetPawn());
+					if (Sound)
+					{
+						UGameplayStatics::PlaySound2D(this, Sound);
+					}
+				}
+			}
 		}
 	}
 }

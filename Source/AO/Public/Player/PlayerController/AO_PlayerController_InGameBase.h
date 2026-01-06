@@ -61,9 +61,6 @@ protected:
 	UAO_ConfirmQuitGameWidget* ConfirmQuitGameWidget;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
-	TObjectPtr<USoundBase> NotEnoughStaminaSound;
-
-	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
 	float NotEnoughStaminaSoundInterval = 5.0f;
 
 	double LastNotEnoughStaminaSoundTime = -1e9;
@@ -116,9 +113,11 @@ protected:
 	UFUNCTION()
 	void OnPauseMenu_RequestSettings();
 
-	UFUNCTION()
+public:		// JM : 실패 화면에서 메인메뉴로 돌아가도록 할 수 있게 해야 하므로 추가
+	UFUNCTION(BlueprintCallable, Category="AO")
 	void OnPauseMenu_RequestReturnLobby();
 
+protected:
 	UFUNCTION()
 	void OnPauseMenu_RequestQuitGame();
 

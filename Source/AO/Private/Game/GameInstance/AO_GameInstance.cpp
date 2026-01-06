@@ -5,24 +5,39 @@
 #include "AO_Log.h"
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
+#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
+#include "Train/Data/AO_FuelData.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
 {
-	SharedTrainFuel = 40.0f;
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
+	TeamDeathCount = 0;
 
 	// 최초 기본 부활 횟수
-	InitialSharedReviveCount = 5;
+	InitialSharedReviveCount = 1;
 	SharedReviveCount = InitialSharedReviveCount;
+
+	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
+}
+
+void UAO_GameInstance::Init()
+{
+	Super::Init();
+    
+	// 게임 시작 시 BP에서 할당한 에셋으로부터 연료 값을 가져옵니다.
+	SharedTrainFuel = GetInitialFuel();
 }
 
 void UAO_GameInstance::ResetRun()
 {
 	CurrentStageIndex = 0;
-	SharedTrainFuel = 40.0f;
+	SharedTrainFuel = GetInitialFuelValue();
 	SharedReviveCount = InitialSharedReviveCount;
+	TeamDeathCount = 0;		// JM : 게임 초기화 시 팀 데스 수 초기화
+	GameStartTime = 0;
+	GameEndTime = 0;
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -142,7 +157,7 @@ int32 UAO_GameInstance::GetSharedReviveCount() const
 	return SharedReviveCount;
 }
 
-void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
+ void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
 {
 	const int32 OldValue = SharedReviveCount;
 	const int32 NewValue = SharedReviveCount + Delta;
@@ -185,3 +200,32 @@ bool UAO_GameInstance::TryConsumeSharedReviveCount()
 
 	return true;
 }
+
+//ms : 패시브 초기화
+void UAO_GameInstance::PassiveReset()
+{
+	UAO_Passive_WorldSubsystem* PassiveSub = GetSubsystem<UAO_Passive_WorldSubsystem>();
+	if (PassiveSub)
+	{
+		PassiveSub->ClearAllPlayerData();
+	}	
+}
+
+float UAO_GameInstance::GetInitialFuel()
+{
+	if (FuelDataAsset)
+	{
+		return FuelDataAsset->InitialFuel;
+	}
+	return SharedTrainFuel;
+}
+
+float UAO_GameInstance::GetInitialFuelValue()
+{
+	if (FuelDataAsset)
+	{
+		return FuelDataAsset->InitialFuel;
+	}
+	return 43.0f;
+}
+// ms

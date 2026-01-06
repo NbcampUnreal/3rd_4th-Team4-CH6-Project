@@ -144,6 +144,10 @@ void UAO_GameplayAbility_Outline::SetCustomDepth(AActor* Target, bool bIsCustomD
 		if (Mesh)
 		{
 			Mesh->SetRenderCustomDepth(bIsCustomDepth);
+			if (bIsCustomDepth)
+			{
+				Mesh->SetCustomDepthStencilValue(240);
+			}
 		}
 	}
 }

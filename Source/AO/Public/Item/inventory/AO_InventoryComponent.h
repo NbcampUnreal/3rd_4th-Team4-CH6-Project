@@ -66,13 +66,13 @@ public:
     
     UFUNCTION(Server, Reliable)
     void ServerSetSelectedSlot(int32 NewIndex);
-    void ServerSetSelectedSlot_Implementation(int32 NewIndex);
 
     void OnRightClick();
     void OnLeftClick();
     
     void SelectInventorySlot(const FInputActionValue& Value);
     void PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator);
+
     UFUNCTION(Server, Reliable)
     void UseInventoryItem_Server();
     UFUNCTION(Server, Reliable)
@@ -80,9 +80,8 @@ public:
     
     UFUNCTION(BlueprintPure, Category="Inventory")
     TArray<FInventorySlot> GetSlots() const { return Slots; }
-
-    UPROPERTY(Transient)
-    TArray<int32> EmptySlotList; 
+    
+    int32 FindEmptySlotIndex() const;
     
     void ClearSlot();
 
@@ -108,6 +107,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Inventory|UI")
     void BindInvenCompListener(UObject* Listener);
+    UFUNCTION(BlueprintCallable, Category="Inventory|UI")
+    void UnBindInvenCompListener(UObject* Listener);
 
     void NotifyListeners();
     void RegisterToSubsystem();

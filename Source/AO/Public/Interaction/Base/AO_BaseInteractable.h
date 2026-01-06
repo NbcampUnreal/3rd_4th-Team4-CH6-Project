@@ -99,7 +99,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	// 상호작용 정보
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="Interaction|Info")
 	FText InteractionTitle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Info")
@@ -117,6 +117,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation",
 		meta=(EditCondition="bIsToggleable", EditConditionHides))
 	TObjectPtr<UAnimMontage> DeactivateMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="Interaction|UI")
+	uint8 HighlightStencilValue = 250;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="Interaction|UI")
+	FLinearColor TitleTextColor = FLinearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction|Animation")
 	bool bWaitForAnimationNotify = false;

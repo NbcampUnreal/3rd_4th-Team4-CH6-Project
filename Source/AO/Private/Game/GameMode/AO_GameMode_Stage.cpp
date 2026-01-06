@@ -8,10 +8,12 @@
 #include "AbilitySystemComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 #include "EngineUtils.h"
+#include "Game/AO_MapRoutes.h"
 #include "Game/GameState/AO_GameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Train/AO_newTrain.h"
+#include "Train/Data/AO_FuelData.h"
 
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
@@ -37,6 +39,14 @@ void AAO_GameMode_Stage::BeginPlay()
 				const int32 ReviveCount = AO_GI->GetSharedReviveCount();
 				AO_GS->SetSharedReviveCount(ReviveCount);
 				AO_LOG(LogJSH, Log, TEXT("Stage BeginPlay: Sync SharedReviveCount GI(%d) -> GS"), ReviveCount);
+
+				FString CurrentFullMapName = World->GetMapName();
+				FString FirstStagePath = AO_MapRoutes::STAGE_MAPS[0];
+				if (CurrentFullMapName.Contains(FPackageName::GetShortName(FirstStagePath)))	// 순수 맵 이름만 가져오기 FPackageName 활용
+				{
+					AO_GS->SetGameStartTime();
+					AO_LOG(LogJM, Log, TEXT("Set Start Time"));
+				}
 			}
 		}
 		// 스테이지 시작 시 부활 대기 큐 초기화
@@ -87,12 +97,6 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	{
 		return;
 	}
-	
-	if (bStageEnded)
-	{
-		return;
-	}
-	bStageEnded = true;
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -101,6 +105,24 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		return;
 	}
 
+	AAO_GameState* GS = GetWorld()->GetGameState<AAO_GameState>();
+
+	if (!GS->CheckHintCount())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("StageExit: HintCount is not correct"));
+		return;
+	}
+	bool AllHint = GS->CheckHintCount();
+	if(AllHint==true)
+	{
+		AO_LOG(LogJSH, Log, TEXT("StageExit: All Hint is true"));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Not all hints are collected"));
+		return;
+	}
+	
 	// 현재 스테이지의 열차에서 연료 값 가져오기
 	AAO_newTrain* Train = nullptr;
 
@@ -128,7 +150,7 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	// 가져온 연료를 GI에 1회 저장
 	AO_GI->SharedTrainFuel = Fuel;
 	
-	constexpr float RequiredFuel = 20.0f;
+	const float RequiredFuel = GetRuquireFuelValue();
 
 	if(Fuel < RequiredFuel)
 	{
@@ -138,16 +160,31 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
 	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
+	
 	FName TargetMapName;
 
 	// 마지막 스테이지면 → 로비로 귀환
 	if(AO_GI->IsLastStage())
 	{
-		TargetMapName = AO_GI->GetLobbyMap();
+		AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+		if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+		{
+			return;
+		}
+
+		AO_GS->SetGameClear();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+		
+		/* JM : 로직 겹쳐서 지움 (ui 에서 버튼 클릭하면 로비로 돌아가도록 할 예정)
+		 *TargetMapName = AO_GI->GetLobbyMap();
 
 		// 다음 판은 다시 처음부터
 		AO_GI->ResetRun();
-		RollbackSessionInGameFlag();
+		RollbackSessionInGameFlag();*/
 	}
 	else
 	{
@@ -163,22 +200,71 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	const FString Path = TargetMapName.ToString() + TEXT("?listen");
 	// World->ServerTravel(Path);
-	// JM : crash 
+	// JM : crash
+
+	//ms 다음레벨 이동
+	if (!GameState)
+	{
+		return;
+	}
+
+	if (AAO_GameState* AO_GS = Cast<AAO_GameState>(GameState))
+	{
+		for (APlayerState* P : AO_GS->PlayerArray)
+		{
+			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(P))
+			{
+				AO_PS->bIsTraveling = true;
+				
+				if (APawn* MyPawn = AO_PS->GetPawn())
+				{
+					if (UAO_InventoryComponent* InvComp = MyPawn->FindComponentByClass<UAO_InventoryComponent>())
+					{
+						AO_PS->SaveInventoryBeforeTravel(InvComp);
+					}
+				}
+				HandlePlayerTravel(AO_PS);
+			}
+		}
+	}
+	//ms
+	
 	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
+
+	AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+	if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+	{
+		return;
+	}
+
+	AO_GS->SetStageFailed();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+// TODO: JM : Requester 쓸 필요가없는데..? 그냥 지울까요?
+void AAO_GameMode_Stage::ResetGameAndGoToLobby(AController* Requester)
 {
 	if(!HasAuthority())
 	{
 		return;
 	}
 	
-	if (bStageEnded)
+	/*if (bStageEnded)
 	{
 		return;
 	}
-	bStageEnded = true;
+	bStageEnded = true;*/
 
 	UWorld* World = GetWorld();
 	if(World == nullptr)
@@ -193,10 +279,11 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 		return;
 	}
 
-	AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
+	/* 로그 찍으려고 Requester가 필요한건가?
+	 *AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
 		Requester ? *Requester->GetName() : TEXT("None"),
 		AO_GI->SharedTrainFuel,
-		AO_GI->CurrentStageIndex);
+		AO_GI->CurrentStageIndex);*/
 
 	// 다음 판은 항상 처음부터
 	AO_GI->ResetRun();
@@ -261,6 +348,12 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 	{
 		// 죽은 경우 → 큐에 추가
 		EnqueuePendingRevive(ChangedPlayerState);
+
+		// 팀 데스에 +1
+		if (AAO_GameState* AO_GS = GetGameState<AAO_GameState>())
+		{
+			AO_GS->AddTeamDeathCount();
+		}
 
 		// 죽은 시점에 공용 부활 카운트가 남아 있다면 즉시 자동 부활 시도
 		TryAutoReviveFromQueue();
@@ -632,4 +725,13 @@ void AAO_GameMode_Stage::RollbackSessionInGameFlag()
 	{
 		Sub->SetSessionInGame(false);
 	}
+}
+
+float AAO_GameMode_Stage::GetRuquireFuelValue()
+{
+	if (FuelDataAsset)
+	{
+		return FuelDataAsset->RequireNextStage;
+	}
+	return 40.0f;
 }
