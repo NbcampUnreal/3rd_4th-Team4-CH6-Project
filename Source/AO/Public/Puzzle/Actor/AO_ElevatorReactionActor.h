@@ -5,6 +5,8 @@
 #include "Puzzle/Actor/AO_PuzzleReactionActor.h"
 #include "AO_ElevatorReactionActor.generated.h"
 
+class UAudioComponent;
+
 UENUM(BlueprintType)
 enum class EElevatorStep : uint8
 {
@@ -101,11 +103,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Elevator")
     TObjectPtr<USoundBase> DoorCloseSound;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Elevator")
-    TObjectPtr<USoundBase> MovementStartSound;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UAudioComponent> MovementAudioComponent;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Elevator")
-    TObjectPtr<USoundBase> MovementStopSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Elevator")
+	TObjectPtr<USoundBase> MovementLoopSound;
 
 protected:
     UPROPERTY(ReplicatedUsing=OnRep_ElevatorSequence, BlueprintReadOnly, Category="Elevator")
