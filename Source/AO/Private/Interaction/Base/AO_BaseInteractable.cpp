@@ -42,6 +42,8 @@ FAO_InteractionInfo AAO_BaseInteractable::GetInteractionInfo(const FAO_Interacti
 	Info.InteractionTransform = GetInteractionTransform();
 	Info.WarpTargetName = WarpTargetName;
 	Info.bWaitForAnimationNotify = bWaitForAnimationNotify;
+	Info.HighlightStencilValue = HighlightStencilValue;
+	Info.TitleTextColor = TitleTextColor;
 	return Info;
 }
 
@@ -154,6 +156,9 @@ void AAO_BaseInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ThisClass, bIsActivated);
 	DOREPLIFETIME(ThisClass, bInteractionEnabled);
 	DOREPLIFETIME(AAO_BaseInteractable, DisabledPlayers);
+	DOREPLIFETIME(AAO_BaseInteractable, InteractionTitle);
+	DOREPLIFETIME(AAO_BaseInteractable, HighlightStencilValue);
+	DOREPLIFETIME(AAO_BaseInteractable, TitleTextColor);
 }
 
 void AAO_BaseInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
