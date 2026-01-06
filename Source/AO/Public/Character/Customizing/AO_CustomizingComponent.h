@@ -12,6 +12,7 @@ class AAO_PlayerState;
 class AAO_PlayerCharacter;
 class UCustomizableObject;
 class UCustomizableObjectInstance;
+class UAO_PlayerSoundDataAsset;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterCapsuleChanged, float /*NewCapsuleHalfHeight*/);
 

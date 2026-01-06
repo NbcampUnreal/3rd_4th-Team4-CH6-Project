@@ -37,6 +37,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Revive")
 	int32 SharedReviveCount;
 
+	// JM : 게임 통계
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float GameStartTime;		// LV_Meadow_Main 레벨 블루프린트에서 Begin Play에서 기록 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float GameEndTime;			// GS::OnRep_Clear 에서 기록
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	int32 TeamDeathCount;
+
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
 	UFUNCTION(BlueprintCallable, Category="AO|Route")
@@ -89,8 +99,6 @@ public:
 
 	//ms: 연료량 data asset
 protected:
-	// 에디터에서 선택할 수 있도록 변수를 만듭니다.
-	// TSoftObjectPtr 대신 일반 포인터를 써서 게임 시작 시 즉시 사용 가능하게 합니다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Train")
 	TObjectPtr<class UAO_FuelData> FuelDataAsset;
 

@@ -25,6 +25,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Death")
 	TObjectPtr<UAnimMontage> DeathMontage;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
+	TSubclassOf<UGameplayEffect> DeathTagEffectClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
 	TSubclassOf<UGameplayEffect> BlockAbilitiesEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
+	FGameplayTag RagdollEventTag;
+
+	UFUNCTION()
+	void OnRagdollEventReceived(FGameplayEventData Payload);
 };

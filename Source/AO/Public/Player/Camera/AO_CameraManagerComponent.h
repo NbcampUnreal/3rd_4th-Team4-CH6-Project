@@ -48,9 +48,11 @@ public:
 
 	void PushCameraState(const FGameplayTag& CameraTag);
 	void PopCameraState(const FGameplayTag& CameraTag);
+	void ResetCameraState();
 
 private:
 	void OnStateTagChanged(FGameplayTag Tag, int32 NewCount);
+	void UnregisterGameplayTagEvent();
 
 	void UpdateRequests(float DeltaTime);
 	const FAO_CameraSettings* ChooseTargetProfile() const;
