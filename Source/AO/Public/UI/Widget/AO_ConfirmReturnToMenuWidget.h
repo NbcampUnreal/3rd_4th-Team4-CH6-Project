@@ -31,14 +31,15 @@ public:
 	FOnCancelLeaveToMenu OnCancelLeaveToMenu;
 
 protected:
-	UPROPERTY(meta = (BindWidget))
+	/* WBP Application Btn 으로 수정 (JM)
+	 *UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Confirm;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Cancel;
 
 	UPROPERTY(meta = (BindWidget, OptionalWidget = true))
-	UTextBlock* Txt_Message;
+	UTextBlock* Txt_Message; */
 
 protected:
 	UFUNCTION(BlueprintCallable, meta = (BindWidget))
