@@ -39,6 +39,7 @@ protected:
 	/* ---------- 기본 UI ---------- */
 	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Refresh = nullptr;
 	UPROPERTY(meta=(BindWidget)) UUserWidget* Btn_Close   = nullptr;
+	UPROPERTY(meta=(BindWidget)) UButton* Btn_BackDrop = nullptr;
 	UPROPERTY(meta=(BindWidget)) UScrollBox* Scroll_SessionList = nullptr;
 	UPROPERTY(meta=(BindWidget)) UTextBlock* Txt_InfoMessage = nullptr;
 
@@ -54,6 +55,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable) void OnClicked_Refresh();
 	UFUNCTION(BlueprintCallable) void OnClicked_Close();
+	UFUNCTION(BlueprintCallable) void OnClicked_BackDrop();
 	UFUNCTION() void OnFindSessionsComplete(bool bSuccessful);
 
 	/* ---------- 검색/페이지 ---------- */
