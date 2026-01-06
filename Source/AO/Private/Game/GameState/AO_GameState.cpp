@@ -163,6 +163,15 @@ void AAO_GameState::OnRep_IsStageFailed()
 void AAO_GameState::OnRep_IsGameCleared()
 {
 	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		if (UWorld* World = GetWorld())
+		{
+			GI->EndTime = World->GetTimeSeconds();	// JM : 플레이 시간 통계를 내기 위함
+		}
+	}
+	
 	if (bIsGameCleared)
 	{
 		AO_LOG_ROLE(LogJM, Log, TEXT("Broadcast Delegate(OnGameCleared)"));

@@ -37,6 +37,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Revive")
 	int32 SharedReviveCount;
 
+	// JM : 게임 통계
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float StartTime;		// LV_Meadow_Main 레벨 블루프린트에서 Begin Play에서 기록 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float EndTime;			// GS::OnRep_Clear 에서 기록
+
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
 	UFUNCTION(BlueprintCallable, Category="AO|Route")
