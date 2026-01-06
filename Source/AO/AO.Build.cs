@@ -61,6 +61,9 @@ public class AO : ModuleRules
 			
 			// VFX
 			"Niagara",
+			
+			// Develop Settings for Subsystem Data
+			"DeveloperSettings",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
