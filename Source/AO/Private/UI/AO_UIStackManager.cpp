@@ -304,7 +304,7 @@ void UAO_UIStackManager::TryTogglePauseMenu(APlayerController* PC)
 	Policy.bShowMouseCursor = true;
 	Policy.MouseLockMode = EMouseLockMode::DoNotLock;
 	Policy.bHideCursorDuringCapture = false;
-	Policy.InitialFocusWidget = nullptr;
+	Policy.InitialFocusWidget = PauseWidget;
 
 	PushWidgetInstance(PC, PauseWidget, Policy);
 }
