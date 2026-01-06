@@ -169,6 +169,10 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 	if (IsValid(ReleasedPlayer))
 	{
 		ReleasedPlayer->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+		// 누워있던 캐릭터를 똑바로 세움 (Pitch, Roll 제거)
+		FRotator CurrentRot = ReleasedPlayer->GetActorRotation();
+		ReleasedPlayer->SetActorRotation(FRotator(0.f, CurrentRot.Yaw, 0.f));
 	}
 
 	// 2. 모든 Ability 취소 (Traversal 등이 실행 중일 수 있음) - 사망한 플레이어는 스킵
@@ -199,7 +203,11 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			{
 				MoveComp->Velocity = FVector::ZeroVector;
 				MoveComp->StopMovementImmediately();
-				MoveComp->SetMovementMode(MOVE_Walking);
+				// 던지기 모드가 아닐 때만 Walking으로 복구 (던지기 시에는 Falling으로 유지)
+				if (!bThrow)
+				{
+					MoveComp->SetMovementMode(MOVE_Walking);
+				}
 				MoveComp->GravityScale = 1.0f;
 			}
 
@@ -282,9 +290,17 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ReleasedPlayer, KnockdownTag, EventData);
 		
 		// 살짝 던지는 물리력 (옵션)
+
+		// 1. 확실하게 Falling 상태로 전환 (물리 적용을 위해)
+		if (UCharacterMovementComponent* MC = ReleasedPlayer->GetCharacterMovement())
+		{
+			MC->SetMovementMode(MOVE_Falling);
+		}
+
+		// 2. 던지는 힘 상향 (300 -> 600) 및 방향 보정
 		FVector ThrowDir = GetOwner()->GetActorForwardVector() + FVector::UpVector;
 		ThrowDir.Normalize();
-		ReleasedPlayer->LaunchCharacter(ThrowDir * 300.f, true, true);
+		ReleasedPlayer->LaunchCharacter(ThrowDir * 600.f, true, true);
 	}
 
 	// 5. DoT 중지
