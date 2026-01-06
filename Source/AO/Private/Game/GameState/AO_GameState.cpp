@@ -151,6 +151,14 @@ void AAO_GameState::OnRep_IsStageFailed()
 	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
 	if (bIsStageFailed)
 	{
+		if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+		{
+			if (UWorld* World = GetWorld())
+			{
+				GI->EndTime = World->GetTimeSeconds();	// JM : 플레이 시간 통계를 내기 위함
+			}
+		}
+		
 		AO_LOG_ROLE(LogJM, Log, TEXT("Broadcast Delegate(OnStageFailed)"));
 		if (OnStageFailed.IsBound())
 		{
