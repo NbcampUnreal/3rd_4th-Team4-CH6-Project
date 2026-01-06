@@ -30,6 +30,8 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 	InstanceData.PlayerProximityCheckTimer = 0.f;
 	InstanceData.CurrentHideLocation = FVector::ZeroVector;
 	InstanceData.bIsMoving = false;
+	InstanceData.bAwaitingEQSResult = false;
+	InstanceData.EQSWaitTimer = 0.f;
 
 	// 후퇴 모드인지 확인
 	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
@@ -52,20 +54,12 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 	}
 	else if (InstanceData.HideQuery)
 	{
-		// EQS 사용
-		FEnvQueryRequest Request(InstanceData.HideQuery, InstanceData.Controller->GetPawn());
-		Request.Execute(EEnvQueryRunMode::SingleResult, 
-			FQueryFinishedSignature::CreateWeakLambda(InstanceData.Controller, 
-			[Controller = InstanceData.Controller, &InstanceData](TSharedPtr<FEnvQueryResult> Result)
-			{
-				if (Result.IsValid() && Result->IsSuccessful() && Controller)
-				{
-					FVector HideLoc = Result->GetItemAsLocation(0);
-					InstanceData.CurrentHideLocation = HideLoc;
-					Controller->MoveToLocation(HideLoc);
-					InstanceData.bIsMoving = true;
-				}
-			}));
+		// KSJ:
+		// StateTree Task의 InstanceData를 비동기 콜백에서 참조 캡처하면
+		// 상태 전이/재진입 타이밍에 따라 크래시/오동작 위험이 크다.
+		// EQS 결과는 Controller에 저장하고, Task는 Tick에서 Consume하여 MoveTo를 시작한다.
+		InstanceData.Controller->RequestHideLocationEQS(InstanceData.HideQuery);
+		InstanceData.bAwaitingEQSResult = true;
 	}
 	else
 	{
@@ -94,6 +88,33 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 	if (!Stalker || !Target)
 	{
 		return EStateTreeRunStatus::Failed;
+	}
+
+	// EQS 결과 대기 중이면, 결과를 소비해서 이동을 시작한다.
+	if (InstanceData.bAwaitingEQSResult && !InstanceData.bIsMoving)
+	{
+		InstanceData.EQSWaitTimer += DeltaTime;
+
+		FVector EQSLocation = FVector::ZeroVector;
+		if (InstanceData.Controller->ConsumePendingHideLocation(EQSLocation))
+		{
+			InstanceData.CurrentHideLocation = EQSLocation;
+			InstanceData.Controller->MoveToLocation(EQSLocation);
+			InstanceData.bIsMoving = true;
+			InstanceData.bAwaitingEQSResult = false;
+		}
+		else if (InstanceData.EQSWaitTimer >= InstanceData.EQSWaitTimeout)
+		{
+			// 타임아웃 시 동기 방식으로 폴백
+			InstanceData.bAwaitingEQSResult = false;
+			FVector Fallback = InstanceData.Controller->FindHideLocation(1000.f, Target);
+			if (!Fallback.IsZero())
+			{
+				InstanceData.CurrentHideLocation = Fallback;
+				InstanceData.Controller->MoveToLocation(Fallback);
+				InstanceData.bIsMoving = true;
+			}
+		}
 	}
 
 	// 플레이어 접근 체크 (주기적으로)

@@ -20,8 +20,12 @@ AAO_Stalker::AAO_Stalker()
 	}
 
 	// 속도 설정
-	RoamSpeed = 400.f;
-	ChaseSpeed = 700.f; // 천장 이동 시 더 빠를 수 있음 (컴포넌트나 상태에서 조정)
+	// KSJ: 요구사항 반영
+	// - 배회: 300
+	// - 추격(지상 스토킹/기습 포함): 500
+	// - 천장 이동(배회에서만): 600 (ChaseSpeed * 1.2f 로 계산)
+	RoamSpeed = 300.f;
+	ChaseSpeed = 500.f;
 	
 	DefaultMovementSpeed = RoamSpeed;
 	AlertMovementSpeed = ChaseSpeed;

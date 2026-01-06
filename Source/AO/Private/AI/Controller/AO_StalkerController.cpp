@@ -12,12 +12,19 @@
 AAO_StalkerController::AAO_StalkerController()
 {
 	// Stalker는 처음 발견한 대상을 집요하게 추적
-	bLockOnFirstTarget = true;
+	// KSJ: 요구사항상 다중 플레이어 상황에서 "가까운 대상"으로 목표를 재설정해야 하므로 고정 모드는 끈다.
+	bLockOnFirstTarget = false;
 }
 
 void AAO_StalkerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+}
+
+bool AAO_StalkerController::IsRetreating() const
+{
+	const AAO_Stalker* Stalker = GetStalker();
+	return Stalker ? Stalker->IsRetreating() : false;
 }
 
 AAO_Stalker* AAO_StalkerController::GetStalker() const
@@ -150,6 +157,67 @@ FVector AAO_StalkerController::FindHideLocation(float Radius, AActor* TargetToHi
 	return BestLocation;
 }
 
+void AAO_StalkerController::RequestHideLocationEQS(UEnvQuery* Query)
+{
+	// KSJ: Task에서 반복 요청할 수 있으므로 in-flight이면 무시한다.
+	if (!Query || bHideQueryInFlight)
+	{
+		return;
+	}
+
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	bHideQueryInFlight = true;
+	const uint32 RequestSerial = ++HideQuerySerial;
+
+	// 결과는 Controller에 저장 후 Task가 Tick에서 Consume한다.
+	FEnvQueryRequest Request(Query, ControlledPawn);
+	Request.Execute(
+		EEnvQueryRunMode::SingleResult,
+		FQueryFinishedSignature::CreateWeakLambda(
+			this,
+			[this, RequestSerial](TSharedPtr<FEnvQueryResult> Result)
+			{
+				// Controller가 파괴/언포제스 되었거나, 더 최신 요청이 있으면 무시한다.
+				bHideQueryInFlight = false;
+				if (RequestSerial != HideQuerySerial)
+				{
+					return;
+				}
+
+				if (Result.IsValid() && Result->IsSuccessful())
+				{
+					PendingHideLocation = Result->GetItemAsLocation(0);
+					bHasPendingHideLocation = !PendingHideLocation.IsZero();
+				}
+			}
+		)
+	);
+}
+
+bool AAO_StalkerController::ConsumePendingHideLocation(FVector& OutLocation)
+{
+	if (!bHasPendingHideLocation)
+	{
+		return false;
+	}
+
+	OutLocation = PendingHideLocation;
+	PendingHideLocation = FVector::ZeroVector;
+	bHasPendingHideLocation = false;
+	return !OutLocation.IsZero();
+}
+
 FVector AAO_StalkerController::FindRetreatLocation()
 {
 	// 플레이어로부터 멀어지고 시야가 가려지는 곳으로 후퇴
@@ -215,7 +283,11 @@ FVector AAO_StalkerController::FindRetreatLocation()
 
 void AAO_StalkerController::OnAttackFinished()
 {
-	bIsRetreating = true;
+	// KSJ: Retreat 상태는 Pawn(AAO_Stalker)이 단일 소스로 관리한다.
+	if (AAO_Stalker* Stalker = GetStalker())
+	{
+		Stalker->SetRetreatMode(true);
+	}
 
 	if (UWorld* World = GetWorld())
 	{
@@ -225,7 +297,95 @@ void AAO_StalkerController::OnAttackFinished()
 
 void AAO_StalkerController::OnRetreatTimerExpired()
 {
-	bIsRetreating = false;
+	// KSJ: Retreat 종료
+	if (AAO_Stalker* Stalker = GetStalker())
+	{
+		Stalker->SetRetreatMode(false);
+	}
+}
+
+void AAO_StalkerController::OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location)
+{
+	// 기본 감지/추격 로직은 부모에서 처리 (타겟 설정, LastKnown 갱신 등)
+	Super::OnPlayerDetected(Player, Location);
+
+	// KSJ: 혹시라도 Search 타이머가 걸려있으면(과거 로직/에디터 설정 등) 스토킹에 방해되므로 정리한다.
+	if (SearchTimerHandle.IsValid())
+	{
+		GetWorldTimerManager().ClearTimer(SearchTimerHandle);
+	}
+
+	// KSJ: 타겟을 다시 확보했으므로 '타겟 유지' 타이머는 해제한다.
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(TargetPersistenceTimerHandle);
+	}
+}
+
+void AAO_StalkerController::OnPlayerLost(AAO_PlayerCharacter* Player, const FVector& LastKnownLocation)
+{
+	// KSJ:
+	// Aggressive 공통 로직은 타겟을 잃으면 즉시 Search로 전환한다.
+	// 하지만 Stalker는 "엄폐 접근(스토킹)" 특성상 타겟이 시야에서 사라지는 것이 정상이며,
+	// 즉시 Search/배회로 넘어가면 요구사항을 만족할 수 없다.
+	//
+	// 따라서:
+	// - LastKnown 위치는 기록한다 (Super의 Memory 기록은 유지)
+	// - Search 모드로 강제 전환하지 않는다
+	// - 일정 시간 동안은 타겟을 유지하며 스토킹 루프를 지속한다 (StateTree가 Hide/Approach를 수행)
+
+	AAO_PlayerCharacter* Current = GetChaseTarget();
+	const bool bIsCurrentTarget = (Current && Player && Current == Player);
+
+	// 기본 메모리/LastLost 기록은 유지하기 위해 "AIControllerBase" 레벨 처리는 한 번 실행한다.
+	// (AAO_AggressiveAICtrl::Super 호출은 Search로 넘어가므로 피한다)
+	AAO_AIControllerBase::OnPlayerLost(Player, LastKnownLocation);
+
+	if (bIsCurrentTarget)
+	{
+		// LastKnown은 AggressiveCtrl이 가진 값을 그대로 유지/갱신한다.
+		LastKnownTargetLocation = LastKnownLocation;
+
+		// 타겟 유지 타이머 시작: 시간이 지나도 다시 감지하지 못하면 타겟을 해제한다.
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(TargetPersistenceTimerHandle);
+			World->GetTimerManager().SetTimer(
+				TargetPersistenceTimerHandle,
+				this,
+				&AAO_StalkerController::OnTargetPersistenceExpired,
+				TargetPersistenceSeconds,
+				false
+			);
+		}
+	}
+}
+
+void AAO_StalkerController::OnTargetPersistenceExpired()
+{
+	// KSJ:
+	// 타이머 만료 시점에도 시야에 플레이어가 없으면 스토킹 타겟을 해제하고 배회로 복귀 가능하게 한다.
+	// (StateTree 상위 전이가 PlayerNearby=false 등을 통해 Roam으로 넘어가도록)
+	if (HasPlayerInSight())
+	{
+		return;
+	}
+
+	SetChaseTarget(nullptr);
+
+	if (AAO_AggressiveAIBase* AI = GetAggressiveAI())
+	{
+		AI->SetChaseMode(false);
+		AI->SetSearchMode(false);
+	}
+
+	// KSJ: 혹시 Search 타이머가 걸려있으면 정리한다.
+	if (SearchTimerHandle.IsValid())
+	{
+		GetWorldTimerManager().ClearTimer(SearchTimerHandle);
+	}
+
+	LastKnownTargetLocation = FVector::ZeroVector;
 }
 
 bool AAO_StalkerController::IsPlayerLookingAtMe(AActor* TargetActor, float ToleranceDegrees) const

@@ -4,6 +4,7 @@
 #include "AI/Base/AO_AICharacterBase.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
@@ -130,6 +131,22 @@ void AAO_AIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus 
 	{
 		if (Player)
 		{
+			// 생존 여부 확인
+			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
+			const bool bIsAlive = PS && PS->GetIsAlive();
+        
+			// [조건 체크] 죽었고 && 시체를 타겟팅하면 안 되는 경우 -> 무시
+			if (!bIsAlive && !bCanTargetDeadPlayer)
+			{
+				// 시야 목록에 있었다면 제거 (죽는 순간 사라진 것으로 처리)
+				if (PlayersInSight.Contains(Player))
+				{
+					PlayersInSight.Remove(Player);
+					OnPlayerLost(Player, Stimulus.StimulusLocation);
+				}
+				return; 
+			}
+
 			if (Stimulus.WasSuccessfullySensed())
 			{
 				// 플레이어 발견
@@ -211,7 +228,37 @@ void AAO_AIControllerBase::OnPlayerLost(AAO_PlayerCharacter* Player, const FVect
 
 void AAO_AIControllerBase::OnNoiseHeard(AActor* NoiseInstigator, const FVector& Location, float Volume)
 {
-	// 기본 구현: 자식 클래스에서 오버라이드
+	// KSJ:
+	// 기본 구현: "소리로 감지된 위치"를 메모리에 저장한다.
+	// - PlayerNearby Condition이 LastHeardLocation을 통해 상태 전이를 결정할 수 있다.
+	// - 멀티플레이 리슨서버 기준으로 AI 로직은 서버에서만 수행되므로, 서버에서만 메모리를 갱신한다.
+	//
+	// 각 AI의 특수 반응(도망, 추격, 납치 등)은 자식 Controller/StateTree에서 처리한다.
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AAO_AICharacterBase* AICharacter = Cast<AAO_AICharacterBase>(GetPawn());
+	if (!AICharacter)
+	{
+		return;
+	}
+
+	UAO_AIMemoryComponent* Memory = AICharacter->GetMemoryComponent();
+	if (!Memory)
+	{
+		return;
+	}
+
+	Memory->SetLastHeardLocation(Location);
+
+	// 소리 발생자가 플레이어라면 해당 플레이어의 마지막 위치도 갱신한다.
+	if (AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(NoiseInstigator))
+	{
+		Memory->SetLastKnownLocation(Player, Location);
+	}
 }
 
 void AAO_AIControllerBase::OnActorDetected(AActor* Actor, const FVector& Location)
@@ -231,6 +278,14 @@ TArray<AAO_PlayerCharacter*> AAO_AIControllerBase::GetPlayersInSight() const
 	{
 		if (WeakPlayer.IsValid())
 		{
+			// 죽은 플레이어 필터링
+			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
+			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
+			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			{
+				continue;
+			}
+			
 			ValidPlayers.Add(WeakPlayer.Get());
 		}
 	}
@@ -252,6 +307,14 @@ AAO_PlayerCharacter* AAO_AIControllerBase::GetNearestPlayerInSight() const
 	{
 		if (WeakPlayer.IsValid())
 		{
+			// 타겟팅 시점에도 다시 한 번 생존 확인
+			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
+			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
+			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			{
+				continue;
+			}
+
 			const float DistSq = FVector::DistSquared(ControlledPawn->GetActorLocation(), WeakPlayer->GetActorLocation());
 			if (DistSq < NearestDistSq)
 			{
@@ -270,6 +333,14 @@ bool AAO_AIControllerBase::HasPlayerInSight() const
 	{
 		if (WeakPlayer.IsValid())
 		{
+			// 죽은 플레이어는 카운트하지 않음
+			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
+			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
+			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			{
+				continue;
+			}
+			
 			return true;
 		}
 	}

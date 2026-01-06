@@ -11,6 +11,9 @@
 AAO_InsectController::AAO_InsectController()
 {
 	// Perception 설정 상속
+	
+	// Insect는 시체도 납치해야 하므로 죽은 플레이어 타겟팅 허용
+	bCanTargetDeadPlayer = true;
 }
 
 void AAO_InsectController::BeginPlay()

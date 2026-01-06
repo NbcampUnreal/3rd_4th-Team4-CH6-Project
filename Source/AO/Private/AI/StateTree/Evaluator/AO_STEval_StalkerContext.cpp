@@ -37,7 +37,8 @@ void FAO_STEval_StalkerContext::UpdateStalkerContextData(FStateTreeExecutionCont
 	}
 
 	// 1. 도주 상태 업데이트
-	InstanceData.bIsRetreating = StalkerCtrl->IsRetreating();
+	// KSJ: Retreat 상태는 Actor(AAO_Stalker)가 단일 소스로 소유한다.
+	InstanceData.bIsRetreating = Stalker->IsRetreating();
 
 	// 2. 플레이어 시선 감지
 	AActor* Target = InstanceData.CurrentTarget.Get();

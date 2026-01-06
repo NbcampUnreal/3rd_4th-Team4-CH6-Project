@@ -30,6 +30,17 @@ struct FAO_STTask_Stalk_Hide_InstanceData
 	// 현재 엄폐 위치
 	UPROPERTY()
 	FVector CurrentHideLocation = FVector::ZeroVector;
+
+	// KSJ: EQS 요청 후 결과를 기다리는 중인지
+	UPROPERTY()
+	bool bAwaitingEQSResult = false;
+
+	// EQS 대기 시간 (무한 대기 방지)
+	UPROPERTY()
+	float EQSWaitTimer = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "EQS")
+	float EQSWaitTimeout = 1.0f;
 };
 
 /**

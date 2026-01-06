@@ -7,6 +7,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 UAO_CeilingMoveComponent::UAO_CeilingMoveComponent()
 {
@@ -90,16 +92,11 @@ void UAO_CeilingMoveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 	else
 	{
-		// 바닥 모드일 때 주기적으로 천장 감지 및 자동 전환 체크 (서버에서만)
-		if (GetOwner() && GetOwner()->HasAuthority())
-		{
-			AutoTransitionCheckTimer += DeltaTime;
-			if (AutoTransitionCheckTimer >= AutoTransitionCheckInterval)
-			{
-				AutoTransitionCheckTimer = 0.f;
-				CheckForCeilingAutoTransition();
-			}
-		}
+		// KSJ:
+		// Stalker의 천장/바닥 전환은 StateTree에서 "명시적으로"만 제어해야 한다.
+		// 여기서 자동 전환을 켜두면 Roam/Chase/Hide 등 여러 태스크와 경쟁하며
+		// 천장 모드가 깜빡이거나(토글 경쟁) 요구사항과 반대로 "추격 중 천장"이 발생할 수 있다.
+		// 따라서 컴포넌트 Tick에서의 자동 전환은 비활성화한다.
 	}
 }
 
@@ -108,6 +105,8 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 	if (!OwnerCharacter) return;
 
 	// 서버에서만 천장 가용성 체크
+	// 주의: CheckCeilingAvailability()가 False면 강제로 리턴되므로, 
+	// 디버그 라인이 Red로 뜨면 여기가 원인임.
 	if (GetOwner() && GetOwner()->HasAuthority() && bEnable && !CheckCeilingAvailability())
 	{
 		// 천장이 없으면 활성화 불가
@@ -186,20 +185,40 @@ bool UAO_CeilingMoveComponent::CheckCeilingAvailability() const
 	UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
 	if (!CapsuleComp) return false;
 
-	// 캡슐 상단에서 시작하여 천장 검사
-	FVector CapsuleLocation = CapsuleComp->GetComponentLocation();
-	float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
-	FVector Start = CapsuleLocation;
-	Start.Z += CapsuleHalfHeight; // 캡슐 상단에서 시작
+	// KSJ: 천장 감지 로직 개선 (SphereTrace + 디버그 라인)
 	
-	FVector End = Start + FVector::UpVector * CeilingTraceDistance;
+	// 캡슐 상단 약간 아래에서 시작해서 위로 쏨 (캡슐에 가려지지 않게)
+	float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
+	float CapsuleRadius = CapsuleComp->GetScaledCapsuleRadius();
+	
+	FVector Start = CapsuleComp->GetComponentLocation();
+	Start.Z += CapsuleHalfHeight * 0.5f; 
+	
+	// 위쪽으로 Trace (거리 여유 있게)
+	// CeilingTraceDistance가 500이라면 600까지 체크
+	FVector End = Start + FVector::UpVector * (CeilingTraceDistance + 100.f);
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(OwnerCharacter);
 
 	FHitResult Hit;
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(OwnerCharacter);
-
-	// WorldStatic 레이어에 대해 천장 검사
-	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+	
+	// LineTrace 대신 SphereTrace 사용 (반지름 30cm) -> 얇은 천장이나 틈새 감지 확률 UP
+	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+		this,
+		Start,
+		End,
+		30.f, // Radius
+		UEngineTypes::ConvertToTraceType(ECC_WorldStatic), // Trace Channel
+		false, // bTraceComplex
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration, // 디버그 라인 그리기 (화면 표시)
+		Hit,
+		true, // IgnoreSelf
+		FLinearColor::Red, // No Hit Color
+		FLinearColor::Green, // Hit Color
+		1.0f // Draw Time
+	);
 
 	if (bHit)
 	{
@@ -212,9 +231,12 @@ bool UAO_CeilingMoveComponent::CheckCeilingAvailability() const
 		// 천장이 허용 각도 내에 있는지 확인
 		if (Hit.Normal.Z <= MinNormalZ)
 		{
-			// 천장까지의 거리가 적절한지 확인 (너무 높으면 이동 불가)
+			// 천장까지의 거리 체크
+			// SphereTrace는 표면 접촉점이 Hit.Location이므로 거리 계산 정확
 			float DistanceToCeiling = (Hit.Location - Start).Size();
-			if (DistanceToCeiling <= CeilingTraceDistance && DistanceToCeiling >= CapsuleHalfHeight * 0.5f)
+			
+			// 최소 거리 체크 (너무 낮으면 안됨)
+			if (DistanceToCeiling >= CapsuleHalfHeight * 0.5f)
 			{
 				return true;
 			}
@@ -419,4 +441,3 @@ void UAO_CeilingMoveComponent::UpdateCapsuleRotationToCeiling(const FVector& Cei
 	
 	MeshComp->SetRelativeRotation(InterpolatedRotation);
 }
-
