@@ -54,9 +54,6 @@ protected:
 	UAO_ConfirmReturnToMenuWidget* ConfirmReturnToMenuWidget;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
-	TObjectPtr<USoundBase> DefaultNotEnoughStaminaSound = nullptr;
-
-	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
 	float NotEnoughStaminaSoundInterval = 5.0f;
 
 	double LastNotEnoughStaminaSoundTime = -1e9;
@@ -145,10 +142,6 @@ private:
 	// 스태미나 부족으로 Ability 실패할 때 발생하는 함수
 	UFUNCTION()
 	void HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureTags);
-
-	// 안전하게 캐릭터 메시 받아오기
-	ECharacterMesh GetLocalCharacterMesh() const;
-	USoundBase* GetNotEnoughStaminaSound() const;
 
 private:
 	bool bIsCheckingVoiceCleanup = false;

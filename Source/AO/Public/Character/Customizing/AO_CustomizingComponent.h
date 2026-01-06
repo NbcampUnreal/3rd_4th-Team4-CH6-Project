@@ -69,9 +69,6 @@ public:
 	const FCustomizingData& GetCustomizingData() const;
 
 	FOnCharacterCapsuleChanged OnCapsuleChangedDelegate;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
-	TObjectPtr<UAO_PlayerSoundDataAsset> PlayerSoundDataAsset;
 
 protected:
 	virtual void BeginPlay() override;

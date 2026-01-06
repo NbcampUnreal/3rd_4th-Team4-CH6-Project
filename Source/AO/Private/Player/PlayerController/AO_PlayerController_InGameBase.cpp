@@ -24,6 +24,7 @@
 #include "LoadingScreenManager.h"
 #include "VoipListenerSynthComponent.h"
 #include "Character/Sound/AO_PlayerSoundDataAsset.h"
+#include "Character/Sound/AO_PlayerSoundSubsystem.h"
 #include "UI/AO_UIActionKeySubsystem.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
@@ -770,70 +771,25 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 	{
 		return;
 	}
-
-	checkf(DefaultNotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
-
+	
 	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Ability Failed: NotEnoughStamina"));
-		
 		const double Now = GetWorld()->GetTimeSeconds();
 		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
 		{
 			LastNotEnoughStaminaSoundTime = Now;
 
-			if (USoundBase* SoundToPlay = GetNotEnoughStaminaSound())
+			if (UGameInstance* GI = GetGameInstance())
 			{
-				UGameplayStatics::PlaySound2D(this, SoundToPlay);
-			}
-			else
-			{
-				AO_LOG(LogKH, Warning, TEXT("NotEnoughStaminaSound not found"));
-			}
-		}
-	}
-}
-
-ECharacterMesh AAO_PlayerController_InGameBase::GetLocalCharacterMesh() const
-{
-	APawn* P = GetPawn();
-	if (!P)
-	{
-		return ECharacterMesh::Elsa;
-	}
-
-	if (UAO_CustomizingComponent* CustomizingComponent = P->FindComponentByClass<UAO_CustomizingComponent>())
-	{
-		return CustomizingComponent->GetCustomizingData().CharacterMeshType;
-	}
-
-	return ECharacterMesh::Elsa;
-}
-
-USoundBase* AAO_PlayerController_InGameBase::GetNotEnoughStaminaSound() const
-{
-	APawn* P = GetPawn();
-	if (!P)
-	{
-		return DefaultNotEnoughStaminaSound;
-	}
-	
-	if (UAO_CustomizingComponent* CustomizingComponent = P->FindComponentByClass<UAO_CustomizingComponent>())
-	{
-		if (UAO_PlayerSoundDataAsset* PlayerSoundDA = CustomizingComponent->PlayerSoundDataAsset)
-		{
-			const ECharacterMesh MeshType = GetLocalCharacterMesh();
-
-			FCharacterSoundSet SoundSet;
-			if (PlayerSoundDA->TryGetSoundSet(MeshType, SoundSet))
-			{
-				if (SoundSet.NotEnoughStamina)
+				if (UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>())
 				{
-					return SoundSet.NotEnoughStamina;
+					USoundBase* Sound = SoundSubsystem->GetNotEnoughStaminaSoundFromActor(GetPawn());
+					if (Sound)
+					{
+						UGameplayStatics::PlaySound2D(this, Sound);
+					}
 				}
 			}
 		}
 	}
-
-	return DefaultNotEnoughStaminaSound;
 }
