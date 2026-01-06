@@ -49,9 +49,15 @@ public:
 
 	void NotifySpectators_TargetInvalidated();
 
+	// 사망 몽타주 재생
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayDeathMontage(UAnimMontage* Montage, float PlayRate = 1.f);
+	
 	// Ragdoll 처리
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_EnterRagdoll();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_NotifyDeathRagdoll();
 	
 private:
 	UFUNCTION()

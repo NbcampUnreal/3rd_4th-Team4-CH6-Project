@@ -2,7 +2,7 @@
 
 #include "Character/Components/AO_DeathSpectateComponent.h"
 
-#include "AO_Log.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -110,8 +110,6 @@ void UAO_DeathSpectateComponent::AddSpectator(APlayerController* SpectatorPC)
 		return;
 	}
 
-	AO_LOG(LogKH, Log, TEXT("Test"));
-
 	const int32 PrevNum = SpectatorSet.Num();
 	SpectatorSet.Add(SpectatorPC);
 
@@ -193,6 +191,36 @@ void UAO_DeathSpectateComponent::NotifySpectators_TargetInvalidated()
 	}
 }
 
+void UAO_DeathSpectateComponent::MulticastRPC_PlayDeathMontage_Implementation(UAnimMontage* Montage, float PlayRate)
+{
+	if (!Montage)
+	{
+		return;
+	}
+
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	if (!ensure(OwnerChar))
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerChar->GetMesh();
+	if (!ensure(Mesh))
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInst = Mesh->GetAnimInstance();
+	if (!ensure(AnimInst))
+	{
+		return;
+	}
+
+	AnimInst->StopAllMontages(0.05f);
+
+	AnimInst->Montage_Play(Montage, PlayRate);
+}
+
 void UAO_DeathSpectateComponent::MulticastRPC_EnterRagdoll_Implementation()
 {
 	USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
@@ -218,6 +246,24 @@ void UAO_DeathSpectateComponent::MulticastRPC_EnterRagdoll_Implementation()
 	MeshComp->SetSimulatePhysics(true);
 	MeshComp->WakeAllRigidBodies();
 	MeshComp->bBlendPhysics = true;
+}
+
+void UAO_DeathSpectateComponent::ServerRPC_NotifyDeathRagdoll_Implementation()
+{
+	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+	if (!ASC || !ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death"))))
+	{
+		return;
+	}
+
+	const FGameplayTag RagdollTag = FGameplayTag::RequestGameplayTag(FName("Event.Death.Ragdoll"));
+
+	FGameplayEventData Payload;
+	Payload.EventTag = RagdollTag;
+	Payload.Instigator = OwnerCharacter;
+	Payload.Target = OwnerCharacter;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerCharacter, RagdollTag, Payload);
 }
 
 void UAO_DeathSpectateComponent::OnOwnerDied()
@@ -246,8 +292,6 @@ void UAO_DeathSpectateComponent::OnOwnerDied()
 		return;
 	}
 	
-	AO_LOG(LogKH, Log, TEXT("Death: %s"), *OwnerCharacter->GetName());
-
 	PS->SetIsAlive(false);
 
 	if (ASC)
@@ -273,12 +317,6 @@ void UAO_DeathSpectateComponent::ClientRPC_HandleDeathView_Implementation()
 {
 	check(OwnerCharacter);
 
-	//if (USpringArmComponent* Arm = OwnerCharacter->GetSpringArm())
-	//{
-	//	Arm->TargetArmLength += OwnerCharacter->DeathCameraArmOffset;
-	//	Arm->SocketOffset = FVector::ZeroVector;
-	//}
-
 	if (AAO_PlayerController_Stage* PC = Cast<AAO_PlayerController_Stage>(OwnerCharacter->GetController()))
 	{
 		PC->ShowDeathUI();
@@ -301,8 +339,6 @@ void UAO_DeathSpectateComponent::StartCameraSyncTimer()
 
 	UWorld* World = GetWorld();
 	checkf(World, TEXT("Failed to get World"));
-
-	AO_LOG(LogKH, Log, TEXT("Test"));
 	
 	if (World->GetTimerManager().IsTimerActive(TimerHandle_CameraSync))
 	{
@@ -364,8 +400,6 @@ void UAO_DeathSpectateComponent::OnRep_StreamEnabled()
 			return;
 		}
 	}
-
-	AO_LOG(LogKH, Log, TEXT("Test"));
 
 	if (bStreamEnabled)
 	{

@@ -3,12 +3,9 @@
 #include "Character/GAS/Ability/AO_GameplayAbility_Death.h"
 
 #include "AbilitySystemComponent.h"
-#include "AO_Log.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
@@ -30,7 +27,11 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 		return;
 	}
 
-	AO_LOG(LogKH, Log, TEXT("Death Ability Activated"));
+	if (!ActorInfo || !ActorInfo->IsNetAuthority())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
 	TObjectPtr<UAbilitySystemComponent> ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (!ensure(ASC))
@@ -61,18 +62,16 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 	WaitRagdollEventTask->EventReceived.AddDynamic(this, &UAO_GameplayAbility_Death::OnRagdollEventReceived);
 	WaitRagdollEventTask->ReadyForActivation();
 	
+	// 사망 몽타주 재생
 	checkf(DeathMontage, TEXT("DeathMontage is null"));
 
-	// 사망 몽타주 재생
-	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask
-		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, DeathMontage);
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	checkf(PlayerCharacter, TEXT("Failed to cast AvatarActor to AAO_PlayerCharacter"));
 
-	checkf(MontageTask, TEXT("Failed to create MontageTask"));
+	UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>();
+	checkf(DeathSpectateComponent, TEXT("Failed to find DeathSpectateComponent"));
 
-	MontageTask->OnCompleted.AddDynamic(this, &UAO_GameplayAbility_Death::OnDeathMontageFinished);
-	MontageTask->OnInterrupted.AddDynamic(this, &UAO_GameplayAbility_Death::OnDeathMontageFinished);
-	MontageTask->OnCancelled.AddDynamic(this, &UAO_GameplayAbility_Death::OnDeathMontageFinished);
-	MontageTask->ReadyForActivation();
+	DeathSpectateComponent->MulticastRPC_PlayDeathMontage(DeathMontage);
 	
 	if (ActorInfo->IsNetAuthority())
 	{
@@ -100,8 +99,6 @@ void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payloa
 	{
 		return;
 	}
-
-	AO_LOG(LogKH, Log, TEXT("Ragdoll Event Received"));
 	
 	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
 	if (!PlayerCharacter)
@@ -109,10 +106,10 @@ void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payloa
 		return;
 	}
 
-	//if (UAbilitySystemComponent* ASC = CurrentActorInfo->AbilitySystemComponent.Get())
-	//{
-	//	ASC->CurrentMontageStop(0.05f);
-	//}
+	if (UAbilitySystemComponent* ASC = CurrentActorInfo->AbilitySystemComponent.Get())
+	{
+		ASC->CurrentMontageStop(0.05f);
+	}
 
 	if (UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>())
 	{
@@ -120,25 +117,4 @@ void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payloa
 	}
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-}
-
-void UAO_GameplayAbility_Death::OnDeathMontageFinished()
-{
-	if (IsActive())
-	{
-		AO_LOG(LogKH, Log, TEXT("Death Montage Finished"));
-		
-		AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
-		if (!PlayerCharacter)
-		{
-			return;
-		}
-		
-		if (UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>())
-		{
-			DeathSpectateComponent->MulticastRPC_EnterRagdoll();
-		}
-		
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	}
 }

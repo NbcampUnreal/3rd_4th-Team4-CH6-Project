@@ -4,6 +4,8 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AO_Log.h"
+#include "Character/AO_PlayerCharacter.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "Character/GAS/Ability/AO_GameplayAbility_Death.h"
 
 void UAO_AnimNotify_SendDeathRagdollEvent::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
@@ -26,22 +28,33 @@ void UAO_AnimNotify_SendDeathRagdollEvent::Notify(USkeletalMeshComponent* MeshCo
 	}
 
 	AActor* OwnerActor = MeshComp->GetOwner();
-	if (!OwnerActor || !OwnerActor->HasAuthority())
+	if (!OwnerActor)
 	{
 		return;
 	}
-
-	AO_LOG(LogKH, Log, TEXT("Send Death Ragdoll Event"));
 
 	if (!RagdollEventTag.IsValid())
 	{
 		RagdollEventTag = FGameplayTag::RequestGameplayTag(FName("Event.Death.Ragdoll"));
 	}
 
-	FGameplayEventData Payload;
-	Payload.EventTag = RagdollEventTag;
-	Payload.Instigator = OwnerActor;
-	Payload.Target = OwnerActor;
+	if (OwnerActor->HasAuthority())
+	{
+		FGameplayEventData Payload;
+		Payload.EventTag = RagdollEventTag;
+		Payload.Instigator = OwnerActor;
+		Payload.Target = OwnerActor;
 
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, RagdollEventTag, Payload);
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, RagdollEventTag, Payload);
+	}
+	else
+	{
+		if (AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(OwnerActor))
+		{
+			if (UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>())
+			{
+				DeathSpectateComponent->ServerRPC_NotifyDeathRagdoll();
+			}
+		}
+	}
 }

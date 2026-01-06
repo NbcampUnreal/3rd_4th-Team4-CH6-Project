@@ -56,7 +56,6 @@ void UAO_PlayerCharacter_AttributeSet::PostGameplayEffectExecute(const struct FG
 				{
 					if (Owner->HasAuthority())
 					{
-						AO_LOG(LogKH, Log, TEXT("Player Death"));
 						OnPlayerDeath.Broadcast();
 					}
 				}

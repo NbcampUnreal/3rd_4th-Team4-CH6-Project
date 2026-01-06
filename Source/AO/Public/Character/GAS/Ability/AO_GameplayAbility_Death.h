@@ -36,7 +36,4 @@ protected:
 
 	UFUNCTION()
 	void OnRagdollEventReceived(FGameplayEventData Payload);
-	
-	UFUNCTION()
-	void OnDeathMontageFinished();
 };
