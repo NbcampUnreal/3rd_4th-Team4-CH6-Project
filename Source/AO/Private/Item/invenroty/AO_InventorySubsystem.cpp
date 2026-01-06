@@ -1,8 +1,8 @@
-#include "Item/invenroty/AO_InventorySubsystem.h"
+#include "Public/Item/inventory/AO_InventorySubsystem.h"
 #include "AO_Log.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Controller.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 
 void UAO_InventorySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Item/invenroty/AO_InventoryComponent.h" 
+#include "Public/Item/inventory/AO_InventoryComponent.h" 
 #include "AO_InventoryListener.generated.h"
 
 UINTERFACE(MinimalAPI, Blueprintable)

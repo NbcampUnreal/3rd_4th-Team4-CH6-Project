@@ -1,5 +1,7 @@
 ﻿// HSJ : AO_ElevatorReactionActor.cpp
 #include "Puzzle/Actor/AO_ElevatorReactionActor.h"
+
+#include "Components/AudioComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -18,6 +20,10 @@ AAO_ElevatorReactionActor::AAO_ElevatorReactionActor()
     RightDoorMesh->SetupAttachment(RootComponent);
     RightDoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     RightDoorMesh->SetCollisionResponseToAllChannels(ECR_Block);
+
+	MovementAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MovementAudioComponent"));
+	MovementAudioComponent->SetupAttachment(RootComponent);
+	MovementAudioComponent->bAutoActivate = false;
 }
 
 void AAO_ElevatorReactionActor::BeginPlay()
@@ -354,10 +360,11 @@ void AAO_ElevatorReactionActor::MoveToGround()
     TargetProgressValue = 0.0f;
     bIsMoving = true;
     
-    if (MovementStartSound && HasAuthority())
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-    }
+	if (HasAuthority() && MovementLoopSound && MovementAudioComponent)
+	{
+		MovementAudioComponent->SetSound(MovementLoopSound);
+		MovementAudioComponent->Play();
+	}
 }
 
 void AAO_ElevatorReactionActor::MoveToBasement()
@@ -365,10 +372,11 @@ void AAO_ElevatorReactionActor::MoveToBasement()
     TargetProgressValue = 1.0f;
     bIsMoving = true;
     
-    if (MovementStartSound && HasAuthority())
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-    }
+	if (HasAuthority() && MovementLoopSound && MovementAudioComponent)
+	{
+		MovementAudioComponent->SetSound(MovementLoopSound);
+		MovementAudioComponent->Play();
+	}
 }
 
 void AAO_ElevatorReactionActor::UpdateElevatorMovement(float DeltaTime)
@@ -423,10 +431,10 @@ void AAO_ElevatorReactionActor::UpdateElevatorMovement(float DeltaTime)
         
         bIsMoving = false;
         
-        if (MovementStopSound && HasAuthority())
-        {
-            UGameplayStatics::PlaySoundAtLocation(this, MovementStopSound, GetActorLocation());
-        }
+    	if (HasAuthority() && MovementAudioComponent && MovementAudioComponent->IsPlaying())
+    	{
+    		MovementAudioComponent->Stop();
+    	}
         
         OnStepComplete();
     }

@@ -1,9 +1,3 @@
-// base interect item 상속. add fuel기능과 crab 상호작용을 component화 시켜서 적용해보려함
-
-// this item can.
-// 1) interection with Press F
-// 2) Can Be Fuel
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -23,6 +17,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	
 public:
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor) override;
@@ -56,5 +52,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UAO_PickupComponent* PickupComponent;
+
+	UPROPERTY(Replicated)
+	FString CachedItemName;
 
 };

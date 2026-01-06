@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
 #include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameState/AO_GameState.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
@@ -20,6 +21,22 @@ AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 
 	NextLobbyJoinOrder = 0;
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_Lobby::BeginPlay()
+{
+	Super::BeginPlay();
+	//ms : 패시브 초기화
+	if (UAO_GameInstance* AO_GI = GetGameInstance<UAO_GameInstance>())
+	{
+		AO_GI->PassiveReset();
+	}
+    
+	if (AAO_GameState* AO_GS = GetGameState<AAO_GameState>())
+	{
+		AO_GS->Authority_NotifyGlobalReset();
+	}
+	//
 }
 
 void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)

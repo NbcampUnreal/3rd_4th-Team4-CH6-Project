@@ -23,8 +23,10 @@ public:
 	AAO_StageInteractable(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	virtual bool CanInteraction(const FAO_InteractionQuery& InteractionQuery) const override;
+	virtual FAO_InteractionInfo GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const override;
 	virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor) override;
+	
+	void GetCurrentConditions(bool& bOutHasFuel, bool& bOutHasClues) const;
 
 protected:
 	UPROPERTY(EditAnywhere, Category="Stage")

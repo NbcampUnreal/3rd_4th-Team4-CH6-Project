@@ -6,6 +6,8 @@
 #include "Components/SplineComponent.h"
 #include "AO_CableCarReactionActor.generated.h"
 
+class UAudioComponent;
+
 UCLASS()
 class AO_API AAO_CableCarReactionActor : public AAO_PuzzleReactionActor
 {
@@ -37,6 +39,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
     TObjectPtr<USplineComponent> SplinePath;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UAudioComponent> MovementAudioComponent;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CableCar", 
         meta=(ClampMin="0.01", UIMin="0.01", UIMax="1.0"))
     float MovementSpeed = 0.15f;
@@ -45,11 +50,8 @@ public:
         meta=(ClampMin="1.0", UIMin="1.0", UIMax="5.0"))
     float EaseStrength = 2.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CableCar")
-    TObjectPtr<USoundBase> MovementStartSound;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CableCar")
-    TObjectPtr<USoundBase> MovementStopSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CableCar")
+	TObjectPtr<USoundBase> MovementLoopSound;
 
 protected:
     UPROPERTY(ReplicatedUsing=OnRep_MovementCommand, BlueprintReadOnly, Category="CableCar")
