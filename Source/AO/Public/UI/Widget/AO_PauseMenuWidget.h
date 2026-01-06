@@ -5,6 +5,7 @@
 #include "AO_PauseMenuWidget.generated.h"
 
 class UButton;
+class UUserWidget;
 
 UCLASS()
 class AO_API UAO_PauseMenuWidget : public UUserWidget
@@ -38,16 +39,16 @@ public:
 
 protected:
 	UPROPERTY(meta=(BindWidget))
-	UButton* Btn_Settings;
+	UUserWidget* Btn_Settings = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* Btn_ReturnLobby;
+	UUserWidget* Btn_ReturnLobby = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* Btn_QuitGame;
+	UUserWidget* Btn_QuitGame = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* Btn_Resume;
+	UUserWidget* Btn_Resume = nullptr;
 
 protected:
 	UFUNCTION()
@@ -61,4 +62,16 @@ protected:
 
 	UFUNCTION()
 	void HandleClicked_Resume();
+
+	UFUNCTION(BlueprintCallable)
+	void OnClicked_Settings();
+
+	UFUNCTION(BlueprintCallable)
+	void OnClicked_ReturnLobby();
+
+	UFUNCTION(BlueprintCallable)
+	void OnClicked_QuitGame();
+
+	UFUNCTION(BlueprintCallable)
+	void OnClicked_Resume();
 };
