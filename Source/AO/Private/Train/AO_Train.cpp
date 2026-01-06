@@ -1,7 +1,7 @@
 #include "Train/AO_Train.h"
 #include "AbilitySystemComponent.h"
 #include "Game/GameMode/AO_GameMode_Stage.h" // JSH: 연료 실패 트리거
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "Train/GAS/AO_Fuel_AttributeSet.h"
 
 AAO_Train::AAO_Train()

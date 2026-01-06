@@ -14,12 +14,13 @@ void AAO_PlayerController::PreClientTravel(const FString& PendingURL, ETravelTyp
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("Client Travel To %s"), *PendingURL), false);	// JM : 디버그용
 	
-	/* JM : 기존 로직 삭제 (이 시점은 너무 늦어서 간혹 제대로 반영 안될 때가 많음
-	 * PC_InGameBase::PrepareClientTravel에서 로딩맵이름 업데이트함
-	 *if (IsLocalController())
+	// JM : 기존 로직 삭제 (이 시점은 너무 늦어서 간혹 제대로 반영 안될 때가 많음)
+	// PC_InGameBase::PrepareClientTravel에서 로딩맵이름 업데이트함
+	// 메인메뉴에서 이동할 때는 위 Prepare를 거치지 않기 때문에 여기서 한번 더 해줌
+	if (IsLocalController())
 	{
 		UpdateLoadingMapName(PendingURL);
-	}*/
+	}
 
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 	AO_LOG(LogJM, Log, TEXT("End"));

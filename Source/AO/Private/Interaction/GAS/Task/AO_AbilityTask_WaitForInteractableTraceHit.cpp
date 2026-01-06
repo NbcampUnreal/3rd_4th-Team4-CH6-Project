@@ -366,6 +366,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::HighlightInteractables(
 	const TArray<FAO_InteractionInfo>& InteractionInfos, 
 	bool bShouldHighlight)
 {
+	uint8 StencilValue = 250;
 	// 모든 Interactable의 메시 수집
 	TArray<UMeshComponent*> MeshComponents;
 	for (const FAO_InteractionInfo& InteractionInfo : InteractionInfos)
@@ -374,6 +375,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::HighlightInteractables(
 		{
 			Interactable->GetMeshComponents(MeshComponents);
 		}
+		StencilValue = InteractionInfo.HighlightStencilValue;
 	}
 
 	// CustomDepth 설정으로 하이라이트 on/off
@@ -383,7 +385,7 @@ void UAO_AbilityTask_WaitForInteractableTraceHit::HighlightInteractables(
 		if (bShouldHighlight)
 		{
 			MeshComponent->SetRenderCustomDepth(true);
-			MeshComponent->SetCustomDepthStencilValue(250);
+			MeshComponent->SetCustomDepthStencilValue(StencilValue);
 		}
 		else
 		{

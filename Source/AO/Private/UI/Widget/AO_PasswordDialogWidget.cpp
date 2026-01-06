@@ -20,6 +20,8 @@ void UAO_PasswordDialogWidget::NativeConstruct()
 	{
 		Txt_Password->SetIsReadOnly(false);
 		Txt_Password->SetKeyboardFocus();
+		
+		Txt_Password->OnTextChanged.AddDynamic(this, &ThisClass::OnPasswordChanged);
 	}
 	else
 	{
@@ -107,4 +109,30 @@ void UAO_PasswordDialogWidget::OnClicked_Back()
 	{
 		AO_LOG(LogJSH, Warning, TEXT("OnClicked_Back: ParentList invalid, cannot restore list visibility/focus"));
 	}
+}
+
+void UAO_PasswordDialogWidget::OnPasswordChanged(const FText& InText)
+{
+	if(Txt_Password == nullptr)
+	{
+		return;
+	}
+
+	FString PasswordString = InText.ToString();
+	if(PasswordString.Len() <= 4)
+	{
+		return;
+	}
+
+	PasswordString.LeftInline(4, EAllowShrinking::No);
+
+	const FText ClampedText = FText::FromString(PasswordString);
+	
+	if(ClampedText.EqualTo(Txt_Password->GetText()))
+	{
+		return;
+	}
+
+	Txt_Password->SetText(ClampedText);
+	Txt_Password->SetKeyboardFocus();
 }

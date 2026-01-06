@@ -6,6 +6,8 @@
 #include "Engine/GameInstance.h"
 #include "AO_GameInstance.generated.h"
 
+class UAO_FuelData;
+
 UCLASS()
 class AO_API UAO_GameInstance : public UGameInstance
 {
@@ -81,4 +83,23 @@ public:
 
 	// 부활 시도: 0보다 크면 1 소모 후 true, 0이면 false
 	bool TryConsumeSharedReviveCount();
+
+	//ms : 패시브 초기화
+	void PassiveReset();
+
+	//ms: 연료량 data asset
+protected:
+	// 에디터에서 선택할 수 있도록 변수를 만듭니다.
+	// TSoftObjectPtr 대신 일반 포인터를 써서 게임 시작 시 즉시 사용 가능하게 합니다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Train")
+	TObjectPtr<class UAO_FuelData> FuelDataAsset;
+
+public:
+	virtual void Init() override;
+
+	UFUNCTION(BlueprintPure, Category = "Train")
+	float GetInitialFuel();
+
+	UFUNCTION(BlueprintPure)
+	float GetInitialFuelValue();
 };

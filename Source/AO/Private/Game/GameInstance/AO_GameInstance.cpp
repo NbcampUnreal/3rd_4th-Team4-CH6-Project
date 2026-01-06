@@ -5,24 +5,39 @@
 #include "AO_Log.h"
 #include "GameFramework/PlayerState.h"
 #include "OnlineSubsystemTypes.h"
+#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
+#include "Train/Data/AO_FuelData.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 
 UAO_GameInstance::UAO_GameInstance()
 {
-	SharedTrainFuel = 40.0f;
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
 
 	// 최초 기본 부활 횟수
 	InitialSharedReviveCount = 5;
 	SharedReviveCount = InitialSharedReviveCount;
+
+	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
+}
+
+void UAO_GameInstance::Init()
+{
+	Super::Init();
+    
+	// 게임 시작 시 BP에서 할당한 에셋으로부터 연료 값을 가져옵니다.
+	SharedTrainFuel = GetInitialFuel();
+    
+	UE_LOG(LogTemp, Log, TEXT("UAO_GameInstance::Init - Initial Fuel: %f"), SharedTrainFuel);
 }
 
 void UAO_GameInstance::ResetRun()
 {
 	CurrentStageIndex = 0;
-	SharedTrainFuel = 40.0f;
+	SharedTrainFuel = GetInitialFuelValue();
 	SharedReviveCount = InitialSharedReviveCount;
+    
+	UE_LOG(LogTemp, Log, TEXT("Run Reset: SharedTrainFuel set to %f"), SharedTrainFuel);
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -142,7 +157,7 @@ int32 UAO_GameInstance::GetSharedReviveCount() const
 	return SharedReviveCount;
 }
 
-void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
+ void UAO_GameInstance::AddSharedReviveCount(int32 Delta)
 {
 	const int32 OldValue = SharedReviveCount;
 	const int32 NewValue = SharedReviveCount + Delta;
@@ -185,3 +200,40 @@ bool UAO_GameInstance::TryConsumeSharedReviveCount()
 
 	return true;
 }
+
+//ms : 패시브 초기화
+void UAO_GameInstance::PassiveReset()
+{
+	UAO_Passive_WorldSubsystem* PassiveSub = GetSubsystem<UAO_Passive_WorldSubsystem>();
+	if (PassiveSub)
+	{
+		PassiveSub->ClearAllPlayerData();
+	}	
+}
+
+//ms: 연료 값을 가져오는 로직
+float UAO_GameInstance::GetInitialFuel()
+{
+	// BP에서 지정한 에셋이 있다면 그 값을 반환
+	if (FuelDataAsset)
+	{
+		return FuelDataAsset->InitialFuel;
+	}
+    
+	// 에셋이 없으면 생성자에서 정한 기본값 반환
+	return SharedTrainFuel;
+}
+
+float UAO_GameInstance::GetInitialFuelValue()
+{
+	// 1. 에디터에서 지정한 에셋(BP_FuelDataAsset)이 있는지 확인
+	if (FuelDataAsset)
+	{
+		// 2. 에셋 내부의 InitialFuel 변수 값을 반환 (예: 80.0)
+		return FuelDataAsset->InitialFuel;
+	}
+    
+	// 3. 만약 에셋을 안 꽂았다면 방어용으로 기본값 반환
+	return 40.0f;
+}
+// ms
