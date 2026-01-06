@@ -9,6 +9,8 @@
 class ACharacter;
 class UCharacterMovementComponent;
 class USkeletalMeshComponent;
+class UAnimMontage;
+class UAnimInstance;
 
 /**
  * 천장 이동 기능을 담당하는 컴포넌트 (Stalker용)
@@ -39,6 +41,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
 	bool IsInCeilingMode() const { return bIsCeilingMode; }
+
+	// 전환 몽타주 (BP 세팅 확인용/폴백용)
+	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
+	UAnimMontage* GetJumpUpMontage() const { return JumpUpMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
+	UAnimMontage* GetJumpDownMontage() const { return JumpDownMontage; }
 
 	// 현재 위치 위쪽에 천장이 있어 이동 가능한지 확인
 	UFUNCTION(BlueprintPure, Category = "AO|AI|Stalker")
@@ -110,5 +119,41 @@ protected:
 	// 기울어진 천장 지원 최대 각도 (도 단위, 0~90)
 	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move")
 	float MaxCeilingAngle = 60.f;
+
+	// 바닥 -> 천장 점프 몽타주
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ceiling Move|Montage")
+	TObjectPtr<UAnimMontage> JumpUpMontage;
+
+	// 천장 -> 바닥 점프 몽타주
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ceiling Move|Montage")
+	TObjectPtr<UAnimMontage> JumpDownMontage;
+
+	// 몽타주 재생 속도
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Montage")
+	float MontagePlayRate = 1.0f;
+
+	// 전환 보간 관련
+	UPROPERTY()
+	bool bIsTransitioning = false;
+
+	UPROPERTY()
+	float TransitionStartTime = 0.f;
+
+	UPROPERTY()
+	float TransitionDuration = 0.f;
+
+	UPROPERTY()
+	float StartOffsetZ = 0.f;
+
+	UPROPERTY()
+	float TargetOffsetZ = 0.f;
+
+	// 보간 속도 (초 단위, 0이면 즉시 전환)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Transition")
+	float TransitionInterpSpeed = 0.f; // 0이면 자동 계산 (몽타주 길이 기반)
+
+	// 보간 시작 지연 (몽타주 시작 후 몇 초 후부터 보간 시작, 바닥→천장 점프 시 발 떨어지는 시점)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Transition")
+	float TransitionStartDelay = 0.1f; // 40프레임 기준 4프레임 = 약 0.1초 (30fps 가정)
 };
 

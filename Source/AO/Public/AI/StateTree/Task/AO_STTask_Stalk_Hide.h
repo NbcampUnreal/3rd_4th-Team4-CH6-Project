@@ -41,6 +41,18 @@ struct FAO_STTask_Stalk_Hide_InstanceData
 
 	UPROPERTY(EditAnywhere, Category = "EQS")
 	float EQSWaitTimeout = 1.0f;
+
+	// 나를 보고 있는 플레이어 (뒷걸음질 시 바라볼 대상)
+	UPROPERTY()
+	TWeakObjectPtr<AActor> LookingPlayer = nullptr;
+
+	// 뒷걸음질 모드 활성화 여부
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	bool bEnableBackpedal = true;
+
+	// 뒷걸음질 시 회전 보간 속도 (도/초)
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float BackpedalRotationSpeed = 360.f;
 };
 
 /**

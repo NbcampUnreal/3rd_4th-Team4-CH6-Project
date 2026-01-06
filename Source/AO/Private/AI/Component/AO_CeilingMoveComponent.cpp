@@ -9,6 +9,7 @@
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Animation/AnimInstance.h"
 
 UAO_CeilingMoveComponent::UAO_CeilingMoveComponent()
 {
@@ -37,66 +38,112 @@ void UAO_CeilingMoveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (bIsCeilingMode)
+	if (GetOwner() && GetOwner()->HasAuthority())
 	{
-		if (GetOwner() && GetOwner()->HasAuthority())
+		// 보간 중인 경우
+		if (bIsTransitioning)
 		{
-			// 서버에서만 천장 위치 계산 및 업데이트
-			UpdateCeilingPosition(DeltaTime);
-		}
-		else
-		{
-			// 클라이언트에서는 서버에서 계산된 Mesh 오프셋을 따라가기 위해
-			// 간단한 보간만 수행 (실제 위치는 서버에서 리플리케이션됨)
-			// Mesh 회전은 천장 Normal에 맞춰 업데이트
-			if (OwnerCharacter && MoveComp)
+			float CurrentTime = GetWorld()->GetTimeSeconds();
+			
+			if (CurrentTime >= TransitionStartTime)
 			{
-				UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
-				if (CapsuleComp)
+				float ElapsedTime = CurrentTime - TransitionStartTime;
+				float Alpha = FMath::Clamp(ElapsedTime / TransitionDuration, 0.f, 1.f);
+				
+				// EaseInOut 곡선 적용 (더 자연스러운 가속/감속)
+				Alpha = Alpha * Alpha * (3.f - 2.f * Alpha);
+				
+				float CurrentOffsetZ = FMath::Lerp(StartOffsetZ, TargetOffsetZ, Alpha);
+				
+				USkeletalMeshComponent* MeshComp = OwnerCharacter ? OwnerCharacter->GetMesh() : nullptr;
+				if (MeshComp && bInitialLocationSaved)
 				{
-					// 클라이언트에서도 천장 감지하여 Mesh 회전 업데이트
-					FVector CurrentLoc = OwnerCharacter->GetActorLocation();
-					float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
-					FVector Start = CurrentLoc;
-					Start.Z += CapsuleHalfHeight;
-					FVector End = Start + FVector::UpVector * CeilingTraceDistance;
-
-					FHitResult Hit;
-					FCollisionQueryParams Params;
-					Params.AddIgnoredActor(OwnerCharacter);
-
-					if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+					FVector NewRelLoc = InitialMeshRelativeLocation;
+					NewRelLoc.Z += CurrentOffsetZ;
+					MeshComp->SetRelativeLocation(NewRelLoc);
+					
+					// 천장 모드이고 보간 완료 시 회전도 업데이트
+					if (bIsCeilingMode && Alpha >= 1.f)
 					{
-						// 천장 Normal에 맞춰 Mesh 회전만 업데이트
-						UpdateCapsuleRotationToCeiling(Hit.Normal);
+						UpdateCeilingPosition(DeltaTime, false);
+					}
+				}
+				
+				// 보간 완료
+				if (Alpha >= 1.f)
+				{
+					bIsTransitioning = false;
+					
+					// 바닥 모드로 전환 완료 시 Mesh 회전/위치 복구
+					if (!bIsCeilingMode && MeshComp)
+					{
+						MoveComp->GravityScale = 1.f;
+						MoveComp->SetMovementMode(MOVE_Walking);
 						
-						// Mesh 위치 오프셋도 클라이언트에서 계산
-						USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
-						if (MeshComp && bInitialLocationSaved)
+						if (bInitialRotationSaved)
 						{
-							const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
-							const float DesiredMeshOffsetZ = DesiredActorZ - CurrentLoc.Z;
-							
-							const float InterpSpeed = 30.f;
-							const float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
-							float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, DesiredMeshOffsetZ, DeltaTime, InterpSpeed);
-							
-							FVector NewRelLoc = InitialMeshRelativeLocation;
-							NewRelLoc.Z += NewOffsetZ;
-							MeshComp->SetRelativeLocation(NewRelLoc);
+							MeshComp->SetRelativeRotation(InitialMeshRotation);
 						}
+						if (bInitialLocationSaved)
+						{
+							MeshComp->SetRelativeLocation(InitialMeshRelativeLocation);
+						}
+						
+						AutoTransitionCheckTimer = 0.f;
 					}
 				}
 			}
 		}
+		
+		// 천장 모드이고 보간 완료된 경우 정상 업데이트
+		if (bIsCeilingMode && !bIsTransitioning)
+		{
+			UpdateCeilingPosition(DeltaTime);
+		}
 	}
 	else
 	{
-		// KSJ:
-		// Stalker의 천장/바닥 전환은 StateTree에서 "명시적으로"만 제어해야 한다.
-		// 여기서 자동 전환을 켜두면 Roam/Chase/Hide 등 여러 태스크와 경쟁하며
-		// 천장 모드가 깜빡이거나(토글 경쟁) 요구사항과 반대로 "추격 중 천장"이 발생할 수 있다.
-		// 따라서 컴포넌트 Tick에서의 자동 전환은 비활성화한다.
+		// 클라이언트에서는 서버에서 계산된 Mesh 오프셋을 따라가기 위해
+		// 간단한 보간만 수행 (실제 위치는 서버에서 리플리케이션됨)
+		if (bIsCeilingMode && OwnerCharacter && MoveComp)
+		{
+			UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
+			if (CapsuleComp)
+			{
+				// 클라이언트에서도 천장 감지하여 Mesh 회전 업데이트
+				FVector CurrentLoc = OwnerCharacter->GetActorLocation();
+				float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
+				FVector Start = CurrentLoc;
+				Start.Z += CapsuleHalfHeight;
+				FVector End = Start + FVector::UpVector * CeilingTraceDistance;
+
+				FHitResult Hit;
+				FCollisionQueryParams Params;
+				Params.AddIgnoredActor(OwnerCharacter);
+
+				if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+				{
+					// 천장 Normal에 맞춰 Mesh 회전만 업데이트
+					UpdateCapsuleRotationToCeiling(Hit.Normal);
+					
+					// Mesh 위치 오프셋도 클라이언트에서 계산
+					USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
+					if (MeshComp && bInitialLocationSaved)
+					{
+						const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
+						const float DesiredMeshOffsetZ = DesiredActorZ - CurrentLoc.Z;
+						
+						const float InterpSpeed = 30.f;
+						const float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+						float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, DesiredMeshOffsetZ, DeltaTime, InterpSpeed);
+						
+						FVector NewRelLoc = InitialMeshRelativeLocation;
+						NewRelLoc.Z += NewOffsetZ;
+						MeshComp->SetRelativeLocation(NewRelLoc);
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -115,14 +162,12 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 
 	if (bIsCeilingMode != bEnable)
 	{
-		bIsCeilingMode = bEnable;
-
 		// 서버에서만 Movement 설정 변경
 		if (GetOwner() && GetOwner()->HasAuthority())
 		{
 			USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
 			
-			if (bIsCeilingMode)
+			if (bEnable)
 			{
 				// NavMesh를 사용하기 위해 Walking 모드 유지
 				// Gravity만 0으로 설정하여 중력 영향 제거
@@ -147,32 +192,86 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 					}
 				}
 
-				// 천장 모드 진입 시 즉시 천장 위치로 "보이도록" 보정 (회전/오프셋)
-				UpdateCeilingPosition(0.f, true); // 즉시 적용
+				// 보간 시작: 현재 오프셋에서 천장 오프셋으로
+				if (MeshComp && bInitialLocationSaved)
+				{
+					float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+					StartOffsetZ = CurrentOffsetZ;
+					
+					// 천장 높이 계산 (목표 오프셋)
+					UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
+					if (CapsuleComp)
+					{
+						FVector CurrentLoc = OwnerCharacter->GetActorLocation();
+						float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
+						
+						FVector Start = CurrentLoc;
+						Start.Z += CapsuleHalfHeight;
+						FVector End = Start + FVector::UpVector * CeilingTraceDistance;
+						
+						FHitResult Hit;
+						FCollisionQueryParams Params;
+						Params.AddIgnoredActor(OwnerCharacter);
+						
+						if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+						{
+							const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
+							TargetOffsetZ = DesiredActorZ - CurrentLoc.Z;
+						}
+						else
+						{
+							TargetOffsetZ = CurrentOffsetZ; // 천장이 없으면 보간 안 함
+						}
+					}
+					
+					// 보간 시간 계산 (몽타주 길이 기반 또는 설정값)
+					if (TransitionInterpSpeed > 0.f)
+					{
+						TransitionDuration = FMath::Abs(TargetOffsetZ - StartOffsetZ) / TransitionInterpSpeed;
+					}
+					else
+					{
+						// 자동 계산: 40프레임 몽타주 기준, 4프레임~35프레임 = 31프레임 동안 보간
+						// 30fps 가정: 31프레임 = 약 1.03초
+						TransitionDuration = 1.03f;
+					}
+					
+					bIsTransitioning = true;
+					TransitionStartTime = GetWorld()->GetTimeSeconds() + TransitionStartDelay;
+				}
 			}
 			else
 			{
-				// 바닥 모드 복귀
-				MoveComp->GravityScale = 1.f;
-				MoveComp->SetMovementMode(MOVE_Walking);
-				
-				// Mesh 회전/위치 복구
-				if (MeshComp && bInitialRotationSaved)
-				{
-					MeshComp->SetRelativeRotation(InitialMeshRotation);
-				}
+				// 바닥 모드 복귀: 보간으로 내려오기
 				if (MeshComp && bInitialLocationSaved)
 				{
-					MeshComp->SetRelativeLocation(InitialMeshRelativeLocation);
+					float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
+					StartOffsetZ = CurrentOffsetZ;
+					TargetOffsetZ = 0.f; // 바닥 = 오프셋 0
+					
+					// 보간 시간 계산
+					if (TransitionInterpSpeed > 0.f)
+					{
+						TransitionDuration = FMath::Abs(TargetOffsetZ - StartOffsetZ) / TransitionInterpSpeed;
+					}
+					else
+					{
+						// 천장→바닥도 동일하게 31프레임 동안 보간
+						TransitionDuration = 1.03f;
+					}
+					
+					bIsTransitioning = true;
+					TransitionStartTime = GetWorld()->GetTimeSeconds() + TransitionStartDelay;
 				}
-
-				// 자동 전환 체크 타이머 리셋
-				AutoTransitionCheckTimer = 0.f;
 			}
 		}
-		else
+		
+		// 모드 플래그는 즉시 변경 (보간은 Tick에서 처리)
+		bIsCeilingMode = bEnable;
+		
+		// 클라이언트에서는 Mesh 시각적 업데이트만 수행
+		if (!GetOwner() || !GetOwner()->HasAuthority())
 		{
-			// 클라이언트에서는 Mesh 시각적 업데이트만 수행
 			UpdateMeshVisualsForCeilingMode(bEnable);
 		}
 	}
