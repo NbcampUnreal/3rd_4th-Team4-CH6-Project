@@ -65,8 +65,6 @@ void UAO_MainMenuWidget::OnClicked_Join()
 			{
 				AO_LOG(LogJSH, Warning, TEXT("OnClicked_Join: PlayerController is null (cannot set input mode)"));
 			}
-
-			SetVisibility(ESlateVisibility::Collapsed);
 		}
 		else
 		{

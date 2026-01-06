@@ -21,6 +21,7 @@ class AO_API UAO_ConfirmReturnToMenuWidget : public UAO_UserWidget
 	
 public:
 	virtual void NativeOnInitialized() override;
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category="Confirm")

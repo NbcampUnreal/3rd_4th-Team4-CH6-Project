@@ -28,8 +28,6 @@ void UAO_GameInstance::Init()
     
 	// 게임 시작 시 BP에서 할당한 에셋으로부터 연료 값을 가져옵니다.
 	SharedTrainFuel = GetInitialFuel();
-    
-	UE_LOG(LogTemp, Log, TEXT("UAO_GameInstance::Init - Initial Fuel: %f"), SharedTrainFuel);
 }
 
 void UAO_GameInstance::ResetRun()
@@ -40,8 +38,6 @@ void UAO_GameInstance::ResetRun()
 	TeamDeathCount = 0;		// JM : 게임 초기화 시 팀 데스 수 초기화
 	GameStartTime = 0;
 	GameEndTime = 0;
-    
-	UE_LOG(LogTemp, Log, TEXT("Run Reset: SharedTrainFuel set to %f"), SharedTrainFuel);
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -215,29 +211,21 @@ void UAO_GameInstance::PassiveReset()
 	}	
 }
 
-//ms: 연료 값을 가져오는 로직
 float UAO_GameInstance::GetInitialFuel()
 {
-	// BP에서 지정한 에셋이 있다면 그 값을 반환
 	if (FuelDataAsset)
 	{
 		return FuelDataAsset->InitialFuel;
 	}
-    
-	// 에셋이 없으면 생성자에서 정한 기본값 반환
 	return SharedTrainFuel;
 }
 
 float UAO_GameInstance::GetInitialFuelValue()
 {
-	// 1. 에디터에서 지정한 에셋(BP_FuelDataAsset)이 있는지 확인
 	if (FuelDataAsset)
 	{
-		// 2. 에셋 내부의 InitialFuel 변수 값을 반환 (예: 80.0)
 		return FuelDataAsset->InitialFuel;
 	}
-    
-	// 3. 만약 에셋을 안 꽂았다면 방어용으로 기본값 반환
-	return 40.0f;
+	return 43.0f;
 }
 // ms

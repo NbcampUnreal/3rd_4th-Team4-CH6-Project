@@ -59,6 +59,15 @@ void UAO_LobbyListWidget::NativeConstruct()
 	{
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Failed to bind OnFindSessionsCompleteEvent (Sub is null)"));
 	}
+	
+	if(Btn_BackDrop && !Btn_BackDrop->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_BackDrop))
+	{
+		Btn_BackDrop->OnClicked.AddDynamic(this, &ThisClass::OnClicked_BackDrop);
+	}
+	else if(!Btn_BackDrop)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Backdrop is null"));
+	}
 
 	AO_LOG(LogJSH, Log, TEXT("NativeConstruct: LobbyList initialized, requesting initial refresh"));
 	OnClicked_Refresh();
@@ -168,6 +177,11 @@ void UAO_LobbyListWidget::OnClicked_Close()
 	}
 
 	RemoveFromParent();
+}
+
+void UAO_LobbyListWidget::OnClicked_BackDrop()
+{
+	OnClicked_Close();
 }
 
 void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
