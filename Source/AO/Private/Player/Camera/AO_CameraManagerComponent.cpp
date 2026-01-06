@@ -2,7 +2,6 @@
 
 #include "Player/Camera/AO_CameraManagerComponent.h"
 
-#include "AO_Log.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -47,16 +46,7 @@ void UAO_CameraManagerComponent::TickComponent(float DeltaTime, enum ELevelTick 
 
 void UAO_CameraManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (ASC)
-	{
-		for (const FDelegateHandle& Handle : TagEventHandles)
-		{
-			ASC->RegisterGameplayTagEvent(State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
-			ASC->RegisterGameplayTagEvent(State_Sprint, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
-			ASC->RegisterGameplayTagEvent(State_Traversal, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
-		}
-	}
-	TagEventHandles.Reset();
+	UnregisterGameplayTagEvent();
 	ASC = nullptr;
 	
 	Super::EndPlay(EndPlayReason);
@@ -146,6 +136,20 @@ void UAO_CameraManagerComponent::OnStateTagChanged(FGameplayTag Tag, int32 NewCo
 	}
 }
 
+void UAO_CameraManagerComponent::UnregisterGameplayTagEvent()
+{
+	if (ASC)
+	{
+		for (const FDelegateHandle& Handle : TagEventHandles)
+		{
+			ASC->RegisterGameplayTagEvent(State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
+			ASC->RegisterGameplayTagEvent(State_Sprint, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
+			ASC->RegisterGameplayTagEvent(State_Traversal, EGameplayTagEventType::NewOrRemoved).Remove(Handle);
+		}
+	}
+	TagEventHandles.Reset();
+}
+
 void UAO_CameraManagerComponent::PushCameraState(const FGameplayTag& CameraTag)
 {
 	checkf(ProfileDB, TEXT("ProfileDB is null"));
@@ -167,6 +171,12 @@ void UAO_CameraManagerComponent::PopCameraState(const FGameplayTag& CameraTag)
 	{
 		Request->bActive = false;
 	}
+}
+
+void UAO_CameraManagerComponent::ResetCameraState()
+{
+	UnregisterGameplayTagEvent();
+	Requests.Empty();
 }
 
 void UAO_CameraManagerComponent::UpdateRequests(float DeltaTime)
