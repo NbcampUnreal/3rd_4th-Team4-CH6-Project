@@ -1,5 +1,7 @@
 ﻿// HSJ : AO_CableCarReactionActor.cpp
 #include "Puzzle/Actor/AO_CableCarReactionActor.h"
+
+#include "Components/AudioComponent.h"
 #include "Components/SplineComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -25,6 +27,10 @@ AAO_CableCarReactionActor::AAO_CableCarReactionActor()
     }
     
     SplinePath->UpdateSpline();
+
+	MovementAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MovementAudioComponent"));
+	MovementAudioComponent->SetupAttachment(RootComponent);
+	MovementAudioComponent->bAutoActivate = false;
 }
 
 void AAO_CableCarReactionActor::BeginPlay()
@@ -124,11 +130,6 @@ void AAO_CableCarReactionActor::ActivateReaction()
         bIsMovingForward = bTargetIsForward;
         TargetAlpha = bIsMovingForward ? 1.0f : 0.0f;
         
-        if (MovementStartSound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-        }
-        
         MovementCommandCounter++;
     }
     else
@@ -154,11 +155,6 @@ void AAO_CableCarReactionActor::DeactivateReaction()
         bIsMovingForward = bTargetIsForward;
         TargetAlpha = bIsMovingForward ? 1.0f : 0.0f;
         
-        if (MovementStartSound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-        }
-        
         MovementCommandCounter++;
     }
     else
@@ -177,20 +173,21 @@ void AAO_CableCarReactionActor::StartMovement(bool bForward)
     TargetAlpha = bForward ? 1.0f : 0.0f;
     bIsMoving = true;
 
-    if (MovementStartSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-    }
+	if (HasAuthority() && MovementLoopSound && MovementAudioComponent)
+	{
+		MovementAudioComponent->SetSound(MovementLoopSound);
+		MovementAudioComponent->Play();
+	}
 }
 
 void AAO_CableCarReactionActor::StopMovement()
 {
     bIsMoving = false;
     
-    if (MovementStopSound && HasAuthority())
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, MovementStopSound, GetActorLocation());
-    }
+	if (HasAuthority() && MovementAudioComponent && MovementAudioComponent->IsPlaying())
+	{
+		MovementAudioComponent->Stop();
+	}
 }
 
 float AAO_CableCarReactionActor::ApplyEaseInOutCurve(float DistanceRemaining) const
@@ -211,22 +208,18 @@ void AAO_CableCarReactionActor::OnRep_MovementCommand()
         {
             bIsMovingForward = bTargetIsForward;
             TargetAlpha = bIsMovingForward ? 1.0f : 0.0f;
-            
-            if (MovementStartSound)
-            {
-                UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-            }
         }
         else
         {
             bIsMovingForward = bTargetIsForward;
             TargetAlpha = bIsMovingForward ? 1.0f : 0.0f;
             bIsMoving = true;
-            
-            if (MovementStartSound)
-            {
-                UGameplayStatics::PlaySoundAtLocation(this, MovementStartSound, GetActorLocation());
-            }
+
+        	if (MovementLoopSound && MovementAudioComponent)
+        	{
+        		MovementAudioComponent->SetSound(MovementLoopSound);
+        		MovementAudioComponent->Play();
+        	}
         }
     }
 }

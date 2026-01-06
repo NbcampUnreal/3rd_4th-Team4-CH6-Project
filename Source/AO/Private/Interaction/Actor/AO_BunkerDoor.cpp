@@ -23,8 +23,8 @@ AAO_BunkerDoor::AAO_BunkerDoor(const FObjectInitializer& ObjectInitializer)
 
     bIsToggleable = true;
     
-    InteractionTitle = FText::FromString(TEXT("벙커 문"));
-    InteractionContent = FText::FromString(TEXT("열기/닫기"));
+    InteractionTitle = FText::FromString(TEXT("Bunker Door"));
+    //InteractionContent = FText::FromString(TEXT("Open/Close"));
 }
 
 bool AAO_BunkerDoor::CanInteraction(const FAO_InteractionQuery& InteractionQuery) const
