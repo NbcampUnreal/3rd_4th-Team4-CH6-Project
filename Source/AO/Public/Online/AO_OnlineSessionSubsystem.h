@@ -14,7 +14,7 @@ namespace AO_SessionKeys
 	static const FName KEY_SERVER_NAME(TEXT("SERVER_NAME"));
 	static const FName KEY_HAS_PASSWORD(TEXT("HAS_PASSWORD"));
 	static const FName KEY_PASSWORD_MD5(TEXT("PASSWORD_MD5"));
-	
+	static const FName KEY_CURRENT_PLAYERS(TEXT("CURRENT_PLAYERS"));
 	// 스테이지 진행 여부 (중간 입장 차단용)
 	static const FName KEY_IN_GAME(TEXT("IN_GAME"));
 }
@@ -76,6 +76,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="AO|Online")
 	bool VerifyPasswordAgainstIndex(int32 Index, const FString& PlainPassword) const;
+	
+	UFUNCTION(BlueprintCallable, Category="AO|Online")
+	int32 GetCurrentPlayersByIndex(int32 Index) const;
+	
+	UFUNCTION(BlueprintCallable, Category="AO|Online")
+	void UpdateCurrentPlayers(int32 CurrentPlayers);
 
 	UFUNCTION(BlueprintPure, Category="AO|Online")
 	bool IsFinding() const { return bFinding; }
@@ -175,6 +181,9 @@ private:
 	{
 		return FName(TEXT("/Game/AVaOut/Maps/LV_Lobby"));
 	}
+	
+	static FString EncodeRoomNameForSession(const FString& InRoomName);
+	static FString DecodeRoomNameFromSession(const FString& InEncoded);
 	
 	static FString ToMD5(const FString& In);
 

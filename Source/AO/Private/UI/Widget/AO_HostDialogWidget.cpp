@@ -37,6 +37,11 @@ void UAO_HostDialogWidget::NativeConstruct()
 	{
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Txt_RoomName is null"));
 	}
+	
+	if (Txt_Password)
+	{
+		Txt_Password->OnTextChanged.AddDynamic(this, &ThisClass::OnPasswordChanged);
+	}
 
 	ApplyModalInput();
 	UpdateCreateButtonState();
@@ -226,4 +231,23 @@ FString UAO_HostDialogWidget::GetTrimmedPassword() const
 		Trimmed.LeftInline(4, EAllowShrinking::No);
 	}
 	return Trimmed;
+}
+
+void UAO_HostDialogWidget::OnPasswordChanged(const FText& Text)
+{
+	if (!Txt_Password)
+	{
+		return;
+	}
+
+	FString S = Text.ToString();
+	if (S.Len() <= 4)
+	{
+		return;
+	}
+
+	S.LeftInline(4, EAllowShrinking::No);
+	
+	Txt_Password->SetText(FText::FromString(S));
+	Txt_Password->SetKeyboardFocus();
 }

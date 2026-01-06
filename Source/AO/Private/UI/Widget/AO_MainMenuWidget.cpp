@@ -40,23 +40,6 @@ void UAO_MainMenuWidget::OnClicked_Join()
 {
 	AO_LOG(LogJSH, Log, TEXT("Join clicked"));
 
-	if (UGameInstance* GI = GetGameInstance())
-	{
-		if (UAO_OnlineSessionSubsystem* Subsystem = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
-		{
-			AO_LOG(LogJSH, Log, TEXT("OnClicked_Join: Starting session search (Auto)"));
-			Subsystem->FindSessionsAuto(50);
-		}
-		else
-		{
-			AO_LOG(LogJSH, Warning, TEXT("OnClicked_Join: OnlineSessionSubsystem is null"));
-		}
-	}
-	else
-	{
-		AO_LOG(LogJSH, Warning, TEXT("OnClicked_Join: GameInstance is null"));
-	}
-
 	if (LobbyListWidgetClass)
 	{
 		if (UAO_LobbyListWidget* Widget = CreateWidget<UAO_LobbyListWidget>(GetWorld(), LobbyListWidgetClass))
@@ -82,8 +65,6 @@ void UAO_MainMenuWidget::OnClicked_Join()
 			{
 				AO_LOG(LogJSH, Warning, TEXT("OnClicked_Join: PlayerController is null (cannot set input mode)"));
 			}
-
-			SetVisibility(ESlateVisibility::Collapsed);
 		}
 		else
 		{

@@ -23,7 +23,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "LoadingScreenManager.h"
 #include "VoipListenerSynthComponent.h"
+#include "Character/Sound/AO_PlayerSoundDataAsset.h"
+#include "Character/Sound/AO_PlayerSoundSubsystem.h"
 #include "UI/AO_UIActionKeySubsystem.h"
+#include "UI/Widget/AO_ConfirmQuitGameWidget.h"
 
 AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
 {
@@ -147,8 +150,8 @@ UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget
 
 	// 델리게이트 바인딩 1회
 	PauseMenu->OnRequestSettings.AddDynamic(this, &ThisClass::OnPauseMenu_RequestSettings);
-	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby);
-	PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame);
+	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby_OpenConfirm);
+	PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame_OpenConfirm);
 	PauseMenu->OnRequestResume.AddDynamic(this, &ThisClass::OnPauseMenu_RequestResume);
 
 	PauseMenu->SetIsFocusable(true);
@@ -572,6 +575,195 @@ void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
 	ApplyInGameInputDefaults();
 }
 
+void AAO_PlayerController_InGameBase::OpenConfirmReturnToMenuWidget()
+{
+	if (ConfirmReturnToMenuWidget == nullptr)
+	{
+		if (ConfirmReturnToMenuWidgetClass == nullptr)
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OpenConfirmReturnToMenuWidget: ConfirmReturnToMenuWidgetClass is null"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget = CreateWidget<UAO_ConfirmReturnToMenuWidget>(this, ConfirmReturnToMenuWidgetClass);
+		if (ConfirmReturnToMenuWidget == nullptr)
+		{
+			AO_LOG(LogJSH, Error, TEXT("OpenConfirmReturnToMenuWidget: Failed to create widget"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget->OnConfirmLeaveToMenu.AddDynamic(this, &ThisClass::OnConfirmReturnToMenu);
+		ConfirmReturnToMenuWidget->OnCancelLeaveToMenu.AddDynamic(this, &ThisClass::OnCancelReturnToMenu);
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			FAOUIStackPolicy Policy;
+			Policy.InputMode = EAOUIStackInputMode::UIOnly;
+			Policy.bShowMouseCursor = true;
+			Policy.MouseLockMode = EMouseLockMode::DoNotLock;
+			Policy.bHideCursorDuringCapture = false;
+			Policy.InitialFocusWidget = ConfirmReturnToMenuWidget;
+
+			UIStack->PushWidgetInstance(this, ConfirmReturnToMenuWidget, Policy);
+			return;
+		}
+	}
+
+	// UIStack 못 찾았을 때 최소 동작용 fallback
+	ConfirmReturnToMenuWidget->AddToViewport(200);
+
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(ConfirmReturnToMenuWidget->TakeWidget());
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby_OpenConfirm()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnPauseMenu_RequestReturnLobby_OpenConfirm: Open confirm dialog"));
+	OpenConfirmReturnToMenuWidget();
+}
+
+void AAO_PlayerController_InGameBase::OpenConfirmQuitGameWidget()
+{
+	if (ConfirmQuitGameWidget == nullptr)
+	{
+		if (ConfirmQuitGameWidgetClass == nullptr)
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OpenConfirmQuitGameWidget: ConfirmQuitGameWidgetClass is null"));
+			return;
+		}
+
+		ConfirmQuitGameWidget = CreateWidget<UAO_ConfirmQuitGameWidget>(this, ConfirmQuitGameWidgetClass);
+		if (ConfirmQuitGameWidget == nullptr)
+		{
+			AO_LOG(LogJSH, Error, TEXT("OpenConfirmQuitGameWidget: Failed to create widget"));
+			return;
+		}
+
+		ConfirmQuitGameWidget->OnConfirmQuitGame.AddDynamic(this, &ThisClass::OnConfirmQuitGame);
+		ConfirmQuitGameWidget->OnCancelQuitGame.AddDynamic(this, &ThisClass::OnCancelQuitGame);
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			FAOUIStackPolicy Policy;
+			Policy.InputMode = EAOUIStackInputMode::UIOnly;
+			Policy.bShowMouseCursor = true;
+			Policy.MouseLockMode = EMouseLockMode::DoNotLock;
+			Policy.bHideCursorDuringCapture = false;
+			Policy.InitialFocusWidget = ConfirmQuitGameWidget;
+
+			UIStack->PushWidgetInstance(this, ConfirmQuitGameWidget, Policy);
+			return;
+		}
+	}
+
+	// UIStack 못 찾았을 때 최소 동작용 fallback
+	ConfirmQuitGameWidget->AddToViewport(200);
+
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(ConfirmQuitGameWidget->TakeWidget());
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAO_PlayerController_InGameBase::OnConfirmQuitGame()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnConfirmQuitGame: Confirmed, quitting game"));
+
+	// 먼저 팝업을 Stack에서 제거
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+		}
+	}
+	else if (ConfirmQuitGameWidget != nullptr)
+	{
+		ConfirmQuitGameWidget->RemoveFromParent();
+	}
+
+	// 기존 "게임 종료" 실제 로직 실행
+	// (이미 구현되어 있는 OnPauseMenu_RequestQuitGame 재사용)
+	OnPauseMenu_RequestQuitGame();
+}
+
+void AAO_PlayerController_InGameBase::OnCancelQuitGame()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnCancelQuitGame: Cancelled"));
+
+	// 팝업만 닫고 PauseMenu로 포커스 복구
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	if (ConfirmQuitGameWidget != nullptr)
+	{
+		ConfirmQuitGameWidget->RemoveFromParent();
+	}
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestQuitGame_OpenConfirm()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnPauseMenu_RequestQuitGame_OpenConfirm: Open confirm dialog"));
+	OpenConfirmQuitGameWidget();
+}
+
+void AAO_PlayerController_InGameBase::OnConfirmReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnConfirmReturnToMenu: Confirmed, returning to menu"));
+
+	// 먼저 팝업을 Stack에서 제거
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+		}
+	}
+	else if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
+
+	// 기존 "메뉴로 돌아가기" 실제 로직 실행 (세션 정리 + 맵 이동)
+	OnPauseMenu_RequestReturnLobby();
+}
+
+void AAO_PlayerController_InGameBase::OnCancelReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnCancelReturnToMenu: Cancelled"));
+
+	// 팝업만 닫고 PauseMenu로 포커스 복구
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
+}
+
 UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const
 {
 	if (const UGameInstance* GI = GetGameInstance())
@@ -594,6 +786,7 @@ void AAO_PlayerController_InGameBase::InitCameraManager(APawn* InPawn)
 	checkf(PlayerCharacter, TEXT("Character not found"));
 
 	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
+	CameraManagerComponent->ResetCameraState();
 	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
 
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
@@ -674,18 +867,25 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 	{
 		return;
 	}
-
-	checkf(NotEnoughStaminaSound, TEXT("NotEnoughStaminaSound not found"));
-
+	
 	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
 	{
-		AO_LOG(LogKH, Warning, TEXT("Ability Failed: NotEnoughStamina"));
-		
 		const double Now = GetWorld()->GetTimeSeconds();
 		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
 		{
 			LastNotEnoughStaminaSoundTime = Now;
-			UGameplayStatics::PlaySound2D(this, NotEnoughStaminaSound);
+
+			if (UGameInstance* GI = GetGameInstance())
+			{
+				if (UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>())
+				{
+					USoundBase* Sound = SoundSubsystem->GetNotEnoughStaminaSoundFromActor(GetPawn());
+					if (Sound)
+					{
+						UGameplayStatics::PlaySound2D(this, Sound);
+					}
+				}
+			}
 		}
 	}
 }

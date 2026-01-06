@@ -6,6 +6,8 @@
 #include "Engine/GameInstance.h"
 #include "AO_GameInstance.generated.h"
 
+class UAO_FuelData;
+
 UCLASS()
 class AO_API UAO_GameInstance : public UGameInstance
 {
@@ -34,6 +36,16 @@ public:
 	// 공유하는 부활 가능 횟수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AO|Revive")
 	int32 SharedReviveCount;
+
+	// JM : 게임 통계
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float GameStartTime;		// LV_Meadow_Main 레벨 블루프린트에서 Begin Play에서 기록 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	float GameEndTime;			// GS::OnRep_Clear 에서 기록
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AO|Statistics")
+	int32 TeamDeathCount;
 
 public:
 	// 이번 판을 처음부터 다시 시작 (스테이지 인덱스 / 연료 초기화)
@@ -81,4 +93,21 @@ public:
 
 	// 부활 시도: 0보다 크면 1 소모 후 true, 0이면 false
 	bool TryConsumeSharedReviveCount();
+
+	//ms : 패시브 초기화
+	void PassiveReset();
+
+	//ms: 연료량 data asset
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Train")
+	TObjectPtr<class UAO_FuelData> FuelDataAsset;
+
+public:
+	virtual void Init() override;
+
+	UFUNCTION(BlueprintPure, Category = "Train")
+	float GetInitialFuel();
+
+	UFUNCTION(BlueprintPure)
+	float GetInitialFuelValue();
 };

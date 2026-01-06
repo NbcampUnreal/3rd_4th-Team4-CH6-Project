@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "GameFramework/PlayerState.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "AO_PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
@@ -83,6 +83,9 @@ protected:
 	UFUNCTION()
 	void OnRep_IsAlive();
 
+	UFUNCTION()
+	void OnRep_DeathCount();
+
 private:
 	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
 	void RefreshLobbyReadyBoard();
@@ -95,6 +98,11 @@ private:
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
 	bool bIsAlive = true;
+
+	UPROPERTY(ReplicatedUsing = OnRep_DeathCount, VisibleAnywhere, BlueprintReadOnly, Category = "AO|Statistics")	// JM : 통계용 데스 수 세기
+	int32 DeathCount = 0;
+
+	void AddDeathCount();
 
 	FORCEINLINE bool GetIsAlive() const { return bIsAlive; };
 	void SetIsAlive(bool bInIsAlive);
@@ -113,4 +121,12 @@ public:
 	TArray<FInventorySlot> PersistentInventory;
 
 	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
+	void ResetStateInventory();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bInsideTravelSafeZone = false;
+	UPROPERTY()
+	bool bInventoryShouldPersist = false;
+	bool bIsTraveling = false;
+	void SetSafeZoneState(bool bInZone);
 };

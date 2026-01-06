@@ -20,7 +20,7 @@ public:
 	
 public:
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
-
+	void HandlePlayerTravel(AAO_PlayerState* PS);
 private:
 	static void LetStartVoiceChat(AController*& C);		// HandleSeamleessTravelPlayer의 C 값을 전달해야 해서 스마트 포인터 변환 보류
 	
@@ -42,4 +42,7 @@ private:
 	
 	bool bIsTravelSyncInProgress = false;
 	FString PendingTravelURL;
+//ms : 인벤토리 유지 영역확인	
+protected:
+	bool CheckPlayerInsideSafeZone(class AAO_PlayerState* PS);
 };

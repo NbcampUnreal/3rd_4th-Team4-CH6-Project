@@ -59,6 +59,15 @@ void UAO_LobbyListWidget::NativeConstruct()
 	{
 		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Failed to bind OnFindSessionsCompleteEvent (Sub is null)"));
 	}
+	
+	if(Btn_BackDrop && !Btn_BackDrop->OnClicked.IsAlreadyBound(this, &ThisClass::OnClicked_BackDrop))
+	{
+		Btn_BackDrop->OnClicked.AddDynamic(this, &ThisClass::OnClicked_BackDrop);
+	}
+	else if(!Btn_BackDrop)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("NativeConstruct: Btn_Backdrop is null"));
+	}
 
 	AO_LOG(LogJSH, Log, TEXT("NativeConstruct: LobbyList initialized, requesting initial refresh"));
 	OnClicked_Refresh();
@@ -170,6 +179,11 @@ void UAO_LobbyListWidget::OnClicked_Close()
 	RemoveFromParent();
 }
 
+void UAO_LobbyListWidget::OnClicked_BackDrop()
+{
+	OnClicked_Close();
+}
+
 void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 {
 	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: Rebuilding filter and list"));
@@ -187,8 +201,8 @@ void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 		if (NewCount == 0 && !bFirstTime)
 		{
 			const FString Msg =
-				TEXT("현재 Steam 매칭 서버가 불안정해 방 검색이 표시되지 않을 수 있습니다.\n")
-				TEXT("호스트에게 Steam 초대를 받아 참여해 주세요.");
+				TEXT("The Steam matchmaking service is currently unstable, so lobby search results may not be displayed.\n")
+				TEXT("Please join by receiving a Steam invite from the host.");
 
 			Txt_InfoMessage->SetText(FText::FromString(Msg));
 			Txt_InfoMessage->SetVisibility(ESlateVisibility::Visible);
@@ -382,9 +396,29 @@ void UAO_LobbyListWidget::RebuildList()
 				Entry->SetParentLobby(this);
 
 				const FString RoomName = Sub->GetServerNameByIndex(ResultIndex);
-				const int32 OpenSlots = Sub->GetOpenPublicConnectionsByIndex(ResultIndex);
-				const int32 MaxSlots  = Sub->GetMaxPublicConnectionsByIndex(ResultIndex);
-				const bool  bHasPw    = Sub->IsPasswordRequiredByIndex(ResultIndex);
+				const bool bHasPw = Sub->IsPasswordRequiredByIndex(ResultIndex);
+
+				const int32 MaxSlots = Sub->GetMaxPublicConnectionsByIndex(ResultIndex);
+
+				int32 CurrentPlayers = Sub->GetCurrentPlayersByIndex(ResultIndex);
+
+				if(CurrentPlayers < 0)
+				{
+					const int32 FallbackOpenSlots = Sub->GetOpenPublicConnectionsByIndex(ResultIndex);
+					CurrentPlayers = MaxSlots - FallbackOpenSlots;
+				}
+
+				if(CurrentPlayers < 0)
+				{
+					CurrentPlayers = 0;
+				}
+
+				if(CurrentPlayers > MaxSlots)
+				{
+					CurrentPlayers = MaxSlots;
+				}
+
+				const int32 OpenSlots = MaxSlots - CurrentPlayers;
 
 				Entry->Setup(ResultIndex, RoomName, OpenSlots, MaxSlots, bHasPw);
 				Scroll_SessionList->AddChild(Entry);

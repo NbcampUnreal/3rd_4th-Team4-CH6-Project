@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerState.h"
 #include "AO/AO_Log.h"
 #include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameState/AO_GameState.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
@@ -20,6 +21,22 @@ AAO_GameMode_Lobby::AAO_GameMode_Lobby()
 
 	NextLobbyJoinOrder = 0;
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameMode_Lobby::BeginPlay()
+{
+	Super::BeginPlay();
+	//ms : 패시브 초기화
+	if (UAO_GameInstance* AO_GI = GetGameInstance<UAO_GameInstance>())
+	{
+		AO_GI->PassiveReset();
+	}
+    
+	if (AAO_GameState* AO_GS = GetGameState<AAO_GameState>())
+	{
+		AO_GS->Authority_NotifyGlobalReset();
+	}
+	//
 }
 
 void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
@@ -54,6 +71,27 @@ void AAO_GameMode_Lobby::PostLogin(APlayerController* NewPlayer)
 					const bool bIsHost = AO_GI->IsLobbyHostPlayerState(AOPS);
 					AOPS->SetIsLobbyHost(bIsHost);
 				}
+			}
+		}
+	}
+	
+	UWorld* World = GetWorld();
+	if(World != nullptr)
+	{
+		UGameInstance* GameInstance = World->GetGameInstance();
+		if(GameInstance != nullptr)
+		{
+			UAO_OnlineSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UAO_OnlineSessionSubsystem>();
+			if(Subsystem != nullptr)
+			{
+				int32 CurrentPlayers = 0;
+
+				if(GameState != nullptr)
+				{
+					CurrentPlayers = GameState->PlayerArray.Num();
+				}
+
+				Subsystem->UpdateCurrentPlayers(CurrentPlayers);
 			}
 		}
 	}
@@ -102,9 +140,50 @@ void AAO_GameMode_Lobby::HandleSeamlessTravelPlayer(AController*& C)
 
 void AAO_GameMode_Lobby::Logout(AController* Exiting)
 {
+	AO_LOG(LogJSH, Log, TEXT("Lobby::Logout %s"), *GetNameSafe(Exiting));
+
+	// 1) 레디 세트에서 확실히 제거
+	if(Exiting != nullptr)
+	{
+		ReadyPlayers.Remove(Exiting);
+
+		// 2) 혹시라도 GameState에 PlayerState가 남아 있다면 강제로 제거
+		if(GameState != nullptr)
+		{
+			APlayerState* PS = Exiting->PlayerState;
+			if(PS != nullptr)
+			{
+				if(GameState->PlayerArray.Contains(PS))
+				{
+					GameState->RemovePlayerState(PS);
+				}
+			}
+		}
+	}
+
+	// 엔진 기본 정리(여기서도 RemovePlayerState가 한 번 더 호출됨)
 	Super::Logout(Exiting);
 
-	// 나간다고 해서 기존 순서를 재배치하지는 않음 (공백만 생김)
+	// 3) 세션 인원 수 다시 계산해서 세션 메타에 반영
+	if(UWorld* World = GetWorld())
+	{
+		if(UGameInstance* GameInstance = World->GetGameInstance())
+		{
+			if(UAO_OnlineSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UAO_OnlineSessionSubsystem>())
+			{
+				int32 CurrentPlayers = 0;
+
+				if(GameState != nullptr)
+				{
+					CurrentPlayers = GameState->PlayerArray.Num();
+				}
+
+				Subsystem->UpdateCurrentPlayers(CurrentPlayers);
+			}
+		}
+	}
+	
+	// 4) 레디보드에게 “다시 그려라” 통보
 	NotifyLobbyBoardChanged();
 }
 

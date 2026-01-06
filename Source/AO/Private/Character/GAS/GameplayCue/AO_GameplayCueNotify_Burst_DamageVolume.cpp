@@ -1,0 +1,66 @@
+// AO_GameplayCueNotify_Burst_DamageVolume.cpp
+
+
+#include "Character/GAS/GameplayCue/AO_GameplayCueNotify_Burst_DamageVolume.h"
+
+#include "Character/Sound/AO_PlayerSoundSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+
+UAO_GameplayCueNotify_Burst_DamageVolume::UAO_GameplayCueNotify_Burst_DamageVolume()
+{
+}
+
+bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* MyTarget,
+	const FGameplayCueParameters& Parameters) const
+{
+	if (!MyTarget)
+	{
+		return false;
+	}
+
+	UWorld* World = MyTarget->GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	// 특정 시간이 지나지 않으면 사운드 재생하지 않음
+	const double Now = World->GetTimeSeconds();
+	if (Now - LastPlayTime <= MinInterval)
+	{
+		return false;
+	}
+	LastPlayTime = Now;
+
+	PlayDamageReactSound(MyTarget);
+	return true;
+}
+
+void UAO_GameplayCueNotify_Burst_DamageVolume::PlayDamageReactSound(AActor* Target) const
+{
+	UGameInstance* GI = Target->GetGameInstance();
+	checkf(GI, TEXT("Failed to get GI"));
+
+	UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>();
+	checkf(SoundSubsystem, TEXT("Failed to get SoundSubsystem"));
+
+	USoundBase* DamageReactSound = SoundSubsystem->GetDamageReactSoundFromActor(Target);
+	if (!ensure(DamageReactSound))
+	{
+		return;
+	}
+
+	if (const APawn* Pawn = Cast<APawn>(Target))
+	{
+		const AController* Controller = Pawn->GetController();
+		const bool bIsLocal = Controller && Controller->IsLocalController();
+
+		if (bIsLocal)
+		{
+			UGameplayStatics::PlaySound2D(Target, DamageReactSound);
+			return;
+		}
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(Target, DamageReactSound, Target->GetActorLocation());
+}

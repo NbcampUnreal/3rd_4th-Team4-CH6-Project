@@ -13,8 +13,8 @@ AAO_Valve::AAO_Valve(const FObjectInitializer& ObjectInitializer)
 {
     bIsToggleable = true;
     
-    InteractionTitle = FText::FromString(TEXT("밸브"));
-    InteractionContent = FText::FromString(TEXT("열기/닫기"));
+    InteractionTitle = FText::FromString(TEXT("Valve"));
+    //InteractionContent = FText::FromString(TEXT("Open/Close"));
 }
 
 void AAO_Valve::PostInitializeComponents()
