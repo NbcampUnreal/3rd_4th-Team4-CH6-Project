@@ -3,9 +3,9 @@
 #include "Character/GAS/Ability/AO_GameplayAbility_Death.h"
 
 #include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/AO_PlayerCharacter.h"
-#include "Components/CapsuleComponent.h"
+#include "Character/Components/AO_DeathSpectateComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
@@ -15,9 +15,6 @@ UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
 	
 	const FGameplayTagContainer TraversalTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
 	SetAssetTags(TraversalTag);
-
-	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
-	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable")));
 }
 
 void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -30,36 +27,94 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 		return;
 	}
 
-	if (HasAuthority(&ActivationInfo))
+	if (!ActorInfo || !ActorInfo->IsNetAuthority())
 	{
-		// 피격 리액션 Ability 취소
-		if (TObjectPtr<UAbilitySystemComponent> ASC = ActorInfo->AbilitySystemComponent.Get())
-		{
-			FGameplayTagContainer HitReactTags;
-			HitReactTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.HitReact")));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
-			ASC->CancelAbilities(&HitReactTags);
-		}
+	TObjectPtr<UAbilitySystemComponent> ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (!ensure(ASC))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	// 이미 캐릭터가 사망한 경우 취소
+	if (ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death"))))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
+	// 피격 리액션 Ability 취소
+	FGameplayTagContainer HitReactTags;
+	HitReactTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.HitReact")));
+	
+	ASC->CancelAbilities(&HitReactTags);
+
+	// 래그돌 이벤트 대기
+	UAbilityTask_WaitGameplayEvent* WaitRagdollEventTask
+		= UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, RagdollEventTag, nullptr, true, true);
+
+	checkf(WaitRagdollEventTask, TEXT("Failed to create WaitRagdollEventTask"));
+
+	WaitRagdollEventTask->EventReceived.AddDynamic(this, &UAO_GameplayAbility_Death::OnRagdollEventReceived);
+	WaitRagdollEventTask->ReadyForActivation();
+	
+	// 사망 몽타주 재생
+	checkf(DeathMontage, TEXT("DeathMontage is null"));
+
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	checkf(PlayerCharacter, TEXT("Failed to cast AvatarActor to AAO_PlayerCharacter"));
+
+	UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>();
+	checkf(DeathSpectateComponent, TEXT("Failed to find DeathSpectateComponent"));
+
+	DeathSpectateComponent->MulticastRPC_PlayDeathMontage(DeathMontage);
+	
+	if (ActorInfo->IsNetAuthority())
+	{
 		TObjectPtr<ACharacter> Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 		checkf(Character, TEXT("Failed to cast AvatarActor to ACharacter"));
 
+		Character->GetCharacterMovement()->StopMovementImmediately();
 		Character->GetCharacterMovement()->DisableMovement();
-		
-		if (BlockAbilitiesEffectClass)
-		{
-			FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, BlockAbilitiesEffectClass, 1.f);
-			FActiveGameplayEffectHandle BlockAbilitiesEffectHandle
-				= ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
-		}
+
+		// 사망 태그 적용
+		checkf(DeathTagEffectClass, TEXT("DeathTagEffectClass is null"));
+		FGameplayEffectSpecHandle DeathTagSpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, DeathTagEffectClass, 1.f);
+		FActiveGameplayEffectHandle DeathTagEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, DeathTagSpecHandle);
+
+		// 다른 Ability 차단 태그 적용
+		checkf(BlockAbilitiesEffectClass, TEXT("BlockAbilitiesEffectClass is null"));
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, BlockAbilitiesEffectClass, 1.f);
+		FActiveGameplayEffectHandle BlockAbilitiesEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+	}
+}
+
+void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payload)
+{
+	if (!CurrentActorInfo->IsNetAuthority())
+	{
+		return;
 	}
 	
-	checkf(DeathMontage, TEXT("DeathMontage is null"));
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
+	if (!PlayerCharacter)
+	{
+		return;
+	}
 
-	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask
-		= UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, DeathMontage);
+	if (UAbilitySystemComponent* ASC = CurrentActorInfo->AbilitySystemComponent.Get())
+	{
+		ASC->CurrentMontageStop(0.05f);
+	}
 
-	checkf(MontageTask, TEXT("Failed to create MontageTask"));
+	if (UAO_DeathSpectateComponent* DeathSpectateComponent = PlayerCharacter->FindComponentByClass<UAO_DeathSpectateComponent>())
+	{
+		DeathSpectateComponent->MulticastRPC_EnterRagdoll();
+	}
 
-	MontageTask->ReadyForActivation();
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

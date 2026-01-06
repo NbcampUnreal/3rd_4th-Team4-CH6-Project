@@ -54,9 +54,6 @@ protected:
 	UAO_ConfirmReturnToMenuWidget* ConfirmReturnToMenuWidget;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
-	TObjectPtr<USoundBase> NotEnoughStaminaSound;
-
-	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
 	float NotEnoughStaminaSoundInterval = 5.0f;
 
 	double LastNotEnoughStaminaSoundTime = -1e9;

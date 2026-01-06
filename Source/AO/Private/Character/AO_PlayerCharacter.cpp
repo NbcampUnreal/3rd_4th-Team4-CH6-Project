@@ -17,6 +17,7 @@
 #include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "Character/GAS/AO_PlayerCharacter_AttributeDefaults.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
 #include "Interaction/Component/AO_InteractionComponent.h"
@@ -62,7 +63,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
-	GetCharacterMovement()->CrouchedHalfHeight = 69.f;
+	GetCharacterMovement()->SetCrouchedHalfHeight(69.f);
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 
@@ -105,6 +106,10 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	// KSJ : Perception Stimuli Source
 	AIPerceptionStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("AIPerceptionStimuliSource"));
 	AIPerceptionStimuliSource->bAutoRegister = true;
+
+	// Post Process Component : For Outline Effect
+	PostProcessComponent = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostProcessComponent"));
+	PostProcessComponent->SetupAttachment(RootComponent);
 }
 
 UAbilitySystemComponent* AAO_PlayerCharacter::GetAbilitySystemComponent() const
@@ -247,7 +252,6 @@ void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority() && AbilitySystemComponent)
 	// KSJ : Register as source for Sight and Hearing
 	if (AIPerceptionStimuliSource)
 	{
@@ -256,7 +260,7 @@ void AAO_PlayerCharacter::BeginPlay()
 		AIPerceptionStimuliSource->RegisterWithPerceptionSystem();
 	}
 
-	if (AbilitySystemComponent)
+	if (!HasAuthority() && AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
