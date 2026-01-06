@@ -13,6 +13,7 @@
 class UAO_CameraManagerComponent;
 class UAO_PauseMenuWidget;
 class UAO_ConfirmReturnToMenuWidget;
+class UAO_ConfirmQuitGameWidget;
 class UAO_OnlineSessionSubsystem;
 
 /**
@@ -52,6 +53,12 @@ protected:
 
 	UPROPERTY()
 	UAO_ConfirmReturnToMenuWidget* ConfirmReturnToMenuWidget;
+	
+	UPROPERTY(EditAnywhere, Category="AO|UI")
+	TSubclassOf<UAO_ConfirmQuitGameWidget> ConfirmQuitGameWidgetClass;
+
+	UPROPERTY()
+	UAO_ConfirmQuitGameWidget* ConfirmQuitGameWidget;
 
 	UPROPERTY(EditDefaultsOnly, Category="AO|Sound")
 	float NotEnoughStaminaSoundInterval = 5.0f;
@@ -128,6 +135,18 @@ protected:
 
 	UFUNCTION()
 	void OnPauseMenu_RequestReturnLobby_OpenConfirm();
+	
+	UFUNCTION()
+	void OpenConfirmQuitGameWidget();
+
+	UFUNCTION()
+	void OnConfirmQuitGame();
+
+	UFUNCTION()
+	void OnCancelQuitGame();
+	
+	UFUNCTION()
+	void OnPauseMenu_RequestQuitGame_OpenConfirm();
 
 	UAO_OnlineSessionSubsystem* GetOnlineSessionSub() const;
 
