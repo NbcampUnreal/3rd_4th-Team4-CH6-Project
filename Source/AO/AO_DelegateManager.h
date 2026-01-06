@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsOpenDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSettingsCloseDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnResetAllSettings);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnKeybindUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStatisticsUpdated);
 
 /* 전역 델리게이트 매니저*/
 UCLASS()
@@ -30,6 +31,9 @@ public:	// 델리게이트 정의
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnKeybindUpdated OnKeybindUpdated;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnStatisticsUpdated OnStatisticsUpdated;
 
 
 public:	// 델리게이트 호출 (BP에서 이벤트를 간단하게 방송할 때,)

@@ -13,9 +13,10 @@ UAO_GameInstance::UAO_GameInstance()
 {
 	CurrentStageIndex = 0;
 	LobbyHostNetIdStr = TEXT("");
+	TeamDeathCount = 0;
 
 	// 최초 기본 부활 횟수
-	InitialSharedReviveCount = 5;
+	InitialSharedReviveCount = 1;
 	SharedReviveCount = InitialSharedReviveCount;
 
 	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
@@ -24,7 +25,8 @@ UAO_GameInstance::UAO_GameInstance()
 void UAO_GameInstance::Init()
 {
 	Super::Init();
-	
+    
+	// 게임 시작 시 BP에서 할당한 에셋으로부터 연료 값을 가져옵니다.
 	SharedTrainFuel = GetInitialFuel();
 }
 
@@ -33,6 +35,9 @@ void UAO_GameInstance::ResetRun()
 	CurrentStageIndex = 0;
 	SharedTrainFuel = GetInitialFuelValue();
 	SharedReviveCount = InitialSharedReviveCount;
+	TeamDeathCount = 0;		// JM : 게임 초기화 시 팀 데스 수 초기화
+	GameStartTime = 0;
+	GameEndTime = 0;
 }
 
 FName UAO_GameInstance::GetCurrentStageMap() const
@@ -221,6 +226,6 @@ float UAO_GameInstance::GetInitialFuelValue()
 	{
 		return FuelDataAsset->InitialFuel;
 	}
-	return 40.0f;
+	return 43.0f;
 }
 // ms
