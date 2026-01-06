@@ -87,12 +87,6 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 	{
 		return;
 	}
-	
-	if (bStageEnded)
-	{
-		return;
-	}
-	bStageEnded = true;
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -156,16 +150,31 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
 	
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
+	
 	FName TargetMapName;
 
 	// 마지막 스테이지면 → 로비로 귀환
 	if(AO_GI->IsLastStage())
 	{
-		TargetMapName = AO_GI->GetLobbyMap();
+		AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+		if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+		{
+			return;
+		}
+
+		AO_GS->SetGameClear();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+		
+		/* JM : 로직 겹쳐서 지움 (ui 에서 버튼 클릭하면 로비로 돌아가도록 할 예정)
+		 *TargetMapName = AO_GI->GetLobbyMap();
 
 		// 다음 판은 다시 처음부터
 		AO_GI->ResetRun();
-		RollbackSessionInGameFlag();
+		RollbackSessionInGameFlag();*/
 	}
 	else
 	{
@@ -181,22 +190,71 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 
 	const FString Path = TargetMapName.ToString() + TEXT("?listen");
 	// World->ServerTravel(Path);
-	// JM : crash 
+	// JM : crash
+
+	//ms 다음레벨 이동
+	if (!GameState)
+	{
+		return;
+	}
+
+	if (AAO_GameState* AO_GS = Cast<AAO_GameState>(GameState))
+	{
+		for (APlayerState* P : AO_GS->PlayerArray)
+		{
+			if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(P))
+			{
+				AO_PS->bIsTraveling = true;
+				
+				if (APawn* MyPawn = AO_PS->GetPawn())
+				{
+					if (UAO_InventoryComponent* InvComp = MyPawn->FindComponentByClass<UAO_InventoryComponent>())
+					{
+						AO_PS->SaveInventoryBeforeTravel(InvComp);
+					}
+				}
+				HandlePlayerTravel(AO_PS);
+			}
+		}
+	}
+	//ms
+	
 	RequestSynchronizedServerTravel(Path);
 }
 
 void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (bStageEnded)
+	{
+		return;
+	}
+	bStageEnded = true;
+
+	AAO_GameState* AO_GS = GetGameState<AAO_GameState>();
+	if (!AO_ENSURE(AO_GS, TEXT("Invalid AO_GS")))
+	{
+		return;
+	}
+
+	AO_GS->SetStageFailed();	// JM : GS에서 OnRep 함수로 위젯을 띄우도록 함
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+// TODO: JM : Requester 쓸 필요가없는데..? 그냥 지울까요?
+void AAO_GameMode_Stage::ResetGameAndGoToLobby(AController* Requester)
 {
 	if(!HasAuthority())
 	{
 		return;
 	}
 	
-	if (bStageEnded)
+	/*if (bStageEnded)
 	{
 		return;
 	}
-	bStageEnded = true;
+	bStageEnded = true;*/
 
 	UWorld* World = GetWorld();
 	if(World == nullptr)
@@ -211,10 +269,11 @@ void AAO_GameMode_Stage::HandleStageFail(AController* Requester)
 		return;
 	}
 
-	AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
+	/* 로그 찍으려고 Requester가 필요한건가?
+	 *AO_LOG(LogJSH, Log, TEXT("StageFail: Requested by %s, Fuel=%.1f, StageIndex=%d"),
 		Requester ? *Requester->GetName() : TEXT("None"),
 		AO_GI->SharedTrainFuel,
-		AO_GI->CurrentStageIndex);
+		AO_GI->CurrentStageIndex);*/
 
 	// 다음 판은 항상 처음부터
 	AO_GI->ResetRun();

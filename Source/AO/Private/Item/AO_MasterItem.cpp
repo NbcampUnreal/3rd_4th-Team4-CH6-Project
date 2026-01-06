@@ -2,7 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Item/AO_struct_FItemBase.h"
-#include "Item/invenroty/AO_InventoryComponent.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 AAO_MasterItem::AAO_MasterItem()

@@ -4,6 +4,7 @@
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "AO_Log.h"
+#include "Game/GameState/AO_GameState.h"
 
 
 AAO_GameMode_Rest::AAO_GameMode_Rest()
@@ -67,6 +68,22 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 		}
 		return;
 	}
+
+	//ms 다음레벨 이동시 인벤토리 유지
+	if (!GameState)
+	{
+		return;
+	}
+	
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAO_PlayerState* PS = Cast<AAO_PlayerState>(It->Get()->PlayerState))
+		{
+			PS->bIsTraveling = true;
+			HandlePlayerTravel(PS);
+		}
+	}
+	//ms
 
 	const FName NextStageMap = AO_GI->GetCurrentStageMap();
 	if(NextStageMap.IsNone())

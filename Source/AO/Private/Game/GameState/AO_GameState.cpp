@@ -8,6 +8,8 @@
 AAO_GameState::AAO_GameState()
 {
 	SharedReviveCount = 0;
+	bIsStageFailed = false;		// JM : 초기화
+	bIsGameCleared = false;		// JM : 초기화
 }
 
 void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -15,6 +17,7 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
+	DOREPLIFETIME(AAO_GameState, bIsStageFailed);
 	DOREPLIFETIME(AAO_GameState, RunResetTrigger); // ms:패시브 초기화
 }
 
@@ -67,12 +70,6 @@ void AAO_GameState::UnmuteVoiceOnAddPlayerState(APlayerState* PlayerState)
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
-void AAO_GameState::OnRep_SharedReviveCount()
-{
-	AO_LOG(LogJSH, Log, TEXT("AO_GameState::OnRep_SharedReviveCount -> %d"), SharedReviveCount);
-	OnSharedReviveCountChanged.Broadcast(SharedReviveCount);	// JM : WBP_RevivalChip 업데이트하기 위함
-}
-
 void AAO_GameState::SetSharedReviveCount(int32 InValue)
 {
 	if (HasAuthority() == false)
@@ -102,13 +99,87 @@ void AAO_GameState::SetSharedReviveCount(int32 InValue)
 	AO_LOG(LogJSH, Log, TEXT("AO_GameState::SetSharedReviveCount -> %d"), SharedReviveCount);
 }
 
+void AAO_GameState::SetGameClear()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (bIsGameCleared)
+	{
+		return;
+	}
+
+	bIsGameCleared = true;
+
+	OnRep_IsGameCleared();		// JM : Host는 OnRep이 자동으로 호출되지 않으므로 수동 호출
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::SetStageFailed()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (bIsStageFailed)
+	{
+		return;
+	}
+
+	bIsStageFailed = true;
+
+	OnRep_IsStageFailed();		// JM : Host는 OnRep이 자동으로 호출되지 않으므로 수동 호출
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::OnRep_SharedReviveCount()
+{
+	AO_LOG(LogJSH, Log, TEXT("AO_GameState::OnRep_SharedReviveCount -> %d"), SharedReviveCount);
+	OnSharedReviveCountChanged.Broadcast(SharedReviveCount);	// JM : WBP_RevivalChip 업데이트하기 위함
+}
+
+void AAO_GameState::OnRep_IsStageFailed()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	if (bIsStageFailed)
+	{
+		AO_LOG_ROLE(LogJM, Log, TEXT("Broadcast Delegate(OnStageFailed)"));
+		if (OnStageFailed.IsBound())
+		{
+			OnStageFailed.Broadcast();
+		}
+	}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::OnRep_IsGameCleared()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+	if (bIsGameCleared)
+	{
+		AO_LOG_ROLE(LogJM, Log, TEXT("Broadcast Delegate(OnGameCleared)"));
+		if (OnGameCleared.IsBound())
+		{
+			OnGameCleared.Broadcast();
+		}
+	}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
 int32 AAO_GameState::GetSharedReviveCount() const
 {
 	return SharedReviveCount;
 }
 
 //ms: 패시브 초기화
-
 void AAO_GameState::Authority_NotifyGlobalReset()
 {
 	if (HasAuthority())
@@ -142,6 +213,6 @@ void AAO_GameState::FindHint(int32 Num)
 
 bool AAO_GameState::CheckHintCount()
 {
-	return bHint1 && bHint2 && bHint3;
+	return bHint1 || bHint2 || bHint3;
 }
 //-ms
