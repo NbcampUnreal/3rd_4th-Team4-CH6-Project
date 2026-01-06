@@ -62,7 +62,7 @@ AAO_PlayerCharacter::AAO_PlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
-	GetCharacterMovement()->CrouchedHalfHeight = 69.f;
+	GetCharacterMovement()->SetCrouchedHalfHeight(69.f);
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 10.f;
 

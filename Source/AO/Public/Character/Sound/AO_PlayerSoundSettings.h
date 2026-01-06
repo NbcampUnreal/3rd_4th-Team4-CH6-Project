@@ -19,4 +19,7 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Sound")
 	TSoftObjectPtr<USoundBase> DefaultNotEnoughStaminaSound;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Sound")
+	TSoftObjectPtr<USoundBase> DefaultDamageReactSound;
 };

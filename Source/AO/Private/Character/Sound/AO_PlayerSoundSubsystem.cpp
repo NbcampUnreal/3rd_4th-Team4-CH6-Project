@@ -25,6 +25,12 @@ void UAO_PlayerSoundSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		DefaultNotEnoughStaminaSound = Settings->DefaultNotEnoughStaminaSound;
 		LoadedDefaultNotEnoughStaminaSound = DefaultNotEnoughStaminaSound.LoadSynchronous();
 	}
+
+	if (!Settings->DefaultDamageReactSound.IsNull())
+	{
+		DefaultNotEnoughStaminaSound = Settings->DefaultDamageReactSound;
+		LoadedDefaultDamageReactSound = DefaultDamageReactSound.LoadSynchronous();
+	}
 }
 
 USoundBase* UAO_PlayerSoundSubsystem::GetNotEnoughStaminaSound(ECharacterMesh MeshType) const
@@ -58,6 +64,39 @@ USoundBase* UAO_PlayerSoundSubsystem::GetNotEnoughStaminaSoundFromActor(const AA
 	}
 
 	return LoadedDefaultNotEnoughStaminaSound;
+}
+
+USoundBase* UAO_PlayerSoundSubsystem::GetDamageReactSound(ECharacterMesh MeshType) const
+{
+	if (UAO_PlayerSoundDataAsset* DA = GetDataAsset())
+	{
+		FCharacterSoundSet Set;
+		if (DA->TryGetSoundSet(MeshType, Set))
+		{
+			if (Set.DamageReact)
+			{
+				return Set.DamageReact;
+			}
+		}
+	}
+
+	return LoadedDefaultDamageReactSound;
+}
+
+USoundBase* UAO_PlayerSoundSubsystem::GetDamageReactSoundFromActor(const AActor* Actor) const
+{
+	if (!Actor)
+	{
+		return LoadedDefaultDamageReactSound;
+	}
+
+	if (const UAO_CustomizingComponent* CustomizingComp = Actor->FindComponentByClass<UAO_CustomizingComponent>())
+	{
+		const ECharacterMesh MeshType = CustomizingComp->GetCustomizingData().CharacterMeshType;
+		return GetDamageReactSound(MeshType);
+	}
+
+	return LoadedDefaultDamageReactSound;
 }
 
 UAO_PlayerSoundDataAsset* UAO_PlayerSoundSubsystem::GetDataAsset() const

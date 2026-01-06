@@ -23,12 +23,21 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Sound")
 	TSoftObjectPtr<USoundBase> DefaultNotEnoughStaminaSound;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	TSoftObjectPtr<USoundBase> DefaultDamageReactSound;
 
 	UFUNCTION(BlueprintCallable, Category = "Sound")
 	USoundBase* GetNotEnoughStaminaSound(ECharacterMesh MeshType) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Sound")
 	USoundBase* GetNotEnoughStaminaSoundFromActor(const AActor* Actor) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Sound")
+	USoundBase* GetDamageReactSound(ECharacterMesh MeshType) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Sound")
+	USoundBase* GetDamageReactSoundFromActor(const AActor* Actor) const;
 
 private:
 	UPROPERTY(Transient)
@@ -37,5 +46,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> LoadedDefaultNotEnoughStaminaSound = nullptr;
 
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> LoadedDefaultDamageReactSound = nullptr;
+	
 	UAO_PlayerSoundDataAsset* GetDataAsset() const;
 };
