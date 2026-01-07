@@ -1,6 +1,7 @@
 #include "Item/RevivealChipContainer/AO_RevivealChipContainer.h"
 
 #include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameState/AO_GameState.h"
 #include "Public/Item/inventory/AO_InventoryComponent.h"
 
 AAO_RevivealChipContainer::AAO_RevivealChipContainer()
@@ -36,9 +37,14 @@ void AAO_RevivealChipContainer::OnInteractionSuccess(AActor* Interactor)
 		return;
 	}
 
-	if (auto* GI = Cast<UAO_GameInstance>(GetWorld()->GetGameInstance()))
+	UWorld* World = GetWorld();
+	if (World != nullptr)
 	{
-		GI->AddSharedReviveCount(1);
+		AAO_GameState* AO_GS = World->GetGameState<AAO_GameState>();
+		if (AO_GS != nullptr)
+		{
+			AO_GS->AddSharedReviveCount(1);
+		}
 	}
 	
 	Inventory->ClearSlot();	

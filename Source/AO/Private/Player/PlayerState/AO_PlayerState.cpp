@@ -8,6 +8,8 @@
 #include "Game/AO_MapRoutes.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
+#include "Game/GameState/AO_GameState.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Net/UnrealNetwork.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "Settings/AO_GameSettingsManager.h"
@@ -128,6 +130,46 @@ void AAO_PlayerState::OnRep_IsAlive()
 	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
 	{
 		OSS->UpdateVoiceMember(this);
+	}
+	
+	APlayerController* OwnerPC = Cast<APlayerController>(GetOwner());
+	if (OwnerPC != nullptr)
+	{
+		AAO_PlayerController_Stage* StagePC = Cast<AAO_PlayerController_Stage>(OwnerPC);
+		if (StagePC != nullptr)
+		{
+			if (OwnerPC->IsLocalController())
+			{
+				UWorld* World = GetWorld();
+				AAO_GameState* AO_GS = nullptr;
+				if (World != nullptr)
+				{
+					AO_GS = World->GetGameState<AAO_GameState>();
+				}
+
+				if (!bIsAlive)
+				{
+					// 사망 시점에 공용 부활칩이 1개 이상 있으면 → 자동 부활 대기 상태로 간주
+					if (AO_GS != nullptr && AO_GS->GetSharedReviveCount() > 0)
+					{
+						StagePC->bPendingAutoRespawn = true;
+						StagePC->StartRespawnCountdown(5.0f);
+					}
+					else
+					{
+						// 부활칩이 없으면 → 자동 부활 없음, 카운트다운도 사용 안 함
+						StagePC->bPendingAutoRespawn = false;
+						StagePC->StopRespawnCountdown();
+					}
+				}
+				else
+				{
+					// 다시 살아남 → 자동 부활 대기 해제 + 카운트다운 정리
+					StagePC->bPendingAutoRespawn = false;
+					StagePC->StopRespawnCountdown();
+				}
+			}
+		}
 	}
 }
 
