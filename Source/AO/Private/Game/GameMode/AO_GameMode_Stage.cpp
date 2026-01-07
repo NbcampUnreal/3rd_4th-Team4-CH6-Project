@@ -161,6 +161,7 @@ void AAO_GameMode_Stage::HandleStageExitRequest(AController* Requester)
 		return;
 	}
 
+	AO_GI->SharedTrainFuel = FMath::Max(0.0f, Fuel - RequiredFuel);
 	AO_LOG(LogJSH, Log, TEXT("StageExit: OK, Fuel=%.1f → Travel to next map"), Fuel);
 	
 	if (bStageEnded)
