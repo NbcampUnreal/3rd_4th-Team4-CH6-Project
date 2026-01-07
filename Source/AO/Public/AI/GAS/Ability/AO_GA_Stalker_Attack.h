@@ -62,4 +62,12 @@ protected:
 	// 트레이스 채널
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
+
+	// 타격음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	// 타격음 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
 };

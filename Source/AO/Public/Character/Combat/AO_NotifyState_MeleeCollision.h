@@ -24,10 +24,19 @@ protected:
 		float TotalDuration,
 		const FAnimNotifyEventReference& EventReference) override;
 
+	virtual void NotifyTick(
+		USkeletalMeshComponent* MeshComp,
+		UAnimSequenceBase* Animation,
+		float FrameDeltaTime,
+		const FAnimNotifyEventReference& EventReference) override;
+
 	virtual void NotifyEnd(
 		USkeletalMeshComponent* MeshComp,
 		UAnimSequenceBase* Animation,
 		const FAnimNotifyEventReference& EventReference) override;
+
+	// 히트 이벤트 전송 함수 (중복 방지를 위해 분리)
+	void SendHitConfirmEvent(USkeletalMeshComponent* MeshComp);
 	
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GAS|Damage")
@@ -47,6 +56,10 @@ public:
 
 private:
 	FVector StartLocation = FVector::ZeroVector;
+	FVector PreviousLocation = FVector::ZeroVector;
 
 	TWeakObjectPtr<AActor> OwningActor;
+
+	// 이번 NotifyState 구간에서 이미 히트 이벤트를 보냈는지 여부
+	bool bHasSentHitEvent = false;
 };
