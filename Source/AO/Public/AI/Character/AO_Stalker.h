@@ -49,6 +49,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleStunBegin() override;
+	virtual void HandleStunEnd() override;
 
 	UFUNCTION()
 	void OnCeilingTransitionMontageEnded(UAnimMontage* Montage, bool bInterrupted);

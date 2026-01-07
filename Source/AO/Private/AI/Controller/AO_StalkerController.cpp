@@ -8,6 +8,7 @@
 #include "EnvironmentQuery/EnvQueryTypes.h"
 #include "EnvironmentQuery/EnvQuery.h"
 #include "NavigationSystem.h"
+#include "Kismet/GameplayStatics.h"
 
 AAO_StalkerController::AAO_StalkerController()
 {
@@ -405,4 +406,261 @@ bool AAO_StalkerController::IsPlayerLookingAtMe(AActor* TargetActor, float Toler
 
 	// 내적값이 임계값보다 크면 보고 있는 것
 	return Dot > Threshold;
+}
+
+TArray<AActor*> AAO_StalkerController::GetAllLookingPlayers(float ToleranceDegrees) const
+{
+	TArray<AActor*> LookingPlayers;
+	
+	APawn* MyPawn = GetPawn();
+	if (!MyPawn)
+	{
+		return LookingPlayers;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return LookingPlayers;
+	}
+
+	TArray<AActor*> AllPlayers;
+	UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
+
+	for (AActor* PlayerActor : AllPlayers)
+	{
+		if (IsPlayerLookingAtMe(PlayerActor, ToleranceDegrees))
+		{
+			LookingPlayers.Add(PlayerActor);
+		}
+	}
+
+	return LookingPlayers;
+}
+
+bool AAO_StalkerController::UpdateLookingPlayerWithHysteresis(float DeltaTime)
+{
+	// KSJ: Hysteresis 로직
+	// 1. 현재 타겟이 여전히 나를 보고 있으면 유지
+	// 2. 현재 타겟이 안 보면 즉시 새 타겟으로 전환
+	// 3. 새 타겟이 "확실히 더 위협적"이면 전환 (최소 유지 시간 후)
+	
+	APawn* MyPawn = GetPawn();
+	if (!MyPawn)
+	{
+		StableLookingPlayer = nullptr;
+		LookingPlayerHoldTimer = 0.f;
+		return false;
+	}
+
+	// 현재 나를 보고 있는 모든 플레이어 가져오기
+	TArray<AActor*> LookingPlayers = GetAllLookingPlayers();
+	
+	// 아무도 안 보고 있으면 타겟 해제
+	if (LookingPlayers.Num() == 0)
+	{
+		bool bWasValid = StableLookingPlayer.IsValid();
+		StableLookingPlayer = nullptr;
+		LookingPlayerHoldTimer = 0.f;
+		return bWasValid; // 타겟이 있었다가 없어졌으면 true
+	}
+
+	// 가장 가까운 플레이어 찾기
+	AActor* ClosestPlayer = nullptr;
+	float ClosestDistance = FLT_MAX;
+	for (AActor* Player : LookingPlayers)
+	{
+		const float Distance = FVector::Dist(MyPawn->GetActorLocation(), Player->GetActorLocation());
+		if (Distance < ClosestDistance)
+		{
+			ClosestDistance = Distance;
+			ClosestPlayer = Player;
+		}
+	}
+
+	// 현재 타겟이 없으면 즉시 설정
+	if (!StableLookingPlayer.IsValid())
+	{
+		StableLookingPlayer = ClosestPlayer;
+		LookingPlayerHoldTimer = 0.f;
+		return true; // 새 타겟 설정됨
+	}
+
+	// 현재 타겟이 여전히 나를 보고 있는지 확인
+	AActor* CurrentTarget = StableLookingPlayer.Get();
+	bool bCurrentStillLooking = LookingPlayers.Contains(CurrentTarget);
+
+	if (!bCurrentStillLooking)
+	{
+		// 현재 타겟이 더 이상 안 보면 즉시 새 타겟으로 전환
+		StableLookingPlayer = ClosestPlayer;
+		LookingPlayerHoldTimer = 0.f;
+		return true;
+	}
+
+	// 현재 타겟이 여전히 보고 있음 - Hysteresis 적용
+	LookingPlayerHoldTimer += DeltaTime;
+
+	// 최소 유지 시간이 지났는지 확인
+	if (LookingPlayerHoldTimer < LookingPlayerMinHoldTime)
+	{
+		return false; // 아직 유지 시간 안 됨, 타겟 변경 없음
+	}
+
+	// 새 타겟이 현재 타겟보다 "확실히 더 가까운지" 확인
+	if (ClosestPlayer != CurrentTarget)
+	{
+		const float CurrentDistance = FVector::Dist(MyPawn->GetActorLocation(), CurrentTarget->GetActorLocation());
+		
+		// 새 타겟이 현재 타겟보다 LookingPlayerSwitchDistanceRatio 배 이상 가까우면 전환
+		if (ClosestDistance < CurrentDistance * LookingPlayerSwitchDistanceRatio)
+		{
+			StableLookingPlayer = ClosestPlayer;
+			LookingPlayerHoldTimer = 0.f;
+			return true;
+		}
+	}
+
+	return false; // 타겟 변경 없음
+}
+
+FVector AAO_StalkerController::FindHideLocationFromMultiple(float Radius, const TArray<AActor*>& PlayersToHideFrom)
+{
+	// KSJ: 다중 플레이어 시야를 모두 고려하여 엄폐 위치 찾기
+	
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn)
+	{
+		return FVector::ZeroVector;
+	}
+
+	AAO_Stalker* Stalker = GetStalker();
+	if (!Stalker)
+	{
+		return FVector::ZeroVector;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return FVector::ZeroVector;
+	}
+
+	// 플레이어가 없으면 현재 위치 반환
+	if (PlayersToHideFrom.Num() == 0)
+	{
+		return ControlledPawn->GetActorLocation();
+	}
+
+	// 다른 Stalker들의 위치 가져오기 (겹침 방지용)
+	TArray<FVector> OtherStalkerLocations;
+	if (UAO_AISubsystem* Subsystem = World->GetSubsystem<UAO_AISubsystem>())
+	{
+		OtherStalkerLocations = Subsystem->GetAllStalkerLocations(Stalker);
+	}
+
+	// 모든 플레이어 위치의 중심점 계산 (Hide 위치 샘플링 기준점)
+	FVector CenterLocation = FVector::ZeroVector;
+	for (AActor* Player : PlayersToHideFrom)
+	{
+		if (Player)
+		{
+			CenterLocation += Player->GetActorLocation();
+		}
+	}
+	CenterLocation /= static_cast<float>(PlayersToHideFrom.Num());
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(World);
+	if (!NavSys)
+	{
+		return ControlledPawn->GetActorLocation();
+	}
+
+	// 여러 방향으로 샘플링하여 모든 플레이어 시야에서 숨을 수 있는 위치 찾기
+	FVector BestLocation = ControlledPawn->GetActorLocation();
+	float BestScore = -1.f;
+
+	const int32 NumSamples = 32;
+	const float MinDistance = 300.f;
+	const float MaxDistance = Radius;
+
+	for (int32 i = 0; i < NumSamples; ++i)
+	{
+		const float Angle = (2.f * UE_PI * i) / NumSamples;
+		const float Distance = FMath::RandRange(MinDistance, MaxDistance);
+		const FVector SampleDir = FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f);
+		const FVector SamplePoint = CenterLocation + SampleDir * Distance;
+
+		FNavLocation NavLocation;
+		if (NavSys->ProjectPointToNavigation(SamplePoint, NavLocation))
+		{
+			// 모든 플레이어 시야에서 숨을 수 있는지 체크
+			int32 HiddenFromCount = 0;
+			
+			FCollisionQueryParams Params;
+			Params.AddIgnoredActor(ControlledPawn);
+			for (AActor* Player : PlayersToHideFrom)
+			{
+				if (Player)
+				{
+					Params.AddIgnoredActor(Player);
+				}
+			}
+
+			for (AActor* Player : PlayersToHideFrom)
+			{
+				if (!Player)
+				{
+					continue;
+				}
+
+				FHitResult Hit;
+				// 플레이어에서 엄폐 위치로의 LineTrace
+				bool bIsHidden = World->LineTraceSingleByChannel(
+					Hit,
+					Player->GetActorLocation(),
+					NavLocation.Location,
+					ECC_Visibility,
+					Params
+				);
+
+				if (bIsHidden)
+				{
+					HiddenFromCount++;
+				}
+			}
+
+			// 최소 1명 이상의 시야에서 숨을 수 있어야 함
+			if (HiddenFromCount > 0)
+			{
+				// 다른 Stalker와의 거리 체크 (겹침 방지)
+				float MinDistToOtherStalker = FLT_MAX;
+				for (const FVector& OtherLoc : OtherStalkerLocations)
+				{
+					const float Dist = FVector::Dist(NavLocation.Location, OtherLoc);
+					MinDistToOtherStalker = FMath::Min(MinDistToOtherStalker, Dist);
+				}
+
+				// 점수 계산
+				// - 더 많은 플레이어 시야에서 숨을 수 있을수록 높은 점수
+				// - 다른 Stalker와 충분히 떨어져 있을수록 높은 점수
+				// - 중심점과 적절한 거리일수록 높은 점수
+				const float HiddenRatio = static_cast<float>(HiddenFromCount) / static_cast<float>(PlayersToHideFrom.Num());
+				const float StalkerSeparationScore = FMath::Min(MinDistToOtherStalker / 500.f, 1.f);
+				const float DistToCenter = FVector::Dist(NavLocation.Location, CenterLocation);
+				const float DistanceScore = 1.f - FMath::Abs(DistToCenter - (MinDistance + MaxDistance) * 0.5f) / MaxDistance;
+
+				// 가중치: 숨김 비율 50%, 분리 점수 30%, 거리 점수 20%
+				const float Score = HiddenRatio * 0.5f + StalkerSeparationScore * 0.3f + DistanceScore * 0.2f;
+
+				if (Score > BestScore && MinDistToOtherStalker > 200.f)
+				{
+					BestScore = Score;
+					BestLocation = NavLocation.Location;
+				}
+			}
+		}
+	}
+
+	return BestLocation;
 }

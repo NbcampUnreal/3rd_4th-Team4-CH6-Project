@@ -53,28 +53,12 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 		}
 	}
 
-	// 나를 보고 있는 플레이어 찾기 (뒷걸음질 대상)
+	// KSJ: Hysteresis 적용된 LookingPlayer 사용 (뒷걸음질 대상)
 	if (InstanceData.bEnableBackpedal && Stalker)
 	{
-		if (UWorld* World = Stalker->GetWorld())
-		{
-			TArray<AActor*> AllPlayers;
-			UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
-
-			float ClosestDistance = FLT_MAX;
-			for (AActor* PlayerActor : AllPlayers)
-			{
-				if (InstanceData.Controller->IsPlayerLookingAtMe(PlayerActor))
-				{
-					const float Distance = FVector::Dist(Stalker->GetActorLocation(), PlayerActor->GetActorLocation());
-					if (Distance < ClosestDistance)
-					{
-						ClosestDistance = Distance;
-						InstanceData.LookingPlayer = PlayerActor;
-					}
-				}
-			}
-		}
+		// Controller의 Hysteresis 로직으로 안정적인 타겟 가져오기
+		InstanceData.Controller->UpdateLookingPlayerWithHysteresis(0.f);
+		InstanceData.LookingPlayer = InstanceData.Controller->GetStableLookingPlayer();
 
 		// 뒷걸음질 모드: 이동 방향으로 회전하지 않도록 설정
 		if (InstanceData.LookingPlayer.IsValid())
@@ -87,8 +71,7 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 		}
 	}
 
-	// 엄폐 위치 찾기 (EQS 또는 직접 계산)
-	AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
+	// KSJ: 다중 플레이어 시야를 고려한 엄폐 위치 찾기
 	FVector HideLocation = FVector::ZeroVector;
 
 	if (bIsRetreating)
@@ -113,8 +96,21 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 	}
 	else
 	{
-		// EQS가 없으면 Controller의 FindHideLocation 사용
-		HideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+		// KSJ: 다중 플레이어 시야 고려 - 나를 보고 있는 모든 플레이어로부터 숨기
+		TArray<AActor*> LookingPlayers = InstanceData.Controller->GetAllLookingPlayers();
+		
+		if (LookingPlayers.Num() > 0)
+		{
+			// 나를 보고 있는 플레이어들 모두로부터 숨는 위치 찾기
+			HideLocation = InstanceData.Controller->FindHideLocationFromMultiple(1000.f, LookingPlayers);
+		}
+		else
+		{
+			// 아무도 안 보고 있으면 ChaseTarget 기준으로 숨기
+			AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
+			HideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+		}
+		
 		if (!HideLocation.IsZero())
 		{
 			InstanceData.CurrentHideLocation = HideLocation;
@@ -193,53 +189,55 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 	InstanceData.PlayerProximityCheckTimer += DeltaTime;
 	const float ProximityCheckInterval = 0.5f; // 0.5초마다 체크
 
+	// KSJ: Hysteresis 적용된 LookingPlayer 업데이트 (매 Tick)
+	if (InstanceData.bEnableBackpedal)
+	{
+		InstanceData.Controller->UpdateLookingPlayerWithHysteresis(DeltaTime);
+		InstanceData.LookingPlayer = InstanceData.Controller->GetStableLookingPlayer();
+	}
+
 	if (InstanceData.PlayerProximityCheckTimer >= ProximityCheckInterval)
 	{
 		InstanceData.PlayerProximityCheckTimer = 0.f;
 
-		// 플레이어와의 거리 체크
-		const float DistanceToPlayer = FVector::Dist(Stalker->GetActorLocation(), Target->GetActorLocation());
+		// KSJ: 다중 플레이어 고려 - 나를 보고 있는 모든 플레이어 중 가장 가까운 거리 체크
+		TArray<AActor*> LookingPlayers = InstanceData.Controller->GetAllLookingPlayers();
+		float MinDistanceToLookingPlayer = FLT_MAX;
+		
+		for (AActor* LookingPlayer : LookingPlayers)
+		{
+			const float Distance = FVector::Dist(Stalker->GetActorLocation(), LookingPlayer->GetActorLocation());
+			MinDistanceToLookingPlayer = FMath::Min(MinDistanceToLookingPlayer, Distance);
+		}
+
+		// ChaseTarget과의 거리도 체크
+		const float DistanceToTarget = FVector::Dist(Stalker->GetActorLocation(), Target->GetActorLocation());
 		const float MinSafeDistance = 500.f; // 최소 안전 거리
 
-		// 플레이어가 너무 가까이 접근했고, 현재 이동 중이 아니면 다른 엄폐물로 재이동
-		if (DistanceToPlayer < MinSafeDistance && !InstanceData.bIsMoving)
+		// 나를 보고 있는 플레이어가 너무 가까이 접근했거나, ChaseTarget이 가까우면 재이동
+		bool bNeedReposition = (MinDistanceToLookingPlayer < MinSafeDistance) || 
+		                       (DistanceToTarget < MinSafeDistance);
+
+		if (bNeedReposition && !InstanceData.bIsMoving)
 		{
-			// 새로운 엄폐 위치 찾기
-			FVector NewHideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+			// KSJ: 다중 플레이어 시야 고려하여 새로운 엄폐 위치 찾기
+			FVector NewHideLocation = FVector::ZeroVector;
+			
+			if (LookingPlayers.Num() > 0)
+			{
+				NewHideLocation = InstanceData.Controller->FindHideLocationFromMultiple(1000.f, LookingPlayers);
+			}
+			else
+			{
+				NewHideLocation = InstanceData.Controller->FindHideLocation(1000.f, Target);
+			}
+			
 			if (!NewHideLocation.IsZero() && FVector::Dist(NewHideLocation, InstanceData.CurrentHideLocation) > 200.f)
 			{
 				// 현재 위치와 충분히 떨어진 새로운 위치로 이동
 				InstanceData.CurrentHideLocation = NewHideLocation;
 				InstanceData.Controller->MoveToLocation(NewHideLocation);
 				InstanceData.bIsMoving = true;
-			}
-		}
-
-		// 뒷걸음질 대상 업데이트: 다른 플레이어가 보고 있으면 갱신
-		if (InstanceData.bEnableBackpedal && Stalker)
-		{
-			if (UWorld* World = Stalker->GetWorld())
-			{
-				TArray<AActor*> AllPlayers;
-				UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
-
-				float ClosestDistance = FLT_MAX;
-				AActor* NewLookingPlayer = nullptr;
-
-				for (AActor* PlayerActor : AllPlayers)
-				{
-					if (InstanceData.Controller->IsPlayerLookingAtMe(PlayerActor))
-					{
-						const float Distance = FVector::Dist(Stalker->GetActorLocation(), PlayerActor->GetActorLocation());
-						if (Distance < ClosestDistance)
-						{
-							ClosestDistance = Distance;
-							NewLookingPlayer = PlayerActor;
-						}
-					}
-				}
-
-				InstanceData.LookingPlayer = NewLookingPlayer;
 			}
 		}
 	}

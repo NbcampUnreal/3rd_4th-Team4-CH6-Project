@@ -31,6 +31,11 @@ public:
 	virtual FEnemyAttackConfig GetCurrentAttackConfig_Implementation() const override;
 
 protected:
+	// 기절 처리 오버라이드
+	virtual void HandleStunBegin() override;
+	virtual void HandleStunEnd() override;
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Werewolf")
 	TObjectPtr<UAO_PackCoordComp> PackCoordComp;
 

@@ -2,6 +2,7 @@
 
 #include "AI/Character/AO_Insect.h"
 #include "AI/Component/AO_KidnapComponent.h"
+#include "AI/Animation/AO_Insect_AnimInstance.h"
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "AI/Controller/AO_InsectController.h"
 #include "Character/AO_PlayerCharacter.h"
@@ -62,12 +63,24 @@ void AAO_Insect::HandleStunBegin()
 	{
 		KidnapComponent->ReleaseKidnap(false);
 	}
+
+	// 기절 애니메이션 재생
+	if (UAO_Insect_AnimInstance* InsectAnimInstance = Cast<UAO_Insect_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		InsectAnimInstance->PlayStunMontage();
+	}
 }
 
 void AAO_Insect::HandleStunEnd()
 {
 	Super::HandleStunEnd();
 	UpdateMovementSpeed();
+
+	// 기절 애니메이션 중지
+	if (UAO_Insect_AnimInstance* InsectAnimInstance = Cast<UAO_Insect_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		InsectAnimInstance->StopStunMontage(0.25f);
+	}
 }
 
 void AAO_Insect::OnKidnapStateChanged(bool bIsKidnapping)

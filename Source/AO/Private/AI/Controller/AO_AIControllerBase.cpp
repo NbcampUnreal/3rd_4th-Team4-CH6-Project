@@ -11,6 +11,7 @@
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Components/StateTreeAIComponent.h"
 #include "StateTree.h"
+#include "NavigationSystem.h"
 
 AAO_AIControllerBase::AAO_AIControllerBase()
 {
@@ -307,6 +308,12 @@ TArray<AAO_PlayerCharacter*> AAO_AIControllerBase::GetPlayersInSight() const
 			{
 				continue;
 			}
+
+			// NavMesh 도달 불가능한 플레이어 필터링 (경계에서 AI가 멈추는 문제 방지)
+			if (bFilterUnreachablePlayers && !IsPlayerOnNavMesh(Player))
+			{
+				continue;
+			}
 			
 			ValidPlayers.Add(WeakPlayer.Get());
 		}
@@ -349,6 +356,12 @@ AAO_PlayerCharacter* AAO_AIControllerBase::GetNearestPlayerInSight() const
 				}
 			}
 
+			// NavMesh 도달 불가능한 플레이어 필터링 (경계에서 AI가 멈추는 문제 방지)
+			if (bFilterUnreachablePlayers && !IsPlayerOnNavMesh(Player))
+			{
+				continue;
+			}
+
 			const float DistSq = FVector::DistSquared(ControlledPawn->GetActorLocation(), WeakPlayer->GetActorLocation());
 			if (DistSq < NearestDistSq)
 			{
@@ -374,11 +387,65 @@ bool AAO_AIControllerBase::HasPlayerInSight() const
 			{
 				continue;
 			}
+
+			// NavMesh 도달 불가능한 플레이어 필터링 (경계에서 AI가 멈추는 문제 방지)
+			if (bFilterUnreachablePlayers && !IsPlayerOnNavMesh(Player))
+			{
+				continue;
+			}
 			
 			return true;
 		}
 	}
 	return false;
+}
+
+bool AAO_AIControllerBase::IsPlayerOnNavMesh(const AAO_PlayerCharacter* Player) const
+{
+	if (!Player)
+	{
+		return false;
+	}
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (!NavSys)
+	{
+		return true; // NavMesh 시스템이 없으면 필터링하지 않음
+	}
+
+	FNavLocation NavLocation;
+	const FVector PlayerLocation = Player->GetActorLocation();
+
+	// 플레이어 위치에서 NavMesh를 찾을 수 있는지 확인
+	return NavSys->ProjectPointToNavigation(PlayerLocation, NavLocation, NavMeshProjectionExtent);
+}
+
+bool AAO_AIControllerBase::CanReachPlayer(const AAO_PlayerCharacter* Player) const
+{
+	if (!Player || !GetPawn())
+	{
+		return false;
+	}
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (!NavSys)
+	{
+		return true; // NavMesh 시스템이 없으면 필터링하지 않음
+	}
+
+	// 동기 경로 탐색 (비용이 높으므로 필요할 때만 사용)
+	FPathFindingQuery Query;
+	Query.StartLocation = GetPawn()->GetActorLocation();
+	Query.EndLocation = Player->GetActorLocation();
+	Query.NavData = NavSys->GetDefaultNavDataInstance();
+
+	if (!Query.NavData.IsValid())
+	{
+		return true; // NavData가 없으면 필터링하지 않음
+	}
+
+	FPathFindingResult Result = NavSys->FindPathSync(Query);
+	return Result.IsSuccessful();
 }
 
 ETeamAttitude::Type AAO_AIControllerBase::GetTeamAttitudeTowards(const AActor& Other) const

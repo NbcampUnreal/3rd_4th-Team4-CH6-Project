@@ -34,19 +34,6 @@ struct FAO_STTask_Stalk_Approach_InstanceData
 	// 시선 허용 각도 (도)
 	UPROPERTY(EditAnywhere, Category = "Approach")
 	float LookToleranceDegrees = 45.f;
-
-	// 이 거리보다 멀면 천장 이동 시도 (400.f 권장)
-	UPROPERTY(EditAnywhere, Category = "Approach")
-	float CeilingModeDistance = 400.f;
-
-	UPROPERTY()
-	TObjectPtr<class AAO_Stalker> Stalker;
-
-	UPROPERTY()
-	TObjectPtr<class UAO_CeilingMoveComponent> CeilingComp;
-
-	UPROPERTY()
-	bool bWaitingForTransition = false;
 };
 
 /**

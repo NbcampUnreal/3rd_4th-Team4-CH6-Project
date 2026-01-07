@@ -55,6 +55,12 @@ AAO_PlayerCharacter* AAO_AggressiveAICtrl::GetChaseTarget() const
 	{
 		return nullptr;
 	}
+
+	// NavMesh 도달 불가능한 플레이어 필터링 (경계에서 AI가 멈추는 문제 방지)
+	if (bFilterUnreachablePlayers && !IsPlayerOnNavMesh(Target))
+	{
+		return nullptr;
+	}
 	
 	return Target;
 }

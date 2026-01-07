@@ -16,15 +16,23 @@
 #include "CollisionQueryParams.h"
 #include "AI/Character/AO_Insect.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
+#include "Net/UnrealNetwork.h"
 
 UAO_KidnapComponent::UAO_KidnapComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false; // 납치 중에만 Tick 활성화 가능
+	SetIsReplicatedByDefault(true); // 컴포넌트 복제 활성화
 
 	// 기본 태그 설정
 	KidnappedStatusTag = FGameplayTag::RequestGameplayTag(FName("Status.Debuff.Kidnapped"));
 	KnockdownTag = FGameplayTag::RequestGameplayTag(FName("Event.Combat.HitReact.Knockdown"));
+}
+
+void UAO_KidnapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UAO_KidnapComponent, CurrentVictim);
 }
 
 void UAO_KidnapComponent::BeginPlay()
@@ -589,5 +597,167 @@ void UAO_KidnapComponent::RemoveKidnappedTag(AAO_PlayerCharacter* Player)
 	if (UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
 	{
 		ASC->RemoveLooseGameplayTag(KidnappedStatusTag);
+	}
+}
+
+void UAO_KidnapComponent::OnRep_CurrentVictim()
+{
+	// 클라이언트에서만 실행 (서버는 TryKidnapPlayer/ReleaseKidnap에서 직접 처리)
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	// 이전 Victim이 있었고, 현재 Victim이 다르면 해제 처리
+	if (PreviousVictim && PreviousVictim != CurrentVictim)
+	{
+		ApplyKidnapStateOnClient(PreviousVictim, false);
+	}
+
+	// 현재 Victim이 있으면 납치 상태 적용
+	if (CurrentVictim)
+	{
+		ApplyKidnapStateOnClient(CurrentVictim, true);
+	}
+
+	// 캐시 업데이트
+	PreviousVictim = CurrentVictim;
+}
+
+void UAO_KidnapComponent::ApplyKidnapStateOnClient(AAO_PlayerCharacter* Victim, bool bIsKidnapped)
+{
+	if (!Victim || !IsValid(Victim))
+	{
+		return;
+	}
+
+	// 로컬 플레이어인지 확인 (자기 자신이 납치당한 경우에만 입력 차단)
+	bool bIsLocalPlayer = Victim->IsLocallyControlled();
+
+	if (bIsKidnapped)
+	{
+		// 납치 상태 적용
+
+		// 1. 로컬 플레이어인 경우 입력 차단 (핵심!)
+		if (bIsLocalPlayer)
+		{
+			if (APlayerController* PC = Cast<APlayerController>(Victim->GetController()))
+			{
+				PC->SetIgnoreMoveInput(true);
+				PC->SetIgnoreLookInput(false); // 카메라는 움직일 수 있음
+			}
+
+			// 카메라 충돌 비활성화
+			if (USpringArmComponent* SpringArm = Victim->GetSpringArm())
+			{
+				bOriginalCameraCollision = SpringArm->bDoCollisionTest;
+				SpringArm->bDoCollisionTest = false;
+			}
+		}
+
+		// 2. 물리/충돌 처리 (모든 클라이언트에서)
+		if (UCapsuleComponent* Capsule = Victim->GetCapsuleComponent())
+		{
+			Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+
+		if (USkeletalMeshComponent* Mesh = Victim->GetMesh())
+		{
+			Mesh->SetSimulatePhysics(false);
+			Mesh->SetCollisionProfileName(TEXT("NoCollision"));
+		}
+
+		if (UCharacterMovementComponent* MoveComp = Victim->GetCharacterMovement())
+		{
+			MoveComp->StopMovementImmediately();
+			MoveComp->SetMovementMode(MOVE_Flying);
+		}
+
+		// 3. 소켓 부착
+		if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+		{
+			Victim->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, KidnapSocketName);
+		}
+	}
+	else
+	{
+		// 납치 해제 상태 적용
+
+		// 1. 부착 해제
+		Victim->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+		// 누워있던 캐릭터를 똑바로 세움
+		FRotator CurrentRot = Victim->GetActorRotation();
+		Victim->SetActorRotation(FRotator(0.f, CurrentRot.Yaw, 0.f));
+
+		// 2. 사망 여부 확인
+		bool bIsDead = false;
+		if (UAbilitySystemComponent* ASC = Victim->GetAbilitySystemComponent())
+		{
+			const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+			bIsDead = ASC->HasMatchingGameplayTag(DeathTag);
+		}
+
+		// 3. 물리/충돌 복구
+		if (!bIsDead)
+		{
+			if (UCapsuleComponent* Capsule = Victim->GetCapsuleComponent())
+			{
+				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				Capsule->SetCollisionProfileName(TEXT("Player"));
+			}
+
+			if (USkeletalMeshComponent* Mesh = Victim->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("CharacterMesh"));
+			}
+
+			if (UCharacterMovementComponent* MoveComp = Victim->GetCharacterMovement())
+			{
+				MoveComp->Velocity = FVector::ZeroVector;
+				MoveComp->StopMovementImmediately();
+				MoveComp->SetMovementMode(MOVE_Walking);
+				MoveComp->GravityScale = 1.0f;
+			}
+
+			// 4. 로컬 플레이어인 경우 입력 차단 해제
+			if (bIsLocalPlayer)
+			{
+				if (APlayerController* PC = Cast<APlayerController>(Victim->GetController()))
+				{
+					PC->SetIgnoreMoveInput(false);
+					PC->SetIgnoreLookInput(false);
+				}
+
+				// 카메라 충돌 복구
+				if (USpringArmComponent* SpringArm = Victim->GetSpringArm())
+				{
+					SpringArm->bDoCollisionTest = bOriginalCameraCollision;
+				}
+			}
+		}
+		else
+		{
+			// 사망한 플레이어: 래그돌 복구
+			if (UCapsuleComponent* Capsule = Victim->GetCapsuleComponent())
+			{
+				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				Capsule->SetCollisionProfileName(TEXT("Ragdoll"));
+			}
+
+			if (USkeletalMeshComponent* Mesh = Victim->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
+				Mesh->SetSimulatePhysics(true);
+			}
+
+			if (UCharacterMovementComponent* MoveComp = Victim->GetCharacterMovement())
+			{
+				MoveComp->Velocity = FVector::ZeroVector;
+				MoveComp->StopMovementImmediately();
+				MoveComp->SetMovementMode(MOVE_Walking);
+				MoveComp->GravityScale = 1.0f;
+			}
+		}
 	}
 }

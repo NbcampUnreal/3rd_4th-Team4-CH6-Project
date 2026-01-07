@@ -2,6 +2,7 @@
 
 #include "AI/Character/AO_Crab.h"
 #include "AI/Component/AO_ItemCarryComponent.h"
+#include "AI/Animation/AO_Crab_AnimInstance.h"
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "AI/Controller/AO_CrabController.h"
 #include "Item/AO_MasterItem.h"
@@ -56,6 +57,12 @@ void AAO_Crab::HandleStunBegin()
 
 	// 도망 상태 해제
 	bIsFleeingFromPlayer = false;
+
+	// 기절 애니메이션 재생
+	if (UAO_Crab_AnimInstance* CrabAnimInstance = Cast<UAO_Crab_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		CrabAnimInstance->PlayStunMontage();
+	}
 }
 
 void AAO_Crab::HandleStunEnd()
@@ -64,6 +71,12 @@ void AAO_Crab::HandleStunEnd()
 
 	// 이동 속도 복구
 	UpdateMovementSpeed();
+
+	// 기절 애니메이션 중지
+	if (UAO_Crab_AnimInstance* CrabAnimInstance = Cast<UAO_Crab_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		CrabAnimInstance->StopStunMontage(0.25f);
+	}
 }
 
 void AAO_Crab::SetFleeMode(bool bFleeing)
