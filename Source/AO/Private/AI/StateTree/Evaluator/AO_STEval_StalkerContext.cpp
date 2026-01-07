@@ -5,6 +5,7 @@
 #include "AI/Character/AO_Stalker.h"
 #include "StateTreeExecutionContext.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "Kismet/GameplayStatics.h"
 
 void FAO_STEval_StalkerContext::TreeStart(FStateTreeExecutionContext& Context) const
 {
@@ -37,21 +38,40 @@ void FAO_STEval_StalkerContext::UpdateStalkerContextData(FStateTreeExecutionCont
 	}
 
 	// 1. 도주 상태 업데이트
-	InstanceData.bIsRetreating = StalkerCtrl->IsRetreating();
+	InstanceData.bIsRetreating = Stalker->IsRetreating();
 
-	// 2. 플레이어 시선 감지
-	AActor* Target = InstanceData.CurrentTarget.Get();
-	if (Target)
+	// 2. 플레이어 시선 감지 (모든 플레이어 대상)
+	// 나를 보고 있는 플레이어 중 가장 가까운 플레이어를 찾음
+	bool bAnyPlayerLooking = false;
+	AActor* ClosestLookingPlayer = nullptr;
+	float ClosestDistance = FLT_MAX;
+	
+	if (UWorld* World = Stalker->GetWorld())
 	{
-		InstanceData.bIsPlayerLookingAtMe = StalkerCtrl->IsPlayerLookingAtMe(Target);
-	}
-	else
-	{
-		InstanceData.bIsPlayerLookingAtMe = false;
-	}
+		TArray<AActor*> AllPlayers;
+		UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
 
-	// 3. 위치 계산 (매 틱 계산은 무거울 수 있으므로 필요한 상태일 때만 계산하거나, Controller 내부 캐싱 권장)
-	// 여기서는 로직 연결을 위해 직접 호출합니다.
+		for (AActor* PlayerActor : AllPlayers)
+		{
+			if (StalkerCtrl->IsPlayerLookingAtMe(PlayerActor))
+			{
+				bAnyPlayerLooking = true;
+				
+				// 가장 가까운 플레이어 찾기
+				const float Distance = FVector::Dist(Stalker->GetActorLocation(), PlayerActor->GetActorLocation());
+				if (Distance < ClosestDistance)
+				{
+					ClosestDistance = Distance;
+					ClosestLookingPlayer = PlayerActor;
+				}
+			}
+		}
+	}
+	
+	InstanceData.bIsPlayerLookingAtMe = bAnyPlayerLooking;
+	InstanceData.LookingPlayer = ClosestLookingPlayer;
+
+	// 3. 위치 계산
 	
 	// 도주 위치는 도주 중일 때만 계산
 	if (InstanceData.bIsRetreating)
@@ -64,15 +84,15 @@ void FAO_STEval_StalkerContext::UpdateStalkerContextData(FStateTreeExecutionCont
 	}
 
 	// 엄폐 위치는 플레이어가 보고 있거나 전투 중일 때 계산
+	// 기준은 현재 추격 타겟 (타겟이 없으면 가장 가까운 플레이어나, 마지막 타겟 등 Controller 로직 따름)
+	AActor* HideTarget = InstanceData.CurrentTarget.Get();
+	
 	if (InstanceData.bIsPlayerLookingAtMe || InstanceData.bIsChasing)
 	{
-		InstanceData.HideLocation = StalkerCtrl->FindHideLocation(1500.f, Target);
+		InstanceData.HideLocation = StalkerCtrl->FindHideLocation(1500.f, HideTarget);
 	}
 	else
 	{
-		// 평소에는 현재 위치나 랜덤 배회 위치가 될 것임 (여기선 현재 위치로 초기화)
 		InstanceData.HideLocation = Stalker->GetActorLocation();
 	}
 }
-
-

@@ -59,6 +59,7 @@ public:
     virtual void PostInitializeComponents() override;
 
 protected:
+	virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void OnInteractionSuccess_BP_Implementation(AActor* Interactor) override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -105,7 +106,7 @@ public:
     float InteractionLockDuration = 2.0f;
 
 protected:
-    UPROPERTY(ReplicatedUsing=OnRep_IsValveOpen, BlueprintReadOnly, Category="Valve")
+    UPROPERTY(ReplicatedUsing=OnRep_IsValveOpen, EditAnywhere, BlueprintReadOnly, Category="Valve")
     bool bIsValveOpen = false;
 
 private:

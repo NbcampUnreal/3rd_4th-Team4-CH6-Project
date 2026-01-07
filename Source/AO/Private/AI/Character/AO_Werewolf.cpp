@@ -13,6 +13,13 @@ AAO_Werewolf::AAO_Werewolf()
 
 	// 컴포넌트 생성
 	PackCoordComp = CreateDefaultSubobject<UAO_PackCoordComp>(TEXT("PackCoordComp"));
+
+	// 공격 설정 기본값
+	AttackConfig.Damage = 30.f;
+	AttackConfig.KnockbackStrength = 500.f;
+	AttackConfig.AttackRadius = 150.f;
+	AttackConfig.AttackDistance = 200.f;
+	AttackConfig.AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Combat.Attack"));
 }
 
 void AAO_Werewolf::PostInitializeComponents()
@@ -24,4 +31,9 @@ void AAO_Werewolf::PostInitializeComponents()
 	{
 		GetCharacterMovement()->MaxWalkSpeed = RoamSpeed;
 	}
+}
+
+FEnemyAttackConfig AAO_Werewolf::GetCurrentAttackConfig_Implementation() const
+{
+	return AttackConfig;
 }

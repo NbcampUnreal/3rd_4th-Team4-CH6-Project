@@ -11,6 +11,7 @@
 #include "NavigationSystem.h"
 #include "NavModifierVolume.h"
 #include "AIController.h"
+#include "Components/CapsuleComponent.h"
 
 AAO_Spawner_AIManager::AAO_Spawner_AIManager()
 {
@@ -144,21 +145,30 @@ void AAO_Spawner_AIManager::OnEQSQueryFinished(TSharedPtr<FEnvQueryResult> Resul
 		return;
 	}
 
-	// 최고 점수 위치 선택 (첫 번째 아이템 사용, 또는 점수가 있는 경우 최고 점수 아이템 찾기)
-	int32 BestItemIndex = INDEX_NONE;
-	float BestScore = -FLT_MAX;
-	
+	// 점수 기반 정렬 및 상위 퍼센트 랜덤 선택 (같은 위치 스폰 방지)
+	struct FItemScore
+	{
+		int32 Index;
+		float Score;
+	};
+	TArray<FItemScore> ScoredItems;
+	ScoredItems.Reserve(Result->Items.Num());
+
 	for (int32 i = 0; i < Result->Items.Num(); ++i)
 	{
-		float ItemScore = Result->GetItemScore(i);
-		if (ItemScore > BestScore)
-		{
-			BestScore = ItemScore;
-			BestItemIndex = i;
-		}
+		ScoredItems.Add({ i, Result->GetItemScore(i) });
 	}
+
+	// 점수 높은 순 정렬
+	ScoredItems.Sort([](const FItemScore& A, const FItemScore& B) {
+		return A.Score > B.Score;
+	});
+
+	// 상위 25% (최소 1개, 최대 5개) 중에서 랜덤 선택
+	int32 TopCount = FMath::Max(1, ScoredItems.Num() / 4);
+	TopCount = FMath::Min(TopCount, 5); // 최대 5개 후보군으로 제한
 	
-	if (BestItemIndex == INDEX_NONE)
+	if (ScoredItems.Num() == 0)
 	{
 		// 다음 스폰 시도 예약
 		float NextDelay = SpawnInterval + FMath::RandRange(-SpawnIntervalRandomDeviation, SpawnIntervalRandomDeviation);
@@ -166,21 +176,38 @@ void AAO_Spawner_AIManager::OnEQSQueryFinished(TSharedPtr<FEnvQueryResult> Resul
 		return;
 	}
 
-	FVector SpawnLocation = Result->GetItemAsLocation(BestItemIndex);
+	int32 RandomIndex = FMath::RandRange(0, FMath::Min(TopCount, ScoredItems.Num()) - 1);
+	int32 SelectedItemIndex = ScoredItems[RandomIndex].Index;
 
-	// NavMesh에 프로젝션
+	FVector SpawnLocation = Result->GetItemAsLocation(SelectedItemIndex);
+
+	// 몬스터 종류 랜덤 선택
+	TSubclassOf<AAO_AICharacterBase> SelectedClass = MonsterClasses[FMath::RandRange(0, MonsterClasses.Num() - 1)];
+
+	// NavMesh에 프로젝션 및 높이 보정 (끼임 방지)
 	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 	if (NavSys)
 	{
 		FNavLocation ProjectedLocation;
-		if (NavSys->ProjectPointToNavigation(SpawnLocation, ProjectedLocation, FVector(500.0f, 500.0f, 200.0f)))
+		// 검색 범위를 넉넉하게 설정
+		if (NavSys->ProjectPointToNavigation(SpawnLocation, ProjectedLocation, FVector(500.0f, 500.0f, 500.0f)))
 		{
 			SpawnLocation = ProjectedLocation.Location;
+			
+			// 캡슐 높이만큼 Z축 보정
+			if (IsValid(SelectedClass))
+			{
+				if (ACharacter* DefaultChar = Cast<ACharacter>(SelectedClass->GetDefaultObject()))
+				{
+					if (UCapsuleComponent* Capsule = DefaultChar->GetCapsuleComponent())
+					{
+						float CapsuleHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+						SpawnLocation.Z += CapsuleHalfHeight + 5.0f; // 5.0f 여유값 추가
+					}
+				}
+			}
 		}
 	}
-
-	// 몬스터 종류 랜덤 선택
-	TSubclassOf<AAO_AICharacterBase> SelectedClass = MonsterClasses[FMath::RandRange(0, MonsterClasses.Num() - 1)];
 
 	// 스폰 실행
 	ExecuteSpawn(SpawnLocation, SelectedClass);

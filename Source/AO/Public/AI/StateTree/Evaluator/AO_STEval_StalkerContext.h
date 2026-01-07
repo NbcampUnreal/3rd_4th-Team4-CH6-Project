@@ -28,6 +28,10 @@ struct FAO_STEval_StalkerCtx_InstanceData : public FAO_STEval_AggressiveCtx_Inst
 	UPROPERTY(EditAnywhere, Category = "Output")
 	bool bIsPlayerLookingAtMe = false;
 
+	// 나를 보고 있는 플레이어 (가장 가까운 대상)
+	UPROPERTY(EditAnywhere, Category = "Output")
+	TWeakObjectPtr<AActor> LookingPlayer = nullptr;
+
 	// 도주 중 상태
 	UPROPERTY(EditAnywhere, Category = "Output")
 	bool bIsRetreating = false;
