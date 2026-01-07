@@ -155,5 +155,20 @@ protected:
 	// 보간 시작 지연 (몽타주 시작 후 몇 초 후부터 보간 시작, 바닥→천장 점프 시 발 떨어지는 시점)
 	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Transition")
 	float TransitionStartDelay = 0.1f; // 40프레임 기준 4프레임 = 약 0.1초 (30fps 가정)
+
+	// 회전 보간 관련
+	UPROPERTY()
+	FRotator LastCeilingNormalRotation = FRotator::ZeroRotator;
+
+	UPROPERTY()
+	FVector LastCeilingNormal = FVector::ZeroVector;
+
+	// 회전 보간 속도 (낮을수록 부드럽지만 느림)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Rotation")
+	float RotationInterpSpeed = 2.f; // 기본 5.f에서 2.f로 낮춤
+
+	// Normal 변화 데드존 (이 값보다 작은 변화는 무시)
+	UPROPERTY(EditDefaultsOnly, Category = "Ceiling Move|Rotation")
+	float NormalChangeThreshold = 0.01f;
 };
 

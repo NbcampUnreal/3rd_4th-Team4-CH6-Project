@@ -56,11 +56,22 @@ void UAO_CeilingMoveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 				float CurrentOffsetZ = FMath::Lerp(StartOffsetZ, TargetOffsetZ, Alpha);
 				
 				USkeletalMeshComponent* MeshComp = OwnerCharacter ? OwnerCharacter->GetMesh() : nullptr;
-				if (MeshComp && bInitialLocationSaved)
+				if (MeshComp && bInitialLocationSaved && bInitialRotationSaved)
 				{
+					// 위치 보간
 					FVector NewRelLoc = InitialMeshRelativeLocation;
 					NewRelLoc.Z += CurrentOffsetZ;
 					MeshComp->SetRelativeLocation(NewRelLoc);
+					
+					// 회전 보간 (천장 모드로 전환 중 또는 바닥 모드로 전환 중)
+					FRotator CurrentMeshRotation = MeshComp->GetRelativeRotation();
+					FRotator InterpolatedRotation = FMath::RInterpTo(
+						CurrentMeshRotation, 
+						LastCeilingNormalRotation, 
+						DeltaTime, 
+						RotationInterpSpeed * 5.f // 보간 중에는 빠르게
+					);
+					MeshComp->SetRelativeRotation(InterpolatedRotation);
 					
 					// 천장 모드이고 보간 완료 시 회전도 업데이트
 					if (bIsCeilingMode && Alpha >= 1.f)
@@ -198,6 +209,9 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 					float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
 					StartOffsetZ = CurrentOffsetZ;
 					
+					// 회전 보간 시작값 저장
+					FRotator CurrentMeshRotation = MeshComp->GetRelativeRotation();
+					
 					// 천장 높이 계산 (목표 오프셋)
 					UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
 					if (CapsuleComp)
@@ -217,10 +231,35 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 						{
 							const float DesiredActorZ = Hit.Location.Z - (CapsuleHalfHeight + CeilingOffset);
 							TargetOffsetZ = DesiredActorZ - CurrentLoc.Z;
+							
+							// 목표 회전 계산 (축 정렬 방식)
+							FVector NormalizedNormal = Hit.Normal.GetSafeNormal();
+							FVector TargetUp = NormalizedNormal; // 천장 Normal (아래) = Mesh Head (아래)
+
+							FVector ActorForward = OwnerCharacter->GetActorForwardVector();
+							FVector TargetForward = FVector::VectorPlaneProject(ActorForward, TargetUp);
+							if (TargetForward.IsNearlyZero())
+							{
+								TargetForward = OwnerCharacter->GetActorUpVector();
+							}
+							TargetForward.Normalize();
+
+							FRotator TargetWorldRot = FRotationMatrix::MakeFromZX(TargetUp, TargetForward).Rotator();
+							FTransform ActorTransform = OwnerCharacter->GetActorTransform();
+							FRotator TargetRelativeRot = ActorTransform.InverseTransformRotation(TargetWorldRot.Quaternion()).Rotator();
+							
+							TargetRelativeRot.Yaw += InitialMeshRotation.Yaw;
+
+							// 목표 회전 저장 (보간용)
+							LastCeilingNormalRotation = TargetRelativeRot;
 						}
 						else
 						{
 							TargetOffsetZ = CurrentOffsetZ; // 천장이 없으면 보간 안 함
+							// 기본 180도 회전만 적용
+							FRotator TargetMeshRotation = InitialMeshRotation;
+							TargetMeshRotation.Pitch += 180.f;
+							LastCeilingNormalRotation = TargetMeshRotation;
 						}
 					}
 					
@@ -238,16 +277,24 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 					
 					bIsTransitioning = true;
 					TransitionStartTime = GetWorld()->GetTimeSeconds() + TransitionStartDelay;
+					
+					// 보간 시작 시점에 즉시 기본 회전 적용 (180도 뒤집기)
+					FRotator ImmediateRotation = InitialMeshRotation;
+					ImmediateRotation.Pitch += 180.f;
+					MeshComp->SetRelativeRotation(ImmediateRotation);
 				}
 			}
 			else
 			{
 				// 바닥 모드 복귀: 보간으로 내려오기
-				if (MeshComp && bInitialLocationSaved)
+				if (MeshComp && bInitialLocationSaved && bInitialRotationSaved)
 				{
 					float CurrentOffsetZ = MeshComp->GetRelativeLocation().Z - InitialMeshRelativeLocation.Z;
 					StartOffsetZ = CurrentOffsetZ;
 					TargetOffsetZ = 0.f; // 바닥 = 오프셋 0
+					
+					// 목표 회전은 초기 회전 (바닥 모드)
+					LastCeilingNormalRotation = InitialMeshRotation;
 					
 					// 보간 시간 계산
 					if (TransitionInterpSpeed > 0.f)
@@ -507,36 +554,55 @@ void UAO_CeilingMoveComponent::UpdateCapsuleRotationToCeiling(const FVector& Cei
 		return;
 	}
 
-	// 천장 Normal이 거의 수평이면 기본 180도 회전만 적용
-	if (CeilingNormal.Z < -0.99f)
+	FVector NormalizedNormal = CeilingNormal.GetSafeNormal();
+	
+	// Normal 변화가 작으면 무시 (데드존)
+	if (!LastCeilingNormal.IsZero())
 	{
-		// 수평 천장: 초기 회전 + 180도만 적용
-		FRotator MeshRot = InitialMeshRotation;
-		MeshRot.Pitch += 180.f;
-		MeshComp->SetRelativeRotation(MeshRot);
-		return;
+		float NormalChange = FVector::Dist(NormalizedNormal, LastCeilingNormal);
+		if (NormalChange < NormalChangeThreshold)
+		{
+			// 변화가 작으면 이전 회전 유지
+			return;
+		}
 	}
+	LastCeilingNormal = NormalizedNormal;
 
-	// 기울어진 천장: 천장 Normal에 맞춰 추가 회전 계산
-	// 기본 Up 벡터에서 천장 Up 벡터로의 회전 계산
-	FVector DefaultUp = FVector::UpVector;
-	FVector CeilingUp = -CeilingNormal.GetSafeNormal();
-	
-	// 두 벡터 사이의 회전 쿼터니언 계산
-	FQuat RotationQuat = FQuat::FindBetweenNormals(DefaultUp, CeilingUp);
-	FRotator AdditionalRotation = RotationQuat.Rotator();
-	
-	// 초기 회전 + 180도 (거꾸로 매달림) + 천장 기울기 보정
-	FRotator FinalMeshRotation = InitialMeshRotation;
-	FinalMeshRotation.Pitch += 180.f;
-	
-	// 추가 회전을 부드럽게 보간
+	// 기울어진 천장 지원을 위한 "축 정렬(Axis Alignment)" 방식
+	// 목표: Mesh의 머리(Up)가 천장 Normal(아래)을 향하고, 
+	//       Mesh의 얼굴(Forward)이 캐릭터 진행 방향을 향하도록 회전 계산.
+
+	// 1. 월드 기준 목표 Up 벡터 (천장 Normal은 아래를 향함 -> Mesh 머리 방향)
+	FVector TargetUp = NormalizedNormal;
+
+	// 2. 월드 기준 목표 Forward 벡터 (캐릭터 진행 방향을 천장 평면에 투영)
+	FVector ActorForward = OwnerCharacter->GetActorForwardVector();
+	FVector TargetForward = FVector::VectorPlaneProject(ActorForward, TargetUp);
+	if (TargetForward.IsNearlyZero())
+	{
+		// 수직 천장 등 예외 상황: Actor Up 벡터를 Forward로 사용
+		TargetForward = OwnerCharacter->GetActorUpVector();
+	}
+	TargetForward.Normalize();
+
+	// 3. 월드 기준 목표 회전 행렬 생성 (MakeFromZX: Z=Up, X=Forward)
+	//    이렇게 하면 Mesh의 머리가 아래(TargetUp)로, 얼굴이 진행방향(TargetForward)으로 향함
+	FRotator TargetWorldRot = FRotationMatrix::MakeFromZX(TargetUp, TargetForward).Rotator();
+
+	// 4. 월드 회전을 로컬(Relative) 회전으로 변환
+	//    Character Actor 자체도 회전(Yaw)하고 있으므로 InverseTransform 필요
+	FTransform ActorTransform = OwnerCharacter->GetActorTransform();
+	FRotator TargetRelativeRot = ActorTransform.InverseTransformRotation(TargetWorldRot.Quaternion()).Rotator();
+
+	// 5. Mesh의 초기 회전 오프셋 보정 (예: 마네킹은 -90도 돌아가 있음)
+	//    InitialMeshRotation의 Yaw값을 더해줌
+	TargetRelativeRot.Yaw += InitialMeshRotation.Yaw;
+	//    InitialMeshRotation의 Z값(Height) 보정이 필요할 수도 있으나 회전만 다룸
+
+	// 부드러운 회전 보간
 	FRotator CurrentMeshRotation = MeshComp->GetRelativeRotation();
-	FRotator TargetRotation = FinalMeshRotation + AdditionalRotation;
-	
-	// 부드러운 회전 보간 (회전 속도 조절 가능)
-	float RotationSpeed = 5.f;
-	FRotator InterpolatedRotation = FMath::RInterpTo(CurrentMeshRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), RotationSpeed);
+	FRotator InterpolatedRotation = FMath::RInterpTo(CurrentMeshRotation, TargetRelativeRot, GetWorld()->GetDeltaSeconds(), RotationInterpSpeed);
 	
 	MeshComp->SetRelativeRotation(InterpolatedRotation);
+	LastCeilingNormalRotation = TargetRelativeRot;
 }
