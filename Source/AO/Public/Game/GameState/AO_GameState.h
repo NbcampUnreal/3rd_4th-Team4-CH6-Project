@@ -9,6 +9,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSharedReviveCountChanged, int32, NewCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStageFailed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameCleared);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHintChangedSignature, int32, NewHintNum);
 
 /**
  * 
@@ -110,15 +111,23 @@ public:
 	
 	//ms : 선발대 흔적 확인
 	UPROPERTY(Replicated)
-	bool bHint1 = false;
+	bool bHint1;
 	UPROPERTY(Replicated)
-	bool bHint2 = false;
+	bool bHint2;
 	UPROPERTY(Replicated)
-	bool bHint3 = false;
+	bool bHint3;
 
 	UFUNCTION(BlueprintCallable)
 	void FindHint(int32 Num);
+	UFUNCTION(BlueprintCallable)
 	bool CheckHintCount();
-	int32 CurrentFindHintNum = 0;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_HintCount, BlueprintReadWrite)
+	int32 CurrentFindHintNum;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FHintChangedSignature OnHintCountChanged;
+	UFUNCTION()
+	void OnRep_HintCount();
 	//-ms
 };

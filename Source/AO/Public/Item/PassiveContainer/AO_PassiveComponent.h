@@ -20,6 +20,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
 	TSubclassOf<UGameplayEffect> MaxHpPassive;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
+	TSubclassOf<UGameplayEffect> AddHpPassive;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Passive")
 	TSubclassOf<UGameplayEffect> MaxStaminaPassive;

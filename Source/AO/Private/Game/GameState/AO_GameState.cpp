@@ -13,6 +13,10 @@ AAO_GameState::AAO_GameState()
 	GameStartTime = 0;
 	GameEndTime = 0;
 	TeamDeathCount = 0;
+	CurrentFindHintNum = 0;
+	bHint1 = false;
+	bHint2 = false;
+	bHint3 = false;
 }
 
 void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -22,6 +26,11 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
 	DOREPLIFETIME(AAO_GameState, bIsStageFailed);
 	DOREPLIFETIME(AAO_GameState, RunResetTrigger); // ms:패시브 초기화
+	//ms : 선발대 흔적 서버 전달
+	DOREPLIFETIME(AAO_GameState, CurrentFindHintNum);
+	DOREPLIFETIME(AAO_GameState, bHint1);
+	DOREPLIFETIME(AAO_GameState, bHint2);
+	DOREPLIFETIME(AAO_GameState, bHint3);
 }
 
 void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -317,28 +326,45 @@ void AAO_GameState::FindHint(int32 Num)
 {
 	if (!HasAuthority()) return;
 	
+	bool bValueUpdated = false;
 	switch (Num)
 	{
 	case 1:
-		if (bHint1 == false)
-		bHint1 = true;
-		CurrentFindHintNum++;
+		if (bHint1 == false) { 
+			bHint1 = true;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
 		break;
 	case 2:
-		if (bHint2 == false)
+		if (bHint2 == false) {
 			bHint2 = true;
-		CurrentFindHintNum++;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
+		break;
 	case 3:
-		if (bHint3 == false)
+		if (bHint3 == false) {
 			bHint3 = true;
-		CurrentFindHintNum++;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
+		break;
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
+
+	if (bValueUpdated)
+	{
+		OnRep_HintCount();
+	}
 }
 
 bool AAO_GameState::CheckHintCount()
 {
 	return bHint1 || bHint2 || bHint3;
+}
+
+void AAO_GameState::OnRep_HintCount()
+{
+	OnHintCountChanged.Broadcast(CurrentFindHintNum);
 }
 //-ms
