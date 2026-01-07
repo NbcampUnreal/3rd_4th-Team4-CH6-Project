@@ -14,11 +14,6 @@ class AO_API UAO_GameplayCueNotify_Burst_DamageVolume : public UGameplayCueNotif
 protected:
 	virtual bool OnExecute_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const override;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Sound")
-	float MinInterval = 1.f;
-
-	mutable double LastPlayTime = -1e9;
-
 private:
 	void PlayDamageReactSound(AActor* Target) const;
 };

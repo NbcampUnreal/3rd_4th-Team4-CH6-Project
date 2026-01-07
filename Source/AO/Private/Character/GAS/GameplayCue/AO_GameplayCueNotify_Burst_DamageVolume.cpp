@@ -4,7 +4,9 @@
 #include "Character/GAS/GameplayCue/AO_GameplayCueNotify_Burst_DamageVolume.h"
 
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "Character/Sound/AO_PlayerSoundSubsystem.h"
+#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 
 bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* MyTarget,
@@ -23,21 +25,7 @@ bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* 
 			return false;
 		}
 	}
-
-	UWorld* World = MyTarget->GetWorld();
-	if (!World)
-	{
-		return false;
-	}
-
-	// 특정 시간이 지나지 않으면 사운드 재생하지 않음
-	const double Now = World->GetTimeSeconds();
-	if (Now - LastPlayTime <= MinInterval)
-	{
-		return false;
-	}
-	LastPlayTime = Now;
-
+	
 	PlayDamageReactSound(MyTarget);
 	return true;
 }
@@ -65,6 +53,15 @@ void UAO_GameplayCueNotify_Burst_DamageVolume::PlayDamageReactSound(AActor* Targ
 		if (bIsLocal)
 		{
 			UGameplayStatics::PlaySound2D(Target, DamageReactSound);
+			return;
+		}
+	}
+
+	if (ACharacter* Character = Cast<ACharacter>(Target))
+	{
+		if (USkeletalMeshComponent* MeshComp = Character->GetMesh())
+		{
+			UGameplayStatics::SpawnSoundAttached(DamageReactSound, MeshComp, NAME_None);
 			return;
 		}
 	}

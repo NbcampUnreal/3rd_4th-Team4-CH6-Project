@@ -22,8 +22,6 @@ void UAO_GameplayCueNotify_Burst_Death::PlayDeathSound(AActor* Target) const
 {
 	UGameInstance* GI = Target->GetGameInstance();
 	checkf(GI, TEXT("Failed to get GI"));
-
-	AO_LOG(LogKH, Log, TEXT("Play Death Sound"));
 	
 	UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>();
 	checkf(SoundSubsystem, TEXT("Failed to get SoundSubsystem"));
