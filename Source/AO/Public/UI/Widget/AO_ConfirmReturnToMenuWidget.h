@@ -21,6 +21,7 @@ class AO_API UAO_ConfirmReturnToMenuWidget : public UAO_UserWidget
 	
 public:
 	virtual void NativeOnInitialized() override;
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category="Confirm")
@@ -30,14 +31,15 @@ public:
 	FOnCancelLeaveToMenu OnCancelLeaveToMenu;
 
 protected:
-	UPROPERTY(meta = (BindWidget))
+	/* WBP Application Btn 으로 수정 (JM)
+	 *UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Confirm;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Cancel;
 
 	UPROPERTY(meta = (BindWidget, OptionalWidget = true))
-	UTextBlock* Txt_Message;
+	UTextBlock* Txt_Message; */
 
 protected:
 	UFUNCTION(BlueprintCallable, meta = (BindWidget))

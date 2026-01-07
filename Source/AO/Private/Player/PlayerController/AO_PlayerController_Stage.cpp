@@ -190,6 +190,7 @@ void AAO_PlayerController_Stage::RequestSpectate()
 		HUDWidget->RemoveFromParent();
 	}
 
+	
 	FInputModeGameAndUI InputMode;
 	if (SpectateWidget)
 	{
@@ -199,7 +200,7 @@ void AAO_PlayerController_Stage::RequestSpectate()
 	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
-	
+
 	if (APawn* P = GetPawn())
 	{
 		P->DisableInput(this);
@@ -211,17 +212,16 @@ void AAO_PlayerController_Stage::RequestSpectate()
 	}
 
 	ServerRPC_RequestSpectate();
+	/*FInputModeGameAndUI InputMode;
+	InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetHideCursorDuringCapture(false);
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
 
-	//FInputModeGameAndUI InputMode;
-	//InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
-	//InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	//InputMode.SetHideCursorDuringCapture(false);
-	//SetInputMode(InputMode);
-	//bShowMouseCursor = true;
-
-	//GetPawn()->DisableInput(this);
+	GetPawn()->DisableInput(this);
 	
-	//ServerRPC_RequestSpectate();
+	ServerRPC_RequestSpectate();*/
 }
 
 void AAO_PlayerController_Stage::RequestSpectateNext(bool bForward)
