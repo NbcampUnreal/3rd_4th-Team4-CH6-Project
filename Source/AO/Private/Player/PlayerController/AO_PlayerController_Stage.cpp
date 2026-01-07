@@ -79,46 +79,44 @@ void AAO_PlayerController_Stage::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if (IsLocalPlayerController())
+	if (!IsLocalPlayerController())
 	{
-		if (HUDWidget)
-		{
-			HUDWidget->RemoveFromParent();
-			HUDWidget = nullptr;
-		}
-	
-		if (HUDWidgetClass)
-		{
-			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-			if (HUDWidget)
-			{
-				HUDWidget->AddToViewport();
-			}
-		}
+		return;
 	}
+
+	if (bIsSpectating)
+	{
+		EnsureSpectateCameraActor();
+		if (SpectateCameraActor)
+		{
+			SetViewTarget(SpectateCameraActor);
+		}
+		return;
+	}
+	
+	RebuildDefaultHUD();
 }
 
 void AAO_PlayerController_Stage::OnRep_Pawn()
 {
 	Super::OnRep_Pawn();
 	
-	if (IsLocalPlayerController())
+	if (!IsLocalPlayerController())
 	{
-		if (HUDWidget)
-		{
-			HUDWidget->RemoveFromParent();
-			HUDWidget = nullptr;
-		}
-	
-		if (HUDWidgetClass)
-		{
-			HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-			if (HUDWidget)
-			{
-				HUDWidget->AddToViewport();
-			}
-		}
+		return;
 	}
+
+	if (bIsSpectating)
+	{
+		EnsureSpectateCameraActor();
+		if (SpectateCameraActor)
+		{
+			SetViewTarget(SpectateCameraActor);
+		}
+		return;
+	}
+
+	RebuildDefaultHUD();
 }
 
 void AAO_PlayerController_Stage::Server_RequestStageExit_Implementation()
@@ -324,20 +322,7 @@ void AAO_PlayerController_Stage::StopSpectate(EAO_SpectateEndReason Reason)
 	{
 	case EAO_SpectateEndReason::Revived:
 		{
-			if (HUDWidget)
-			{
-				HUDWidget->RemoveFromParent();
-				HUDWidget = nullptr;
-			}
-			
-			if (HUDWidgetClass)
-			{
-				HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-				if (HUDWidget)
-				{
-					HUDWidget->AddToViewport();
-				}
-			}
+			RebuildDefaultHUD();
 
 			FInputModeGameOnly InputMode;
 			SetInputMode(InputMode);
@@ -710,6 +695,24 @@ void AAO_PlayerController_Stage::ResetSpectateSmoothing()
 	TargetFOV = 90.f;
 }
 
+void AAO_PlayerController_Stage::RebuildDefaultHUD()
+{
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+		HUDWidget = nullptr;
+	}
+			
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+		if (HUDWidget)
+		{
+			HUDWidget->AddToViewport();
+		}
+	}
+}
+
 void AAO_PlayerController_Stage::Server_RequestRevive_Implementation()
 {
 	UWorld* World = GetWorld();
@@ -753,20 +756,7 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 	}
 	
 	// 2) HUD 위젯 완전히 갈아끼우기
-	if (HUDWidget)
-	{
-		HUDWidget->RemoveFromParent();
-		HUDWidget = nullptr;
-	}
-	
-	if (HUDWidgetClass)
-	{
-		HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-		if (HUDWidget)
-		{
-			HUDWidget->AddToViewport();
-		}
-	}
+	RebuildDefaultHUD();
 	
 	// 3) 입력 모드 복구
 	FInputModeGameOnly InputMode;
