@@ -67,6 +67,16 @@ protected:
 	/* 공용 부활 카운트와 큐 상태를 보고 자동 부활 처리 */
 	void TryAutoReviveFromQueue();
 	
+	// 자동 부활 대기 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Revive")
+	float AutoReviveDelaySeconds;
+
+	// 자동 부활용 타이머
+	FTimerHandle AutoReviveTimerHandle;
+
+	// 자동 부활 시도를 일정 시간 뒤에 호출하는 헬퍼
+	void ScheduleAutoRevive();
+	
 	/* 방 진행정보 초기화 */
 	void RollbackSessionInGameFlag();
 
