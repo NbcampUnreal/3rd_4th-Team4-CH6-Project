@@ -18,6 +18,9 @@
 AAO_GameMode_Stage::AAO_GameMode_Stage()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
+	
+	AutoReviveDelaySeconds = 5.0f;
+	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
 
@@ -356,7 +359,7 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 		}
 
 		// 죽은 시점에 공용 부활 카운트가 남아 있다면 즉시 자동 부활 시도
-		TryAutoReviveFromQueue();
+		ScheduleAutoRevive();;
 	}
 	
 	// JM : 캐릭터 생존 상태 변경 시, 모든 플레이어의 보이스 채팅 Mute 상태 업데이트 (논리적 분리)
@@ -688,6 +691,34 @@ void AAO_GameMode_Stage::TryAutoReviveFromQueue()
 		TEXT("TryAutoReviveFromQueue: End. QueueSize=%d, SharedRevive=%d"),
 		PendingReviveQueue.Num(),
 		AO_GI->GetSharedReviveCount()
+	);
+}
+
+void AAO_GameMode_Stage::ScheduleAutoRevive()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	if (AutoReviveDelaySeconds <= 0.0f)
+	{
+		// 딜레이 0 이하이면 기존처럼 즉시 자동 부활
+		TryAutoReviveFromQueue();
+		return;
+	}
+
+	// 매번 새로 설정해도 큰 문제는 없지만,
+	// 혹시 이전 타이머가 있으면 한 번 정리
+	GetWorldTimerManager().ClearTimer(AutoReviveTimerHandle);
+
+	GetWorldTimerManager().SetTimer
+	(
+		AutoReviveTimerHandle,
+		this,
+		&AAO_GameMode_Stage::TryAutoReviveFromQueue,
+		AutoReviveDelaySeconds,
+		false
 	);
 }
 
