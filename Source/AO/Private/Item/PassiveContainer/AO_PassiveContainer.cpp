@@ -4,6 +4,7 @@
 #include "Abilities/GameplayAbilityTypes.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Interaction/Component/AO_InteractableComponent.h"
+#include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -125,12 +126,23 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 
 	for (AActor* Player : Players)
 	{
-		if (!Player) continue;
+		AAO_PlayerCharacter* Character = Cast<AAO_PlayerCharacter>(Player);
+		if (!Character) continue;
 
-		UAbilitySystemComponent* PlayerASC = Player->FindComponentByClass<UAbilitySystemComponent>();
+		UAbilitySystemComponent* PlayerASC = Character->GetAbilitySystemComponent();
 		if (PlayerASC)
 		{
+			// 1. 현재 살아있는 캐릭터에게 즉시 적용
 			PlayerASC->HandleGameplayEvent(ActivationEventTag, &EventData);
+
+			// 2. 서브시스템에 기록 (나중에 죽고 부활했을 때를 위해)
+			if (APlayerController* PC = Cast<APlayerController>(Character->GetController()))
+			{
+				if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
+				{
+					Subsystem->RecordPassiveUpgrade(PC, ActivationEventTag, AddPassive);
+				}
+			}
 		}
 	}
 	
