@@ -21,16 +21,19 @@ AAO_TrainDoor::AAO_TrainDoor(const FObjectInitializer& ObjectInitializer)
     DoorMesh->SetCollisionResponseToAllChannels(ECR_Block);
 
     bIsToggleable = true;
-    InteractionTitle = FText::FromString(TEXT("열차 문"));
-    InteractionContent = FText::FromString(TEXT("열기/닫기"));
+    InteractionTitle = FText::FromString(TEXT("Door"));
+    InteractionContent = FText::FromString(TEXT("Open/Close"));
 }
 
 void AAO_TrainDoor::BeginPlay()
 {
     Super::BeginPlay();
     
-    ClosedRotation = GetActorRotation();
-    OpenedRotation = ClosedRotation + FRotator(0.0f, TargetRotationYaw, 0.0f);
+    // 시작 위치 저장
+    ClosedLocation = GetActorLocation();
+    
+    // 로컬 좌표 기준 Offset을 월드 좌표로 변환하여 목표 위치 계산
+    OpenedLocation = ClosedLocation + GetActorQuat().RotateVector(SlideOffset);
 
     bDoorOpen = false;
 }
@@ -39,14 +42,16 @@ void AAO_TrainDoor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    FRotator TargetRot = bDoorOpen ? OpenedRotation : ClosedRotation;
+    // 목표 위치 설정
+    FVector TargetLoc = bDoorOpen ? OpenedLocation : ClosedLocation;
+    FVector CurrentLoc = GetActorLocation();
     
-    FRotator CurrentRot = GetActorRotation();
-    
-    if (!CurrentRot.Equals(TargetRot, 0.01f))
+    // 현재 위치가 목표 위치와 차이가 있다면 이동
+    if (!CurrentLoc.Equals(TargetLoc, 0.1f))
     {
-        FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, RotationSpeed);
-        SetActorRotation(NewRot);
+        // VInterpTo를 사용하여 부드러운 슬라이딩 구현
+        FVector NewLoc = FMath::VInterpTo(CurrentLoc, TargetLoc, DeltaTime, SlideSpeed);
+        SetActorLocation(NewLoc);
     }
 }
 
@@ -69,11 +74,13 @@ void AAO_TrainDoor::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
     
     bDoorOpen = !bDoorOpen;
     
+    // 서버에서도 소리 재생
     PlayDoorSound();
 }
 
 void AAO_TrainDoor::OnRep_DoorState()
 {
+    // 클라이언트에서 상태 변동 시 소리 재생
     PlayDoorSound();
 }
 

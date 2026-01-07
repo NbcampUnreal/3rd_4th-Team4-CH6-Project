@@ -29,23 +29,25 @@ private:
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> DoorMesh;
-	
+
+	//거리
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="TrainDoor")
-	float TargetRotationYaw = -90.0f;
-	
+	FVector SlideOffset = FVector(-100.0f, 0.0f, 0.0f);
+
+	//속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="TrainDoor")
-	float RotationSpeed = 3.0f;
+	float SlideSpeed = 4.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="TrainDoor")
 	TObjectPtr<USoundBase> DoorOpenSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="TrainDoor")
 	TObjectPtr<USoundBase> DoorCloseSound;
-	
+    
 	UPROPERTY(ReplicatedUsing=OnRep_DoorState, BlueprintReadOnly, Category="TrainDoor")
 	bool bDoorOpen = false;
 
 private:
-	FRotator ClosedRotation;
-	FRotator OpenedRotation;
+	FVector ClosedLocation;
+	FVector OpenedLocation;
 };
