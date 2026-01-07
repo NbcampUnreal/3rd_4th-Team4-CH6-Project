@@ -1,5 +1,6 @@
 #include "Public/Item/inventory/AO_InventoryComponent.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "Public/Item/inventory/AO_InventorySubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
@@ -110,46 +111,56 @@ int32 UAO_InventoryComponent::FindEmptySlotIndex() const
 void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AActor* Instigator)
 {
     if (GetOwnerRole() != ROLE_Authority) return;
-	
+    
     int32 TargetIndex = FindEmptySlotIndex();
-	
+    bool bPickupSuccess = false;
+
     if (TargetIndex != INDEX_NONE)
     {
         Slots[TargetIndex] = IncomingItem;
-        if (Instigator) 
-        {
-            Instigator->Destroy();
-        }
+        bPickupSuccess = true;
     }
-    else
+    else if (IsValidSlotIndex(SelectedSlotIndex))
     {
-        if (IsValidSlotIndex(SelectedSlotIndex))
+        FInventorySlot OldSlot = Slots[SelectedSlotIndex];
+        Slots[SelectedSlotIndex] = IncomingItem;
+        
+        FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
+        FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
+        AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
+             DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
+             SpawnTransform,
+             GetOwner(),
+             nullptr,
+             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+        );
+        bPickupSuccess = true;
+    }
+
+    if (bPickupSuccess && Instigator)
+    {
+        if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Instigator))
         {
-            FInventorySlot OldSlot = Slots[SelectedSlotIndex];
-            Slots[SelectedSlotIndex] = IncomingItem;
-        	
-            FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
-            FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
-
-            AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
-                 DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
-                 SpawnTransform,
-                 GetOwner(),
-                 nullptr,
-                 ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
-            );
-
-            if (DropItem)
+            if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
             {
-                DropItem->ItemID = OldSlot.ItemID;
-                UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
-            }
-        	
-            if (Instigator)
-            {
-                Instigator->Destroy();
+                //시체 ASC에서 death ability 종료시키는 로직
+                TArray<FGameplayAbilitySpecHandle> AllAbilities;
+                for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+                {
+                    AllAbilities.Add(Spec.Handle);
+                }
+
+                for (const FGameplayAbilitySpecHandle& Handle : AllAbilities)
+                {
+                    ASC->CancelAbilityHandle(Handle);
+                    ASC->ClearAbility(Handle);
+                }
             }
         }
+        Instigator->SetActorHiddenInGame(true);
+        Instigator->SetActorEnableCollision(false);
+        Instigator->SetLifeSpan(0.1f); 
     }
     
     NotifyListeners();
