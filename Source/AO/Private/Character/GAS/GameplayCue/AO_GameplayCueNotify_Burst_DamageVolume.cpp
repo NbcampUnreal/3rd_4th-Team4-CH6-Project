@@ -3,12 +3,9 @@
 
 #include "Character/GAS/GameplayCue/AO_GameplayCueNotify_Burst_DamageVolume.h"
 
+#include "AbilitySystemComponent.h"
 #include "Character/Sound/AO_PlayerSoundSubsystem.h"
 #include "Kismet/GameplayStatics.h"
-
-UAO_GameplayCueNotify_Burst_DamageVolume::UAO_GameplayCueNotify_Burst_DamageVolume()
-{
-}
 
 bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* MyTarget,
 	const FGameplayCueParameters& Parameters) const
@@ -16,6 +13,15 @@ bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* 
 	if (!MyTarget)
 	{
 		return false;
+	}
+
+	// 사망 시에는 사망 소리 재생
+	if (UAbilitySystemComponent* ASC = MyTarget->FindComponentByClass<UAbilitySystemComponent>())
+	{
+		if (ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death"))))
+		{
+			return false;
+		}
 	}
 
 	UWorld* World = MyTarget->GetWorld();
