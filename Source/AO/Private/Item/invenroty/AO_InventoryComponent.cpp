@@ -127,7 +127,7 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
         
         FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
         FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
-
+        
         AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
              DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
              SpawnTransform,
@@ -135,16 +135,21 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
              nullptr,
              ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
         );
+
+        if (DropItem)
+        {
+            DropItem->ItemID = OldSlot.ItemID; 
+            UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
+        }
+
         bPickupSuccess = true;
     }
-
     if (bPickupSuccess && Instigator)
     {
         if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Instigator))
         {
             if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
             {
-                //시체 ASC에서 death ability 종료시키는 로직
                 TArray<FGameplayAbilitySpecHandle> AllAbilities;
                 for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
                 {

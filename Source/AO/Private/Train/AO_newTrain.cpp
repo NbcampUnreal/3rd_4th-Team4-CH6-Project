@@ -41,6 +41,7 @@ void AAO_newTrain::BeginPlay()
 		{
 			ASC->GiveAbility(FGameplayAbilitySpec(LeakEnergyAbilityClass, 1, 0));
 		}
+		FuelLeakSkillOn();
 	}
 	if (UWorld* World = GetWorld())
 	{

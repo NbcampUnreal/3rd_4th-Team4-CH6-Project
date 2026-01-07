@@ -37,7 +37,6 @@ bool UAO_GameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHa
 		if (OptionalRelevantTags)
 		{
 			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
-			AO_LOG(LogKH, Warning, TEXT("Sprint Ability Failed: NotEnoughStamina"));
 		}
 		return false;
 	}

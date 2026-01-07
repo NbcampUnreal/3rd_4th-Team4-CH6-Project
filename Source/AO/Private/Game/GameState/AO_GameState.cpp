@@ -3,6 +3,7 @@
 #include "Net/UnrealNetwork.h"
 #include "AO_Log.h"
 #include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_GameState::AAO_GameState()
@@ -13,6 +14,10 @@ AAO_GameState::AAO_GameState()
 	GameStartTime = 0;
 	GameEndTime = 0;
 	TeamDeathCount = 0;
+	CurrentFindHintNum = 0;
+	bHint1 = false;
+	bHint2 = false;
+	bHint3 = false;
 }
 
 void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -22,6 +27,11 @@ void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAO_GameState, SharedReviveCount);
 	DOREPLIFETIME(AAO_GameState, bIsStageFailed);
 	DOREPLIFETIME(AAO_GameState, RunResetTrigger); // ms:패시브 초기화
+	//ms : 선발대 흔적 서버 전달
+	DOREPLIFETIME(AAO_GameState, CurrentFindHintNum);
+	DOREPLIFETIME(AAO_GameState, bHint1);
+	DOREPLIFETIME(AAO_GameState, bHint2);
+	DOREPLIFETIME(AAO_GameState, bHint3);
 }
 
 void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -295,6 +305,73 @@ int32 AAO_GameState::GetSharedReviveCount() const
 	return SharedReviveCount;
 }
 
+
+void AAO_GameState::AddSharedReviveCount(int32 Delta)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	const int32 OldValue = SharedReviveCount;
+
+	int32 NewValue = SharedReviveCount + Delta;
+	if (NewValue < 0)
+	{
+		NewValue = 0;
+	}
+
+	// SetSharedReviveCount 안에서 Rep / OnRep / 로그 처리
+	SetSharedReviveCount(NewValue);
+
+	// GI 값도 같이 맞춰줌 (GI는 "저장"만 담당)
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		GI->SharedReviveCount = SharedReviveCount;
+	}
+
+	// 값이 증가한 경우에만 Stage GameMode에 알림 (기존 GI 로직 이관)
+	if (SharedReviveCount > OldValue)
+	{
+		UWorld* World = GetWorld();
+		if (World != nullptr)
+		{
+			AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+			if (StageGM != nullptr)
+			{
+				StageGM->HandleSharedReviveCountIncreased();
+			}
+		}
+	}
+}
+
+bool AAO_GameState::TryConsumeSharedReviveCount()
+{
+	if (HasAuthority() == false)
+	{
+		return false;
+	}
+
+	if (SharedReviveCount <= 0)
+	{
+		return false;
+	}
+
+	const int32 NewValue = SharedReviveCount - 1;
+
+	// SetSharedReviveCount 를 통해 Rep / OnRep / 로그 처리
+	SetSharedReviveCount(NewValue);
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		GI->SharedReviveCount = SharedReviveCount;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("GS: Consume revive -> %d left"), SharedReviveCount);
+
+	return true;
+}
+
 //ms: 패시브 초기화
 void AAO_GameState::Authority_NotifyGlobalReset()
 {
@@ -317,28 +394,45 @@ void AAO_GameState::FindHint(int32 Num)
 {
 	if (!HasAuthority()) return;
 	
+	bool bValueUpdated = false;
 	switch (Num)
 	{
 	case 1:
-		if (bHint1 == false)
-		bHint1 = true;
-		CurrentFindHintNum++;
+		if (bHint1 == false) { 
+			bHint1 = true;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
 		break;
 	case 2:
-		if (bHint2 == false)
+		if (bHint2 == false) {
 			bHint2 = true;
-		CurrentFindHintNum++;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
+		break;
 	case 3:
-		if (bHint3 == false)
+		if (bHint3 == false) {
 			bHint3 = true;
-		CurrentFindHintNum++;
+			CurrentFindHintNum++;
+			bValueUpdated = true;
+		}
+		break;
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
+
+	if (bValueUpdated)
+	{
+		OnRep_HintCount();
+	}
 }
 
 bool AAO_GameState::CheckHintCount()
 {
-	return bHint1 || bHint2 || bHint3;
+	return bHint1 && bHint2 && bHint3;
+}
+
+void AAO_GameState::OnRep_HintCount()
+{
+	OnHintCountChanged.Broadcast(CurrentFindHintNum);
 }
 //-ms

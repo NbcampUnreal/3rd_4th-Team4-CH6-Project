@@ -11,6 +11,7 @@ enum class EAO_StageInteractType : uint8
 {
 	ExitToNextArea UMETA(DisplayName="ExitToNextArea"),
 	ExitToLobby    UMETA(DisplayName="ExitToLobby"),
+	Tutorial       UMETA(DisplayName="Tutorial"),
 	// 추후: ActivateEvent, OpenDoor 등 추가 가능
 };
 
@@ -34,4 +35,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Stage")
 	float RequiredFuel = 20.0f;
+
+	UPROPERTY(EditAnywhere, Category="Stage", meta=(EditCondition="InteractType==EAO_StageInteractType::Tutorial", EditConditionHides))
+	FName TutorialExitLevelName = TEXT("LV_MainMenu");
 };
