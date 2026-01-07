@@ -3,6 +3,7 @@
 #include "AI/Controller/AO_AIControllerBase.h"
 #include "AI/Base/AO_AICharacterBase.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
+#include "AI/Subsystem/AO_AISubsystem.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Player/PlayerState/AO_PlayerState.h"
 #include "Perception/AIPerceptionComponent.h"
@@ -19,6 +20,9 @@ AAO_AIControllerBase::AAO_AIControllerBase()
 
 	// State Tree 컴포넌트 생성
 	StateTreeComponent = CreateDefaultSubobject<UStateTreeAIComponent>(TEXT("StateTreeComponent"));
+
+	// 기본적으로 시체 타겟팅 불가
+	bCanTargetDeadPlayer = false;
 }
 
 void AAO_AIControllerBase::BeginPlay()
@@ -145,6 +149,24 @@ void AAO_AIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus 
 					OnPlayerLost(Player, Stimulus.StimulusLocation);
 				}
 				return; 
+			}
+
+			// 이미 납치 중인 플레이어는 타겟팅하지 않음 (Insect 제외, Insect는 컨트롤러에서 오버라이드 됨)
+			if (UWorld* World = GetWorld())
+			{
+				if (UAO_AISubsystem* AISubsystem = World->GetSubsystem<UAO_AISubsystem>())
+				{
+					if (AISubsystem->IsPlayerBeingKidnapped(Player))
+					{
+						// 시야 목록에 있었다면 제거
+						if (PlayersInSight.Contains(Player))
+						{
+							PlayersInSight.Remove(Player);
+							OnPlayerLost(Player, Stimulus.StimulusLocation);
+						}
+						return;
+					}
+				}
 			}
 
 			if (Stimulus.WasSuccessfullySensed())
@@ -313,6 +335,18 @@ AAO_PlayerCharacter* AAO_AIControllerBase::GetNearestPlayerInSight() const
 			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
 			{
 				continue;
+			}
+
+			// 납치 중인 플레이어 확인 (더블 체크)
+			if (UWorld* World = GetWorld())
+			{
+				if (UAO_AISubsystem* AISubsystem = World->GetSubsystem<UAO_AISubsystem>())
+				{
+					if (AISubsystem->IsPlayerBeingKidnapped(WeakPlayer.Get()))
+					{
+						continue;
+					}
+				}
 			}
 
 			const float DistSq = FVector::DistSquared(ControlledPawn->GetActorLocation(), WeakPlayer->GetActorLocation());

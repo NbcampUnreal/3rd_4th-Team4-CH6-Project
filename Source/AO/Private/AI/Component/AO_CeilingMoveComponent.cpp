@@ -331,7 +331,7 @@ bool UAO_CeilingMoveComponent::CheckCeilingAvailability() const
 	UCapsuleComponent* CapsuleComp = OwnerCharacter->GetCapsuleComponent();
 	if (!CapsuleComp) return false;
 
-	// KSJ: 천장 감지 로직 개선 (SphereTrace + 디버그 라인)
+	// KSJ: 천장 감지 로직 개선 (SphereTrace)
 	
 	// 캡슐 상단 약간 아래에서 시작해서 위로 쏨 (캡슐에 가려지지 않게)
 	float CapsuleHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
@@ -358,7 +358,7 @@ bool UAO_CeilingMoveComponent::CheckCeilingAvailability() const
 		UEngineTypes::ConvertToTraceType(ECC_WorldStatic), // Trace Channel
 		false, // bTraceComplex
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration, // 디버그 라인 그리기 (화면 표시)
+		EDrawDebugTrace::None, // 디버그 라인 끔
 		Hit,
 		true, // IgnoreSelf
 		FLinearColor::Red, // No Hit Color

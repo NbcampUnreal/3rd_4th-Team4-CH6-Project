@@ -4,6 +4,7 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -113,6 +114,18 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 충돌 끔 (Insect와 겹치기 위해)
 	}
+
+	// 1-1. 메시 물리 시뮬레이션 비활성화 (Ragdoll 상태인 경우 필수)
+	if (USkeletalMeshComponent* Mesh = CurrentVictim->GetMesh())
+	{
+		Mesh->SetSimulatePhysics(false);
+		Mesh->SetCollisionProfileName(TEXT("NoCollision")); // 부착 중 충돌 방지
+		
+		// 래그돌로 인해 돌아가있을 수 있는 루트 본 등을 초기화
+		Mesh->AttachToComponent(CurrentVictim->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		Mesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator); // 캡슐 기준 정렬
+	}
+
 	if (UCharacterMovementComponent* MoveComp = CurrentVictim->GetCharacterMovement())
 	{
 		MoveComp->StopMovementImmediately();
@@ -223,6 +236,20 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			{
 				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 				Capsule->SetCollisionProfileName(TEXT("Ragdoll"));
+			}
+
+			// 사망 상태라면 다시 래그돌(물리) 활성화
+			if (USkeletalMeshComponent* Mesh = ReleasedPlayer->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
+				Mesh->SetSimulatePhysics(true);
+				
+				// 물리 힘을 조금 주어 자연스럽게 떨어지게 함
+				if (bThrow)
+				{
+					FVector ThrowDir = GetOwner()->GetActorForwardVector() + FVector::UpVector;
+					Mesh->AddImpulse(ThrowDir * 500.f, NAME_None, true);
+				}
 			}
 			
 			if (MoveComp)
