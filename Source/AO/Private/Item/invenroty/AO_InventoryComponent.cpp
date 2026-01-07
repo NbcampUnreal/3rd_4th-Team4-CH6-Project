@@ -117,20 +117,17 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 
     if (TargetIndex != INDEX_NONE)
     {
-        // 1. 빈 슬롯이 있는 경우: 단순히 추가
         Slots[TargetIndex] = IncomingItem;
         bPickupSuccess = true;
     }
     else if (IsValidSlotIndex(SelectedSlotIndex))
     {
-        // 2. 빈 슬롯이 없어 선택된 슬롯과 교체(Swap)하는 경우
         FInventorySlot OldSlot = Slots[SelectedSlotIndex];
         Slots[SelectedSlotIndex] = IncomingItem;
         
         FVector SpawnLocation = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 60.f;
         FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
-
-        // 지연 스폰 시작
+        
         AAO_MasterItem* DropItem = GetWorld()->SpawnActorDeferred<AAO_MasterItem>(
              DroppableItemClass ? DroppableItemClass.Get() : AAO_MasterItem::StaticClass(),
              SpawnTransform,
@@ -141,18 +138,12 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
 
         if (DropItem)
         {
-            // [복구된 로직] 밖으로 스폰되는 아이템에 기존 슬롯 정보(ID 등) 설정
             DropItem->ItemID = OldSlot.ItemID; 
-            // 필요한 경우 DropItem->ItemQuantity = OldSlot.Quantity; 등 추가
-            
-            // 스폰 마무리
             UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
         }
 
         bPickupSuccess = true;
     }
-
-    // 3. 습득 성공 시 처리 (Instigator 제거 및 GAS 정리)
     if (bPickupSuccess && Instigator)
     {
         if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Instigator))
@@ -172,8 +163,6 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
                 }
             }
         }
-        
-        // 즉시 삭제보다는 안전하게 LifeSpan 부여
         Instigator->SetActorHiddenInGame(true);
         Instigator->SetActorEnableCollision(false);
         Instigator->SetLifeSpan(0.1f); 
