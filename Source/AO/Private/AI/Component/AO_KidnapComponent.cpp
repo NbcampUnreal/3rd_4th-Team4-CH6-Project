@@ -120,10 +120,21 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	{
 		Mesh->SetSimulatePhysics(false);
 		Mesh->SetCollisionProfileName(TEXT("NoCollision")); // 부착 중 충돌 방지
-		
-		// 래그돌로 인해 돌아가있을 수 있는 루트 본 등을 초기화
-		Mesh->AttachToComponent(CurrentVictim->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-		Mesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator); // 캡슐 기준 정렬
+
+		// 사망 상태라면 메시 위치 초기화 (래그돌이었을 경우를 대비)
+		// 살아있는 플레이어는 애니메이션이 위치를 제어하므로 건드리지 않음 (방향 꼬임 방지)
+		bool bIsDead = false;
+		if (UAbilitySystemComponent* VictimASC = CurrentVictim->GetAbilitySystemComponent())
+		{
+			bIsDead = VictimASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
+		}
+
+		if (bIsDead)
+		{
+			// 래그돌로 인해 돌아가있을 수 있는 루트 본 등을 초기화
+			Mesh->AttachToComponent(CurrentVictim->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			Mesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator); // 캡슐 기준 정렬
+		}
 	}
 
 	if (UCharacterMovementComponent* MoveComp = CurrentVictim->GetCharacterMovement())
@@ -212,6 +223,12 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			{
 				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 				Capsule->SetCollisionProfileName(TEXT("Player"));
+			}
+			
+			// 메시 충돌 프로필 복구 (NoCollision -> CharacterMesh)
+			if (USkeletalMeshComponent* Mesh = ReleasedPlayer->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("CharacterMesh")); // 기본 캐릭터 메시 프로필로 복구
 			}
 			
 			if (MoveComp)
