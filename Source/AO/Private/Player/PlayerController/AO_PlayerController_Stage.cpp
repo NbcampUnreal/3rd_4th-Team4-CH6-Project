@@ -30,6 +30,7 @@
 AAO_PlayerController_Stage::AAO_PlayerController_Stage()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bPendingAutoRespawn = false;
 	
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -142,6 +143,12 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 {
 	if (!IsLocalController())
 	{
+		return;
+	}
+	
+	if (bPendingAutoRespawn)
+	{
+		// 자동 부활 대기 중이면 관전 UI 띄우지 않음
 		return;
 	}
 

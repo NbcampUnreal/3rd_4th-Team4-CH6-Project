@@ -146,6 +146,7 @@ private:
 public:
 	void StartRespawnCountdown(float InDelaySeconds);
 	void StopRespawnCountdown();
+	bool bPendingAutoRespawn;
 	
 public:
 	// 부활 요청 RPC
