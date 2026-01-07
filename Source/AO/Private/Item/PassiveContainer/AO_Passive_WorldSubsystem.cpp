@@ -1,96 +1,51 @@
 #include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
 #include "AbilitySystemComponent.h"
-#include "Character/GAS/AO_PlayerCharacter_AttributeSet.h"
 #include "GameFramework/PlayerState.h"
 
 FString UAO_Passive_WorldSubsystem::GetPlayerPersistentId(APlayerController* PC)
 {
     if (!PC || !PC->PlayerState) return FString(TEXT("InvalidPlayer"));
+    // 이름 외에 UniqueId를 쓰는 것이 멀티플레이에서 더 정확합니다.
     return PC->PlayerState->GetPlayerName();
 }
 
-void UAO_Passive_WorldSubsystem::SnapshotPlayerData(APlayerController* PC)
+void UAO_Passive_WorldSubsystem::RecordPassiveUpgrade(APlayerController* PC, FGameplayTag PassiveTag, float Amount)
 {
-    if (!PC || !PC->HasAuthority()) return;
+    if (!PC) return;
 
     FString PlayerId = GetPlayerPersistentId(PC);
-    APawn* Pawn = PC->GetPawn();
-    
-    if (!Pawn)
-    {
-        if (PlayerSnapshots.Contains(PlayerId))
-        {
-            return;
-        }
-        return;
-    }
+    FAO_PlayerPassiveData& Data = PlayerPassiveStats.FindOrAdd(PlayerId);
 
-    UAbilitySystemComponent* ASC = Pawn->FindComponentByClass<UAbilitySystemComponent>();
-    if (!ASC) return;
-    
-    FAO_PlayerGASSnapshot& Snapshot = PlayerSnapshots.FindOrAdd(PlayerId);
-    const UAO_PlayerCharacter_AttributeSet* AS = Cast<UAO_PlayerCharacter_AttributeSet>(ASC->GetAttributeSet(UAO_PlayerCharacter_AttributeSet::StaticClass()));
-    if (AS)
-    {
-        Snapshot.AttributeBaseValues.Add(TEXT("MaxHealth"), AS->GetMaxHealth());
-        Snapshot.AttributeBaseValues.Add(TEXT("Health"), AS->GetHealth());
-        Snapshot.AttributeBaseValues.Add(TEXT("MaxStamina"), AS->GetMaxStamina());
-        Snapshot.AttributeBaseValues.Add(TEXT("Stamina"), AS->GetStamina());
-    }
-    FGameplayEffectQuery UniversalQuery;
-    TArray<FActiveGameplayEffectHandle> ActiveHandles = ASC->GetActiveEffects(UniversalQuery);
-    
-    Snapshot.ActiveSpecs.Empty();
-    for (const FActiveGameplayEffectHandle& Handle : ActiveHandles)
-    {
-        const FActiveGameplayEffect* ActiveGE = ASC->GetActiveGameplayEffect(Handle);
-        if (ActiveGE && ActiveGE->Spec.Def->DurationPolicy != EGameplayEffectDurationType::Instant)
-        {
-            Snapshot.ActiveSpecs.Add(ActiveGE->Spec);
-        }
-    }
+    // 해당 태그의 누적 수치를 더해줌
+    float& CurrentTotal = Data.CumulativePassives.FindOrAdd(PassiveTag);
+    CurrentTotal += Amount;
 }
 
-void UAO_Passive_WorldSubsystem::RestorePlayerGASData(APlayerController* PC)
+void UAO_Passive_WorldSubsystem::ReapplyAllPassives(APlayerController* PC)
 {
     if (!PC || !PC->HasAuthority() || !PC->GetPawn()) return;
 
     FString PlayerId = GetPlayerPersistentId(PC);
-    if (!PlayerSnapshots.Contains(PlayerId)) return;
+    if (!PlayerPassiveStats.Contains(PlayerId)) return;
 
     UAbilitySystemComponent* ASC = PC->GetPawn()->FindComponentByClass<UAbilitySystemComponent>();
     if (!ASC) return;
 
-    FAO_PlayerGASSnapshot& Snapshot = PlayerSnapshots[PlayerId];
-    
-    if (UAO_PlayerCharacter_AttributeSet* AS = const_cast<UAO_PlayerCharacter_AttributeSet*>(
-        Cast<UAO_PlayerCharacter_AttributeSet>(ASC->GetAttributeSet(UAO_PlayerCharacter_AttributeSet::StaticClass()))))
+    FAO_PlayerPassiveData& Data = PlayerPassiveStats[PlayerId];
+
+    // 저장된 모든 패시브 레코드에 대해 다시 이벤트를 발생시켜 적용함
+    for (auto& Pair : Data.CumulativePassives)
     {
-        if (Snapshot.AttributeBaseValues.Contains(TEXT("MaxHealth")))
-        {
-            AS->SetMaxHealth(Snapshot.AttributeBaseValues[TEXT("MaxHealth")]);
-        }
+        FGameplayEventData EventData;
+        EventData.EventTag = Pair.Key;
+        EventData.EventMagnitude = Pair.Value; // 누적된 전체 값을 한 번에 전달
         
-        if (Snapshot.AttributeBaseValues.Contains(TEXT("MaxStamina")))
-        {
-            AS->SetMaxStamina(Snapshot.AttributeBaseValues[TEXT("MaxStamina")]);
-        }
-        
-        if (Snapshot.AttributeBaseValues.Contains(TEXT("Health")))
-        {
-            AS->SetHealth(Snapshot.AttributeBaseValues[TEXT("Health")]);
-        }
-        
-        if (Snapshot.AttributeBaseValues.Contains(TEXT("Stamina")))
-        {
-            AS->SetStamina(Snapshot.AttributeBaseValues[TEXT("Stamina")]);
-        }
+        // 캐릭터의 PassiveComponent가 이 이벤트를 받아 GE를 다시 적용하게 됨
+        ASC->HandleGameplayEvent(Pair.Key, &EventData);
     }
-    
-    PlayerSnapshots.Remove(PlayerId);
 }
 
 void UAO_Passive_WorldSubsystem::ClearAllPlayerData()
 {
-    PlayerSnapshots.Empty();
+    PlayerPassiveStats.Empty();
 }
