@@ -190,10 +190,12 @@ void AAO_PlayerController_Stage::RequestSpectate()
 	if (DeathWidget)
 	{
 		DeathWidget->RemoveFromParent();
+		DeathWidget = nullptr;
 	}
 	if (HUDWidget)
 	{
 		HUDWidget->RemoveFromParent();
+		HUDWidget = nullptr;
 	}
 	
 	FInputModeGameAndUI InputMode;
@@ -321,6 +323,26 @@ void AAO_PlayerController_Stage::StopSpectate(EAO_SpectateEndReason Reason)
 	switch (Reason)
 	{
 	case EAO_SpectateEndReason::Revived:
+		{
+			if (HUDWidget)
+			{
+				HUDWidget->RemoveFromParent();
+				HUDWidget = nullptr;
+			}
+			
+			if (HUDWidgetClass)
+			{
+				HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+				if (HUDWidget)
+				{
+					HUDWidget->AddToViewport();
+				}
+			}
+
+			FInputModeGameOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = false;
+		}
 		break;
 
 	case EAO_SpectateEndReason::NoValidTarget:
@@ -720,6 +742,7 @@ void AAO_PlayerController_Stage::Client_OnRevived_Implementation()
 	if (bIsSpectating)
 	{
 		RequestStopSpectate(EAO_SpectateEndReason::Revived);
+		return;
 	}
 	
 	// 1) Death UI 닫기
