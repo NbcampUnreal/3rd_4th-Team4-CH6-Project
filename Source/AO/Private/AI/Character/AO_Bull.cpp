@@ -4,6 +4,7 @@
 #include "AI/Controller/AO_BullController.h"
 #include "AI/Controller/AO_AggressiveAICtrl.h"
 #include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -15,6 +16,10 @@
 
 AAO_Bull::AAO_Bull()
 {
+	// 캡슐 콜리전 크기 설정 (4족 보행 대형 몬스터)
+	GetCapsuleComponent()->SetCapsuleHalfHeight(150.f);
+	GetCapsuleComponent()->SetCapsuleRadius(120.f);
+
 	// 충돌 박스 생성
 	ChargeCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ChargeCollisionBox"));
 	ChargeCollisionBox->SetupAttachment(GetRootComponent());

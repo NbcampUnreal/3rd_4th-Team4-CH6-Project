@@ -172,15 +172,21 @@ void AAO_PlayerController_Stage::RequestSpectate()
 		return;
 	}
 	
-	if (!SpectateWidget && SpectateWidgetClass)
-	{
-		SpectateWidget = CreateWidget<UUserWidget>(this, SpectateWidgetClass);
-	}
-
 	if (SpectateWidget)
 	{
-		SpectateWidget->AddToViewport();
+		SpectateWidget->RemoveFromParent();
+		SpectateWidget = nullptr;
 	}
+
+	if (SpectateWidgetClass)
+	{
+		SpectateWidget = CreateWidget<UUserWidget>(this, SpectateWidgetClass);
+		if (SpectateWidget)
+		{
+			SpectateWidget->AddToViewport();
+		}
+	}
+	
 	if (DeathWidget)
 	{
 		DeathWidget->RemoveFromParent();
@@ -189,16 +195,22 @@ void AAO_PlayerController_Stage::RequestSpectate()
 	{
 		HUDWidget->RemoveFromParent();
 	}
-
+	
 	FInputModeGameAndUI InputMode;
-	InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
+	if (SpectateWidget)
+	{
+		InputMode.SetWidgetToFocus(SpectateWidget->TakeWidget());
+	}
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
 
-	GetPawn()->DisableInput(this);
-	
+	if (APawn* P = GetPawn())
+	{
+		P->DisableInput(this);
+	}
+
 	ServerRPC_RequestSpectate();
 }
 
@@ -302,32 +314,13 @@ void AAO_PlayerController_Stage::StopSpectate(EAO_SpectateEndReason Reason)
 	if (SpectateWidget)
 	{
 		SpectateWidget->RemoveFromParent();
+		SpectateWidget = nullptr;
 	}
 
 	// 이유별 UI 처리
 	switch (Reason)
 	{
 	case EAO_SpectateEndReason::Revived:
-		{
-			if (HUDWidget)
-			{
-				HUDWidget->RemoveFromParent();
-				HUDWidget = nullptr;
-			}
-			
-			if (HUDWidgetClass)
-			{
-				HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
-				if (HUDWidget)
-				{
-					HUDWidget->AddToViewport();
-				}
-			}
-
-			FInputModeGameOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = false;
-		}
 		break;
 
 	case EAO_SpectateEndReason::NoValidTarget:

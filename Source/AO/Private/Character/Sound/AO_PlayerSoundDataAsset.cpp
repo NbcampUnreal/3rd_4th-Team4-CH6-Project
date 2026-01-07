@@ -3,13 +3,15 @@
 
 #include "Character/Sound/AO_PlayerSoundDataAsset.h"
 
-bool UAO_PlayerSoundDataAsset::TryGetSoundSet(ECharacterMesh MeshType, FCharacterSoundSet& OutSet) const
+USoundBase* UAO_PlayerSoundDataAsset::FindSound(ECharacterMesh MeshType, FGameplayTag SoundTag) const
 {
-	if (const FCharacterSoundSet* Found = SoundSetByMesh.Find(MeshType))
+	if (const FCharacterSoundSet* FoundSet = SoundSetByMesh.Find(MeshType))
 	{
-		OutSet = *Found;
-		return true;
+		if (const TObjectPtr<USoundBase>* Sound = FoundSet->Sounds.Find(SoundTag))
+		{
+			return Sound->Get();
+		}
 	}
 
-	return false;
+	return nullptr;
 }

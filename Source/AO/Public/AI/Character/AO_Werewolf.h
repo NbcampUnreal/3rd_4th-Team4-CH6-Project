@@ -27,7 +27,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
 	UAO_PackCoordComp* GetPackCoordComp() const { return PackCoordComp; }
 
+	// 공통 공격 인터페이스 오버라이드
+	virtual FEnemyAttackConfig GetCurrentAttackConfig_Implementation() const override;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Werewolf")
 	TObjectPtr<UAO_PackCoordComp> PackCoordComp;
+
+	// 공격 설정 (에디터에서 몽타주 지정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|Werewolf|Combat")
+	FEnemyAttackConfig AttackConfig;
 };

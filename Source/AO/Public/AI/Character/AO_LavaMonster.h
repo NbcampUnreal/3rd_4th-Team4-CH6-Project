@@ -6,6 +6,9 @@
 #include "AI/Base/AO_AggressiveAIBase.h"
 #include "AO_LavaMonster.generated.h"
 
+class UAudioComponent;
+class USoundAttenuation;
+
 /**
  * 용암 몬스터 공격 타입 열거형
  * 
@@ -117,13 +120,104 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster")
 	float GetMaxAttackRange() const;
 
+public:
+	// ===== 앰비언트 사운드 제어 =====
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	void StartAmbientSound();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	void StopAmbientSound();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	bool IsAmbientSoundPlaying() const;
+
+	// ===== 이동 사운드 제어 =====
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	void StartMovementSound();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	void StopMovementSound();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	bool IsMovementSoundPlaying() const;
+
+	// 현재 이동 속도 비율 (0~1) 가져오기
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
+	float GetNormalizedMovementSpeed() const;
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaTime) override;
 
 	// 기절 처리 오버라이드
 	virtual void HandleStunBegin() override;
 
+	// 이동 사운드 파라미터 업데이트 (Tick에서 호출)
+	void UpdateMovementSoundParameters();
+
 protected:
+	// ===== 오디오 설정 =====
+	
+	// 용암 앰비언트 사운드 (MetaSound Source 할당)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio")
+	TObjectPtr<USoundBase> LavaAmbientSound = nullptr;
+
+	// 사운드 감쇠 설정 (거리에 따른 볼륨 감소, 3D 공간화)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio")
+	TObjectPtr<USoundAttenuation> AmbientSoundAttenuation = nullptr;
+
+	// 앰비언트 사운드 볼륨 (0.0 ~ 2.0)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio", meta = (ClampMin = "0.0", ClampMax = "2.0"))
+	float AmbientSoundVolume = 1.0f;
+
+	// 앰비언트 사운드 피치 (0.5 ~ 2.0)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio", meta = (ClampMin = "0.5", ClampMax = "2.0"))
+	float AmbientSoundPitch = 1.0f;
+
+	// 앰비언트 오디오 컴포넌트 (런타임에 생성)
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> AmbientAudioComponent = nullptr;
+
+	// ===== 이동 사운드 설정 =====
+	
+	// 이동 사운드 (MetaSound Source - MovementSpeed 파라미터 필요)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement")
+	TObjectPtr<USoundBase> MovementSound = nullptr;
+
+	// 이동 사운드 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement")
+	TObjectPtr<USoundAttenuation> MovementSoundAttenuation = nullptr;
+
+	// 이동 사운드 기본 볼륨 (0.0 ~ 2.0)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement", meta = (ClampMin = "0.0", ClampMax = "2.0"))
+	float MovementSoundVolume = 1.0f;
+
+	// 이동 사운드 기본 피치 (0.5 ~ 2.0)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement", meta = (ClampMin = "0.5", ClampMax = "2.0"))
+	float MovementSoundPitch = 1.0f;
+
+	// 이동 속도 정규화를 위한 최대 속도 (ChaseSpeed 사용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement")
+	float MaxSpeedForSound = 500.f;
+
+	// MetaSound 파라미터 이름 (MovementSpeed)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement")
+	FName MovementSpeedParamName = FName("MovementSpeed");
+
+	// 이동 오디오 컴포넌트 (런타임에 생성)
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> MovementAudioComponent = nullptr;
+
+	// 이전 프레임 이동 속도 (스무딩용)
+	float PreviousNormalizedSpeed = 0.f;
+
+	// 속도 스무딩 계수 (급격한 변화 방지)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Audio|Movement", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float SpeedSmoothingFactor = 0.1f;
+
+	// ===== 공격 설정 =====
+	
 	// 공격 타입별 설정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Attack")
 	TMap<ELavaMonsterAttackType, FAO_LavaMonsterAttackConfig> AttackConfigs;

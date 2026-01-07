@@ -36,34 +36,37 @@ void AAO_WerewolfController::OnPossess(APawn* InPawn)
 
 void AAO_WerewolfController::OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location)
 {
-	// 부모의 StartChase를 바로 호출하지 않고, Howl 로직을 먼저 탄다.
-	
+	// 플레이어 위치 추적 (이동 방향 분석용)
+	LastPlayerLocation = Location;
+	if (GetWorld())
+	{
+		LastLocationUpdateTime = GetWorld()->GetTimeSeconds();
+	}
+
+	// 아직 Howl을 하지 않았다면, 단순히 타겟만 설정
+	// 실제 Howl 실행은 StateTree의 Howl Task에서 담당
 	if (!bHasHowledOrJoined)
 	{
-		// 처음 발견!
-		bHasHowledOrJoined = true;
-
 		// 추격 대상 설정 (StateTree에서 접근 가능하도록)
 		SetChaseTarget(Player);
 		
-		// Howl 강제 실행 (StateTree와 독립적으로)
-		TriggerHowl(Player);
+		// bHasHowledOrJoined는 Howl Task에서 설정됨
+		// StateTree가 Howl State에 진입하면 자동으로 처리
 	}
 	else
 	{
-		// 이미 전투 중이면 그냥 추격 정보 갱신
+		// 이미 Howl을 했으면 일반적인 추격 로직
 		Super::OnPlayerDetected(Player, Location);
 	}
-
-	// 플레이어 위치 추적 (이동 방향 분석용)
-	LastPlayerLocation = Location;
-	LastLocationUpdateTime = GetWorld()->GetTimeSeconds();
 }
 
 void AAO_WerewolfController::HandleHowlReceived(AActor* TargetActor)
 {
 	AAO_PlayerCharacter* TargetPlayer = Cast<AAO_PlayerCharacter>(TargetActor);
-	if (!TargetPlayer) return;
+	if (!TargetPlayer)
+	{
+		return;
+	}
 
 	bHasHowledOrJoined = true;
 	
@@ -72,6 +75,27 @@ void AAO_WerewolfController::HandleHowlReceived(AActor* TargetActor)
 
 	// Howl을 들었을 때의 로직 (StateTree에서 'HowlReceived' Condition이 true가 되어 Surround로 진입)
 	// Surround 모드로 전환은 PackCoordComp에서 자동으로 처리됨
+}
+
+void AAO_WerewolfController::OnPlayerLost(AAO_PlayerCharacter* Player, const FVector& LastKnownLocation)
+{
+	Super::OnPlayerLost(Player, LastKnownLocation);
+	
+	// 플레이어를 놓쳤을 때 포위 모드 해제
+	if (PackComp && PackComp->IsSurrounding())
+	{
+		PackComp->SetSurroundMode(false);
+	}
+}
+
+void AAO_WerewolfController::EndSearch()
+{
+	// 부모 클래스의 EndSearch 호출
+	Super::EndSearch();
+	
+	// 수색 완료 후 배회로 돌아갈 때 Howl 상태 리셋
+	// 다음에 플레이어를 발견하면 다시 Howl을 실행할 수 있도록
+	ResetHowlState();
 }
 
 void AAO_WerewolfController::HandleCoordinatedAttackStarted()
@@ -290,6 +314,17 @@ TArray<FVector> AAO_WerewolfController::FindPotentialEscapeRoutesImproved(AAO_Pl
 	}
 
 	return EscapeRoutes;
+}
+
+void AAO_WerewolfController::ResetHowlState()
+{
+	bHasHowledOrJoined = false;
+	
+	// PackComp 상태도 리셋
+	if (PackComp)
+	{
+		PackComp->SetSurroundMode(false);
+	}
 }
 
 FVector AAO_WerewolfController::FindEscapeRouteBlockPosition(AAO_PlayerCharacter* Target, float BlockRadius)

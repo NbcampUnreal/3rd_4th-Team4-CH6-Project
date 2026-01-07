@@ -11,7 +11,7 @@ void UAO_ConfirmQuitGameWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	if (Btn_Confirm != nullptr)
+	/*if (Btn_Confirm != nullptr)
 	{
 		Btn_Confirm->OnClicked.AddDynamic(this, &UAO_ConfirmQuitGameWidget::HandleClicked_Confirm);
 	}
@@ -24,7 +24,7 @@ void UAO_ConfirmQuitGameWidget::NativeOnInitialized()
 	if (Txt_Message != nullptr)
 	{
 		Txt_Message->SetText(FText::FromString(TEXT("Are you sure you want to quit the game?")));
-	}
+	}*/
 }
 
 FReply UAO_ConfirmQuitGameWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
