@@ -103,6 +103,11 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	// 납치 성공 처리
 	CurrentVictim = TargetPlayer;
 	
+	// 0. 제약 설정 및 태그 적용 (가장 먼저 실행하여 어빌리티 취소)
+	// 파쿠르 등의 어빌리티가 취소되면서 MovementMode를 Walking으로 돌려놓더라도,
+	// 아래의 물리 처리 로직이 나중에 실행되어 Flying으로 덮어씌워야 안전함
+	SetPlayerRestrictions(CurrentVictim, true);
+	
 	// 1. 물리/충돌 처리
 	if (UCapsuleComponent* Capsule = CurrentVictim->GetCapsuleComponent())
 	{
@@ -120,10 +125,7 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 		CurrentVictim->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, KidnapSocketName);
 	}
 
-	// 3. 제약 설정 및 태그 적용
-	SetPlayerRestrictions(CurrentVictim, true);
-
-	// 4. 플레이어 사망 감지 바인딩
+	// 3. 플레이어 사망 감지 바인딩
 	BindDeathDelegate();
 
 	// 5. DoT 시작
@@ -489,9 +491,9 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 			// 납치 태그 추가 (Loose Tag) -> 이걸로 점프/스킬 차단 (Player Character Ability에서 Tag Block 필요)
 			ASC->AddLooseGameplayTag(KidnappedStatusTag);
 			
-			// 이동/점프 등 Ability Cancel
-			FGameplayTagContainer AbilityTags(FGameplayTag::RequestGameplayTag(FName("Ability")));
-			ASC->CancelAbilities(&AbilityTags);
+			// 이동/점프 등 모든 Ability Cancel
+			// 특정 태그 대신 nullptr을 사용하여 모든 활성 어빌리티를 확실하게 취소
+			ASC->CancelAbilities(nullptr);
 		}
 		else
 		{

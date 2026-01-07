@@ -248,7 +248,7 @@ void UAO_CeilingMoveComponent::SetCeilingMode(bool bEnable)
 							FTransform ActorTransform = OwnerCharacter->GetActorTransform();
 							FRotator TargetRelativeRot = ActorTransform.InverseTransformRotation(TargetWorldRot.Quaternion()).Rotator();
 							
-							TargetRelativeRot.Yaw += InitialMeshRotation.Yaw;
+							TargetRelativeRot.Yaw += InitialMeshRotation.Yaw + 180.f;
 
 							// 목표 회전 저장 (보간용)
 							LastCeilingNormalRotation = TargetRelativeRot;
@@ -573,30 +573,34 @@ void UAO_CeilingMoveComponent::UpdateCapsuleRotationToCeiling(const FVector& Cei
 	//       Mesh의 얼굴(Forward)이 캐릭터 진행 방향을 향하도록 회전 계산.
 
 	// 1. 월드 기준 목표 Up 벡터 (천장 Normal은 아래를 향함 -> Mesh 머리 방향)
+	//    주의: Mesh의 Up 벡터(+Z)가 천장 Normal 방향(아래)이 되어야 함
 	FVector TargetUp = NormalizedNormal;
 
 	// 2. 월드 기준 목표 Forward 벡터 (캐릭터 진행 방향을 천장 평면에 투영)
+	//    주의: 거꾸로 매달렸을 때 시각적 혼란을 막기 위해 벡터 방향 확인 필요
+	//    증상: 진행 방향 반대 + 기울기 반전 -> Forward 벡터를 반전시켜본다.
 	FVector ActorForward = OwnerCharacter->GetActorForwardVector();
 	FVector TargetForward = FVector::VectorPlaneProject(ActorForward, TargetUp);
+	
+	// 진행 방향 반전 보정 (뒤를 보고 있다면 주석 해제/적용)
+	// TargetForward = -TargetForward; 
+	
 	if (TargetForward.IsNearlyZero())
 	{
-		// 수직 천장 등 예외 상황: Actor Up 벡터를 Forward로 사용
 		TargetForward = OwnerCharacter->GetActorUpVector();
 	}
 	TargetForward.Normalize();
 
 	// 3. 월드 기준 목표 회전 행렬 생성 (MakeFromZX: Z=Up, X=Forward)
-	//    이렇게 하면 Mesh의 머리가 아래(TargetUp)로, 얼굴이 진행방향(TargetForward)으로 향함
 	FRotator TargetWorldRot = FRotationMatrix::MakeFromZX(TargetUp, TargetForward).Rotator();
 
 	// 4. 월드 회전을 로컬(Relative) 회전으로 변환
-	//    Character Actor 자체도 회전(Yaw)하고 있으므로 InverseTransform 필요
 	FTransform ActorTransform = OwnerCharacter->GetActorTransform();
 	FRotator TargetRelativeRot = ActorTransform.InverseTransformRotation(TargetWorldRot.Quaternion()).Rotator();
 
-	// 5. Mesh의 초기 회전 오프셋 보정 (예: 마네킹은 -90도 돌아가 있음)
-	//    InitialMeshRotation의 Yaw값을 더해줌
-	TargetRelativeRot.Yaw += InitialMeshRotation.Yaw;
+	// 5. Mesh의 초기 회전 오프셋 보정
+	//    증상: 진행 방향 반대 -> Yaw 180도 추가
+	TargetRelativeRot.Yaw += InitialMeshRotation.Yaw + 180.f;
 	//    InitialMeshRotation의 Z값(Height) 보정이 필요할 수도 있으나 회전만 다룸
 
 	// 부드러운 회전 보간
