@@ -69,14 +69,10 @@ EStateTreeRunStatus FAO_STTask_AIRoam::Tick(FStateTreeExecutionContext& Context,
 		}
 		else if (AAO_Stalker* Stalker = Cast<AAO_Stalker>(Pawn))
 		{
-			// Stalker: 천장이 있으면 자동으로 천장 모드로 전환
-			if (UAO_CeilingMoveComponent* CeilingComp = Stalker->GetCeilingMoveComponent())
-			{
-				if (!CeilingComp->IsInCeilingMode() && CeilingComp->CheckCeilingAvailability())
-				{
-					Stalker->SetCeilingMode(true);
-				}
-			}
+			// KSJ:
+			// Stalker의 천장/바닥 전환은 "배회에서만" 그리고 StateTree에서만 제어되어야 한다.
+			// AIRoam Tick에서 자동 전환을 수행하면 StateTree의 상태 전이/태스크와 경쟁하며
+			// 추적(Engage) 중 천장 전환 같은 요구사항 위반을 유발할 수 있다.
 		}
 	}
 

@@ -6,6 +6,8 @@
 #include "AbilitySystemComponent.h"
 #include "AI/GAS/Ability/AO_GA_LavaMonster_Attack.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundAttenuation.h"
 
 AAO_LavaMonster::AAO_LavaMonster()
 {
@@ -17,6 +19,13 @@ AAO_LavaMonster::AAO_LavaMonster()
 
 	// 기본 공격 범위
 	AttackRange = 250.f;
+
+	// 이동 사운드 최대 속도 기본값 (ChaseSpeed와 동일)
+	MaxSpeedForSound = ChaseSpeed;
+
+	// Tick 활성화 (이동 사운드 파라미터 업데이트용)
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 }
 
 void AAO_LavaMonster::BeginPlay()
@@ -68,6 +77,194 @@ void AAO_LavaMonster::BeginPlay()
 		GroundStrike.WarningDuration = 2.f; // 전조 현상 지속 시간
 		AttackConfigs.Add(ELavaMonsterAttackType::GroundStrike, GroundStrike);
 	}
+
+	// 앰비언트 사운드 시작 (사운드와 Attenuation이 설정된 경우에만)
+	StartAmbientSound();
+
+	// 이동 사운드 시작 (항상 재생, 속도에 따라 볼륨 조절)
+	StartMovementSound();
+}
+
+void AAO_LavaMonster::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// 앰비언트 사운드 정지
+	StopAmbientSound();
+
+	// 이동 사운드 정지
+	StopMovementSound();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void AAO_LavaMonster::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// 이동 사운드 파라미터 업데이트
+	UpdateMovementSoundParameters();
+}
+
+void AAO_LavaMonster::StartAmbientSound()
+{
+	// 이미 재생 중이면 무시
+	if (IsAmbientSoundPlaying())
+	{
+		return;
+	}
+
+	// 사운드가 설정되지 않았으면 무시
+	if (!LavaAmbientSound)
+	{
+		return;
+	}
+
+	// 오디오 컴포넌트 생성 및 설정
+	AmbientAudioComponent = NewObject<UAudioComponent>(this, TEXT("LavaAmbientAudioComponent"));
+	if (!ensure(AmbientAudioComponent))
+	{
+		return;
+	}
+
+	// 컴포넌트를 루트에 부착
+	AmbientAudioComponent->SetupAttachment(GetRootComponent());
+	AmbientAudioComponent->RegisterComponent();
+
+	// 사운드 설정
+	AmbientAudioComponent->SetSound(LavaAmbientSound);
+	AmbientAudioComponent->SetVolumeMultiplier(AmbientSoundVolume);
+	AmbientAudioComponent->SetPitchMultiplier(AmbientSoundPitch);
+
+	// Attenuation 설정 (거리 감쇠)
+	if (AmbientSoundAttenuation)
+	{
+		AmbientAudioComponent->AttenuationSettings = AmbientSoundAttenuation;
+	}
+
+	// 자동 파괴 비활성화 (수동 관리)
+	AmbientAudioComponent->bAutoDestroy = false;
+
+	// 루프 재생 설정은 MetaSound 내부에서 처리됨 (Trigger Repeat로 무한 반복)
+	// 여기서는 재생만 시작
+	AmbientAudioComponent->Play();
+}
+
+void AAO_LavaMonster::StopAmbientSound()
+{
+	if (AmbientAudioComponent)
+	{
+		if (AmbientAudioComponent->IsPlaying())
+		{
+			AmbientAudioComponent->Stop();
+		}
+
+		AmbientAudioComponent->DestroyComponent();
+		AmbientAudioComponent = nullptr;
+	}
+}
+
+bool AAO_LavaMonster::IsAmbientSoundPlaying() const
+{
+	return AmbientAudioComponent && AmbientAudioComponent->IsPlaying();
+}
+
+void AAO_LavaMonster::StartMovementSound()
+{
+	// 이미 재생 중이면 무시
+	if (IsMovementSoundPlaying())
+	{
+		return;
+	}
+
+	// 사운드가 설정되지 않았으면 무시
+	if (!MovementSound)
+	{
+		return;
+	}
+
+	// 오디오 컴포넌트 생성 및 설정
+	MovementAudioComponent = NewObject<UAudioComponent>(this, TEXT("LavaMovementAudioComponent"));
+	if (!ensure(MovementAudioComponent))
+	{
+		return;
+	}
+
+	// 컴포넌트를 루트에 부착
+	MovementAudioComponent->SetupAttachment(GetRootComponent());
+	MovementAudioComponent->RegisterComponent();
+
+	// 사운드 설정
+	MovementAudioComponent->SetSound(MovementSound);
+	MovementAudioComponent->SetVolumeMultiplier(MovementSoundVolume);
+	MovementAudioComponent->SetPitchMultiplier(MovementSoundPitch);
+
+	// Attenuation 설정 (거리 감쇠)
+	if (MovementSoundAttenuation)
+	{
+		MovementAudioComponent->AttenuationSettings = MovementSoundAttenuation;
+	}
+
+	// 자동 파괴 비활성화 (수동 관리)
+	MovementAudioComponent->bAutoDestroy = false;
+
+	// 초기 MovementSpeed 파라미터 설정 (0으로 시작)
+	MovementAudioComponent->SetFloatParameter(MovementSpeedParamName, 0.f);
+
+	// 재생 시작
+	MovementAudioComponent->Play();
+}
+
+void AAO_LavaMonster::StopMovementSound()
+{
+	if (MovementAudioComponent)
+	{
+		if (MovementAudioComponent->IsPlaying())
+		{
+			MovementAudioComponent->Stop();
+		}
+
+		MovementAudioComponent->DestroyComponent();
+		MovementAudioComponent = nullptr;
+	}
+
+	PreviousNormalizedSpeed = 0.f;
+}
+
+bool AAO_LavaMonster::IsMovementSoundPlaying() const
+{
+	return MovementAudioComponent && MovementAudioComponent->IsPlaying();
+}
+
+float AAO_LavaMonster::GetNormalizedMovementSpeed() const
+{
+	// 현재 속도 가져오기
+	const float CurrentSpeed = GetVelocity().Size();
+
+	// 0~1 범위로 정규화 (MaxSpeedForSound 기준)
+	if (MaxSpeedForSound <= 0.f)
+	{
+		return 0.f;
+	}
+
+	return FMath::Clamp(CurrentSpeed / MaxSpeedForSound, 0.f, 1.f);
+}
+
+void AAO_LavaMonster::UpdateMovementSoundParameters()
+{
+	// 이동 사운드가 재생 중이 아니면 무시
+	if (!IsMovementSoundPlaying())
+	{
+		return;
+	}
+
+	// 현재 정규화된 속도 가져오기
+	const float TargetSpeed = GetNormalizedMovementSpeed();
+
+	// 스무딩 적용 (급격한 변화 방지)
+	const float SmoothedSpeed = FMath::FInterpTo(PreviousNormalizedSpeed, TargetSpeed, GetWorld()->GetDeltaSeconds(), 1.f / SpeedSmoothingFactor);
+	PreviousNormalizedSpeed = SmoothedSpeed;
+
+	// MetaSound 파라미터 업데이트
+	MovementAudioComponent->SetFloatParameter(MovementSpeedParamName, SmoothedSpeed);
 }
 
 ELavaMonsterAttackType AAO_LavaMonster::SelectRandomAttackType() const

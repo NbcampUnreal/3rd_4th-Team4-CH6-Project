@@ -237,6 +237,9 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
+	// 넉다운 HitReact 이벤트 발송 (먼저 실행)
+	SendKnockdownEvent(TargetActor, GetAvatarActorFromActorInfo());
+
 	// 넉백 적용
 	ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor);
 	if (TargetCharacter)
@@ -259,9 +262,6 @@ void UAO_GA_Troll_Attack::ApplyDamageAndKnockback(AActor* TargetActor, const FAO
 			TargetCharacter->LaunchCharacter(KnockbackDirection * Config.KnockbackStrength, true, true);
 		}
 	}
-
-	// 넉다운 HitReact 이벤트 발송
-	SendKnockdownEvent(TargetActor, GetAvatarActorFromActorInfo());
 }
 
 void UAO_GA_Troll_Attack::SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor)

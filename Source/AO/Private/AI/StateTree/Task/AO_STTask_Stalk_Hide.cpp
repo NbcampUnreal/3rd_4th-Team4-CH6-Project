@@ -3,10 +3,13 @@
 #include "AI/StateTree/Task/AO_STTask_Stalk_Hide.h"
 #include "AI/Controller/AO_StalkerController.h"
 #include "AI/Character/AO_Stalker.h"
+#include "AI/Component/AO_CeilingMoveComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "EnvironmentQuery/EnvQueryManager.h"
 #include "StateTreeExecutionContext.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
@@ -30,10 +33,59 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 	InstanceData.PlayerProximityCheckTimer = 0.f;
 	InstanceData.CurrentHideLocation = FVector::ZeroVector;
 	InstanceData.bIsMoving = false;
+	InstanceData.bAwaitingEQSResult = false;
+	InstanceData.EQSWaitTimer = 0.f;
+	InstanceData.LookingPlayer = nullptr;
 
 	// 후퇴 모드인지 확인
 	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
 	bool bIsRetreating = Stalker && Stalker->IsRetreating();
+
+	// Hide 상태에서는 무조건 바닥 모드로 전환 (천장 사용 안 함)
+	if (Stalker)
+	{
+		if (UAO_CeilingMoveComponent* CeilingComp = Stalker->GetCeilingMoveComponent())
+		{
+			if (CeilingComp->IsInCeilingMode())
+			{
+				Stalker->PlayCeilingTransitionMontage(false);
+			}
+		}
+	}
+
+	// 나를 보고 있는 플레이어 찾기 (뒷걸음질 대상)
+	if (InstanceData.bEnableBackpedal && Stalker)
+	{
+		if (UWorld* World = Stalker->GetWorld())
+		{
+			TArray<AActor*> AllPlayers;
+			UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
+
+			float ClosestDistance = FLT_MAX;
+			for (AActor* PlayerActor : AllPlayers)
+			{
+				if (InstanceData.Controller->IsPlayerLookingAtMe(PlayerActor))
+				{
+					const float Distance = FVector::Dist(Stalker->GetActorLocation(), PlayerActor->GetActorLocation());
+					if (Distance < ClosestDistance)
+					{
+						ClosestDistance = Distance;
+						InstanceData.LookingPlayer = PlayerActor;
+					}
+				}
+			}
+		}
+
+		// 뒷걸음질 모드: 이동 방향으로 회전하지 않도록 설정
+		if (InstanceData.LookingPlayer.IsValid())
+		{
+			if (UCharacterMovementComponent* MoveComp = Stalker->GetCharacterMovement())
+			{
+				MoveComp->bOrientRotationToMovement = false;
+			}
+			Stalker->bUseControllerRotationYaw = false;
+		}
+	}
 
 	// 엄폐 위치 찾기 (EQS 또는 직접 계산)
 	AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
@@ -52,20 +104,12 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::EnterState(FStateTreeExecutionContext
 	}
 	else if (InstanceData.HideQuery)
 	{
-		// EQS 사용
-		FEnvQueryRequest Request(InstanceData.HideQuery, InstanceData.Controller->GetPawn());
-		Request.Execute(EEnvQueryRunMode::SingleResult, 
-			FQueryFinishedSignature::CreateWeakLambda(InstanceData.Controller, 
-			[Controller = InstanceData.Controller, &InstanceData](TSharedPtr<FEnvQueryResult> Result)
-			{
-				if (Result.IsValid() && Result->IsSuccessful() && Controller)
-				{
-					FVector HideLoc = Result->GetItemAsLocation(0);
-					InstanceData.CurrentHideLocation = HideLoc;
-					Controller->MoveToLocation(HideLoc);
-					InstanceData.bIsMoving = true;
-				}
-			}));
+		// KSJ:
+		// StateTree Task의 InstanceData를 비동기 콜백에서 참조 캡처하면
+		// 상태 전이/재진입 타이밍에 따라 크래시/오동작 위험이 크다.
+		// EQS 결과는 Controller에 저장하고, Task는 Tick에서 Consume하여 MoveTo를 시작한다.
+		InstanceData.Controller->RequestHideLocationEQS(InstanceData.HideQuery);
+		InstanceData.bAwaitingEQSResult = true;
 	}
 	else
 	{
@@ -96,6 +140,55 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 		return EStateTreeRunStatus::Failed;
 	}
 
+	// EQS 결과 대기 중이면, 결과를 소비해서 이동을 시작한다.
+	if (InstanceData.bAwaitingEQSResult && !InstanceData.bIsMoving)
+	{
+		InstanceData.EQSWaitTimer += DeltaTime;
+
+		FVector EQSLocation = FVector::ZeroVector;
+		if (InstanceData.Controller->ConsumePendingHideLocation(EQSLocation))
+		{
+			InstanceData.CurrentHideLocation = EQSLocation;
+			InstanceData.Controller->MoveToLocation(EQSLocation);
+			InstanceData.bIsMoving = true;
+			InstanceData.bAwaitingEQSResult = false;
+		}
+		else if (InstanceData.EQSWaitTimer >= InstanceData.EQSWaitTimeout)
+		{
+			// 타임아웃 시 동기 방식으로 폴백
+			InstanceData.bAwaitingEQSResult = false;
+			FVector Fallback = InstanceData.Controller->FindHideLocation(1000.f, Target);
+			if (!Fallback.IsZero())
+			{
+				InstanceData.CurrentHideLocation = Fallback;
+				InstanceData.Controller->MoveToLocation(Fallback);
+				InstanceData.bIsMoving = true;
+			}
+		}
+	}
+
+	// 뒷걸음질: 나를 보고 있는 플레이어를 바라보며 이동
+	if (InstanceData.bEnableBackpedal && InstanceData.LookingPlayer.IsValid() && InstanceData.bIsMoving)
+	{
+		AActor* LookingPlayerActor = InstanceData.LookingPlayer.Get();
+		if (LookingPlayerActor)
+		{
+			// 플레이어를 향한 방향 계산
+			FVector ToPlayer = LookingPlayerActor->GetActorLocation() - Stalker->GetActorLocation();
+			ToPlayer.Z = 0.f; // 수평 방향만 고려
+			
+			if (!ToPlayer.IsNearlyZero())
+			{
+				FRotator TargetRotation = ToPlayer.Rotation();
+				FRotator CurrentRotation = Stalker->GetActorRotation();
+				
+				// 부드러운 회전 보간
+				FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, InstanceData.BackpedalRotationSpeed / 90.f);
+				Stalker->SetActorRotation(FRotator(0.f, NewRotation.Yaw, 0.f));
+			}
+		}
+	}
+
 	// 플레이어 접근 체크 (주기적으로)
 	InstanceData.PlayerProximityCheckTimer += DeltaTime;
 	const float ProximityCheckInterval = 0.5f; // 0.5초마다 체크
@@ -119,6 +212,34 @@ EStateTreeRunStatus FAO_STTask_Stalk_Hide::Tick(FStateTreeExecutionContext& Cont
 				InstanceData.CurrentHideLocation = NewHideLocation;
 				InstanceData.Controller->MoveToLocation(NewHideLocation);
 				InstanceData.bIsMoving = true;
+			}
+		}
+
+		// 뒷걸음질 대상 업데이트: 다른 플레이어가 보고 있으면 갱신
+		if (InstanceData.bEnableBackpedal && Stalker)
+		{
+			if (UWorld* World = Stalker->GetWorld())
+			{
+				TArray<AActor*> AllPlayers;
+				UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
+
+				float ClosestDistance = FLT_MAX;
+				AActor* NewLookingPlayer = nullptr;
+
+				for (AActor* PlayerActor : AllPlayers)
+				{
+					if (InstanceData.Controller->IsPlayerLookingAtMe(PlayerActor))
+					{
+						const float Distance = FVector::Dist(Stalker->GetActorLocation(), PlayerActor->GetActorLocation());
+						if (Distance < ClosestDistance)
+						{
+							ClosestDistance = Distance;
+							NewLookingPlayer = PlayerActor;
+						}
+					}
+				}
+
+				InstanceData.LookingPlayer = NewLookingPlayer;
 			}
 		}
 	}
@@ -150,6 +271,17 @@ void FAO_STTask_Stalk_Hide::ExitState(FStateTreeExecutionContext& Context, const
 	if (InstanceData.Controller)
 	{
 		InstanceData.Controller->StopMovement();
+
+		// 뒷걸음질 모드 해제: 회전 설정 원복
+		if (AAO_Stalker* Stalker = InstanceData.Controller->GetStalker())
+		{
+			if (UCharacterMovementComponent* MoveComp = Stalker->GetCharacterMovement())
+			{
+				// 기본값으로 복원 (이동 방향으로 회전)
+				MoveComp->bOrientRotationToMovement = true;
+			}
+			Stalker->bUseControllerRotationYaw = false;
+		}
 	}
 }
 

@@ -29,9 +29,15 @@ AAO_TrollWeapon::AAO_TrollWeapon()
 void AAO_TrollWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// 초기 상태: 월드에 놓여있는 상태
-	SetCollisionForDropped();
+	
+	if (GetOwner())
+	{
+		SetCollisionForPickedUp();
+	}
+	else
+	{
+		SetCollisionForDropped();
+	}
 }
 
 void AAO_TrollWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

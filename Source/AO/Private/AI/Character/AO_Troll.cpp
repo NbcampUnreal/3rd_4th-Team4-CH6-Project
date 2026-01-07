@@ -4,6 +4,7 @@
 #include "AI/Component/AO_WeaponHolderComp.h"
 #include "AI/Item/AO_TrollWeapon.h"
 #include "AI/Animation/AO_Troll_AnimInstance.h"
+#include "Components/CapsuleComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -11,6 +12,10 @@
 
 AAO_Troll::AAO_Troll()
 {
+	// 캡슐 콜리전 크기 설정 (대형 인간형 몬스터)
+	GetCapsuleComponent()->SetCapsuleHalfHeight(250.f);
+	GetCapsuleComponent()->SetCapsuleRadius(100.f);
+
 	// 무기 관리 컴포넌트 생성
 	WeaponHolderComp = CreateDefaultSubobject<UAO_WeaponHolderComp>(TEXT("WeaponHolderComp"));
 
