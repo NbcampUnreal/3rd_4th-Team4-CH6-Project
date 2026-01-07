@@ -127,9 +127,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
 
-	// 땅속 공격 VFX (나이아가라 시스템)
+	// 땅속 공격 전조 VFX (나이아가라 시스템)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
 	TObjectPtr<UNiagaraSystem> GroundStrikeVFX;
+
+	// 땅속 공격 분출 VFX (Cascade 파티클)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
+	TObjectPtr<UParticleSystem> EruptionVFX;
 
 	// 땅속 공격 타겟 목록
 	UPROPERTY()
@@ -140,5 +144,13 @@ protected:
 
 	// 땅속 공격 타겟별 공격 타이머 핸들
 	TMap<int32, FTimerHandle> GroundStrikeAttackTimers;
+
+	// 타격음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	// 타격음 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Sound")
+	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
 };
 

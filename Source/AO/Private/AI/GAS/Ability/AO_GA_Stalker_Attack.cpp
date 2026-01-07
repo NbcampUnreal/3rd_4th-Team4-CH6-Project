@@ -10,6 +10,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 UAO_GA_Stalker_Attack::UAO_GA_Stalker_Attack()
 {
@@ -171,6 +172,20 @@ void UAO_GA_Stalker_Attack::ApplyDamageAndKnockback(AActor* TargetActor)
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
 		return;
+	}
+
+	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			TargetActor->GetActorLocation(),
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
 	}
 
 	// 1. 데미지 적용

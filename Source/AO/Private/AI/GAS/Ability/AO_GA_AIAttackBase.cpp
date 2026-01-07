@@ -10,6 +10,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 UAO_GA_AIAttackBase::UAO_GA_AIAttackBase()
 {
@@ -198,6 +199,20 @@ void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* I
 	if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Invulnerable"))))
 	{
 		return;
+	}
+
+	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			TargetActor->GetActorLocation(),
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
 	}
 
 	// 1. 데미지 적용
