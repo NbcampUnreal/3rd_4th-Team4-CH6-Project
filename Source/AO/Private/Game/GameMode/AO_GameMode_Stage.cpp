@@ -415,14 +415,11 @@ bool AAO_GameMode_Stage::TryRevivePlayer(APlayerController* ReviveTargetPC)
 	}
 
 	// 부활 카운트 소모 (없으면 실패)
-	if (AO_GI->TryConsumeSharedReviveCount() == false)
+	if (AO_GS->TryConsumeSharedReviveCount() == false)
 	{
 		AO_LOG(LogJSH, Log, TEXT("TryRevivePlayer: no shared revive left"));
 		return false;
 	}
-
-	// GameState에 최신 부활 카운트 동기화
-	AO_GS->SetSharedReviveCount(AO_GI->GetSharedReviveCount());
 
 	// 생존 플래그 되살리기
 	AO_PS->SetIsAlive(true);
@@ -622,7 +619,7 @@ void AAO_GameMode_Stage::TryAutoReviveFromQueue()
 		return;
 	}
 
-	if (AO_GI->GetSharedReviveCount() <= 0)
+	if (AO_GS->GetSharedReviveCount() <= 0)
 	{
 		return;
 	}
@@ -633,7 +630,7 @@ void AAO_GameMode_Stage::TryAutoReviveFromQueue()
 		Log,
 		TEXT("TryAutoReviveFromQueue: Start. QueueSize=%d, SharedRevive=%d"),
 		PendingReviveQueue.Num(),
-		AO_GI->GetSharedReviveCount()
+		AO_GS->GetSharedReviveCount()
 	);
 
 	int32 Index = 0;
@@ -655,7 +652,7 @@ void AAO_GameMode_Stage::TryAutoReviveFromQueue()
 			continue;
 		}
 
-		if (AO_GI->GetSharedReviveCount() <= 0)
+		if (AO_GS->GetSharedReviveCount() <= 0)
 		{
 			break;
 		}
@@ -690,7 +687,7 @@ void AAO_GameMode_Stage::TryAutoReviveFromQueue()
 		Log,
 		TEXT("TryAutoReviveFromQueue: End. QueueSize=%d, SharedRevive=%d"),
 		PendingReviveQueue.Num(),
-		AO_GI->GetSharedReviveCount()
+		AO_GS->GetSharedReviveCount()
 	);
 }
 
