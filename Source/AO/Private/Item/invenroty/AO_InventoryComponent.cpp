@@ -261,6 +261,13 @@ void UAO_InventoryComponent::BindInvenCompListener(UObject* Listener)
     IAO_InventoryListener::Execute_OnSlotChanged(Listener, Slots);
 }
 
+void UAO_InventoryComponent::UnBindInvenCompListener(UObject* Listener)
+{
+    if (!IsValid(Listener) || !Listener->GetClass()->ImplementsInterface(UAO_InventoryListener::StaticClass())) return;
+
+    InvenCompListeners.Remove(Listener);
+}
+
 void UAO_InventoryComponent::NotifyListeners()
 {
     for (int32 i = InvenCompListeners.Num() - 1; i >= 0; --i)

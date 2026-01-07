@@ -107,6 +107,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Inventory|UI")
     void BindInvenCompListener(UObject* Listener);
+    UFUNCTION(BlueprintCallable, Category="Inventory|UI")
+    void UnBindInvenCompListener(UObject* Listener);
 
     void NotifyListeners();
     void RegisterToSubsystem();

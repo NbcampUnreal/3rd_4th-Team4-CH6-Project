@@ -14,26 +14,6 @@ void UAO_PauseMenuWidget::NativeConstruct()
 void UAO_PauseMenuWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
-	if (Btn_Settings)
-	{
-		Btn_Settings->OnClicked.AddDynamic(this, &ThisClass::HandleClicked_Settings);
-	}
-
-	if (Btn_ReturnLobby)
-	{
-		Btn_ReturnLobby->OnClicked.AddDynamic(this, &ThisClass::HandleClicked_ReturnLobby);
-	}
-
-	if (Btn_QuitGame)
-	{
-		Btn_QuitGame->OnClicked.AddDynamic(this, &ThisClass::HandleClicked_QuitGame);
-	}
-
-	if (Btn_Resume)
-	{
-		Btn_Resume->OnClicked.AddDynamic(this, &ThisClass::HandleClicked_Resume);
-	}
 }
 
 FReply UAO_PauseMenuWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -76,4 +56,24 @@ void UAO_PauseMenuWidget::HandleClicked_QuitGame()
 void UAO_PauseMenuWidget::HandleClicked_Resume()
 {
 	OnRequestResume.Broadcast();
+}
+
+void UAO_PauseMenuWidget::OnClicked_Settings()
+{
+	HandleClicked_Settings();
+}
+
+void UAO_PauseMenuWidget::OnClicked_ReturnLobby()
+{
+	HandleClicked_ReturnLobby();
+}
+
+void UAO_PauseMenuWidget::OnClicked_QuitGame()
+{
+	HandleClicked_QuitGame();
+}
+
+void UAO_PauseMenuWidget::OnClicked_Resume()
+{
+	HandleClicked_Resume();
 }

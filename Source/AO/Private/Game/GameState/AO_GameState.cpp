@@ -10,6 +10,9 @@ AAO_GameState::AAO_GameState()
 	SharedReviveCount = 0;
 	bIsStageFailed = false;		// JM : 초기화
 	bIsGameCleared = false;		// JM : 초기화
+	GameStartTime = 0;
+	GameEndTime = 0;
+	TeamDeathCount = 0;
 }
 
 void AAO_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -42,6 +45,20 @@ void AAO_GameState::AddPlayerState(APlayerState* PlayerState)
 	);
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::BeginPlay()
+{
+	Super::BeginPlay();
+	if (HasAuthority())
+	{
+		if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+		{
+			TeamDeathCount = GI->TeamDeathCount;	// JM : 데스 수를 유지하기 위함
+			GameStartTime = GI->GameStartTime;
+			GameEndTime = GI->GameEndTime;
+		} 
+	}
 }
 
 void AAO_GameState::UnmuteVoiceOnAddPlayerState(APlayerState* PlayerState)
@@ -114,8 +131,59 @@ void AAO_GameState::SetGameClear()
 	}
 
 	bIsGameCleared = true;
-
+	SetGameEndTime();			// JM : 게임 클리어 시 End Time 갱신
 	OnRep_IsGameCleared();		// JM : Host는 OnRep이 자동으로 호출되지 않으므로 수동 호출
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::AddTeamDeathCount()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (HasAuthority())
+	{
+		TeamDeathCount++;
+		if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+		{
+			GI->TeamDeathCount = TeamDeathCount;
+		}
+		OnRep_TeamDeathCount();		// JM : 서버는 OnRep 자동으로 실행 안되므로 수동으로 실행
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::SetGameStartTime()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (HasAuthority())
+	{
+		GameStartTime = GetWorld()->GetTimeSeconds();
+		if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+		{
+			GI->GameStartTime = GameStartTime;
+		}
+		OnRep_GameStartTime();		// JM : 서버는 OnRep 자동으로 실행 안되므로 수동으로 실행
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::SetGameEndTime()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (HasAuthority())
+	{
+		GameEndTime = GetWorld()->GetTimeSeconds();
+		if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+		{
+			GI->GameEndTime = GameEndTime;
+		}
+		OnRep_GameEndTime();		// JM : 서버는 OnRep 자동으로 실행 안되므로 수동으로 실행
+	}
 	
 	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
 }
@@ -134,7 +202,7 @@ void AAO_GameState::SetStageFailed()
 	}
 
 	bIsStageFailed = true;
-
+	SetGameEndTime();			// JM : 게임 실패 시 End Time 갱신
 	OnRep_IsStageFailed();		// JM : Host는 OnRep이 자동으로 호출되지 않으므로 수동 호출
 	
 	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
@@ -171,6 +239,54 @@ void AAO_GameState::OnRep_IsGameCleared()
 			OnGameCleared.Broadcast();
 		}
 	}
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::OnRep_TeamDeathCount()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		// GI->TeamDeathCount = TeamDeathCount;
+		if (UAO_DelegateManager* DM = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		{
+			DM->OnStatisticsUpdated.Broadcast();
+		}
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::OnRep_GameStartTime()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		// GI->GameStartTime = GameStartTime;
+		if (UAO_DelegateManager* DM = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		{
+			DM->OnStatisticsUpdated.Broadcast();
+		}
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_GameState::OnRep_GameEndTime()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		// GI->GameEndTime = GameEndTime;
+		if (UAO_DelegateManager* DM = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+		{
+			DM->OnStatisticsUpdated.Broadcast();
+		}
+	}
+	
 	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
 }
 

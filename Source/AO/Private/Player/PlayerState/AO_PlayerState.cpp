@@ -5,6 +5,7 @@
 #include "UI/Actor/AO_LobbyReadyBoardActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "AO_Log.h"
+#include "Game/AO_MapRoutes.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Net/UnrealNetwork.h"
@@ -19,6 +20,7 @@ AAO_PlayerState::AAO_PlayerState()
 	bLobbyIsReady = false;
 	LobbyJoinOrder = -1;
 	bIsLobbyHost = false;
+	DeathCount = 0;
 
 	CharacterCustomizingData.CharacterMeshType = ECharacterMesh::Elsa;
 
@@ -39,6 +41,7 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, bIsAlive);	// JM : 생존 여부 확인용
 	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
 	DOREPLIFETIME(AAO_PlayerState, PersistentInventory); // ms : 인벤토리
+	DOREPLIFETIME(AAO_PlayerState, DeathCount);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -122,6 +125,31 @@ void AAO_PlayerState::OnRep_IsAlive()
 	}
 }
 
+void AAO_PlayerState::OnRep_DeathCount()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (UAO_DelegateManager* DM = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DM->OnStatisticsUpdated.Broadcast();
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerState::AddDeathCount()
+{
+	AO_LOG_ROLE(LogJM, Log, TEXT("Start"));
+
+	if (HasAuthority())
+	{
+		DeathCount++;
+		OnRep_DeathCount();	// JM : 서버에서는 호출되지 않기에 명시적으로 실행
+	}
+	
+	AO_LOG_ROLE(LogJM, Log, TEXT("End"));
+}
+
 void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
 {
 	if (HasAuthority())
@@ -130,6 +158,11 @@ void AAO_PlayerState::SetIsAlive(bool bInIsAlive)
 		{
 			bIsAlive = bInIsAlive;
 			OnRep_IsAlive();
+
+			if (!bInIsAlive)	// 사망한 경우
+			{
+				AddDeathCount();
+			}
 			
 			if (UWorld* World = GetWorld())
 			{
@@ -161,6 +194,7 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 			PS->PersistentInventory.Empty();
 		}
 		//ms
+		PS->DeathCount = this->DeathCount;	// JM : 해당 캐릭터 죽음 횟수 유지
 	}
 }
 
@@ -195,6 +229,17 @@ void AAO_PlayerState::BeginPlay()
 	}
 
 	InitVoiceChat();	// JM : 레벨 이동시 보이스 채팅 초기화 (Unmute 해제)
+
+	if (HasAuthority())
+	{
+		FString CurrentMapName = GetWorld()->GetMapName();
+		FString LobbyName = FPackageName::GetShortName(AO_MapRoutes::LOBBY_MAP);
+		if (CurrentMapName.Contains(LobbyName))
+		{
+			DeathCount = 0;
+		}
+	}
+	
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }
