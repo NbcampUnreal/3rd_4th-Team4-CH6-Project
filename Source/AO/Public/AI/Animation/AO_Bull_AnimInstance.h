@@ -7,9 +7,15 @@
 #include "AO_Bull_AnimInstance.generated.h"
 
 class AAO_Bull;
+class UAnimMontage;
 
 /**
  * Bull AI 애니메이션 인스턴스
+ * 
+ * 주요 기능:
+ * - 속도 기반 Locomotion
+ * - 돌진(Charge) 상태 반영
+ * - 기절 Montage 재생
  */
 UCLASS()
 class AO_API UAO_Bull_AnimInstance : public UAO_AIAnimInstance
@@ -20,14 +26,42 @@ public:
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+	// 기절 몽타주 재생/중지
+	UFUNCTION(BlueprintCallable, Category = "AO|Animation|Bull")
+	void PlayStunMontage();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|Animation|Bull")
+	void StopStunMontage(float BlendOutTime = 0.25f);
+
+	// Getter 함수들 (블루프린트용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Bull")
+	bool IsStunned() const { return bIsStunned; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Bull")
+	bool IsCharging() const { return bIsCharging; }
+
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Bull")
 	TObjectPtr<AAO_Bull> BullCharacter;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bIsCharging;
+	// === 상태 플래그 ===
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bIsStunned;
+	// 돌진 중
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Bull|State")
+	bool bIsCharging = false;
+
+	// 기절 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Bull|State")
+	bool bIsStunned = false;
+
+	// === 몽타주 설정 ===
+
+	// 기절 몽타주 (에디터에서 할당)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|Animation|Bull|Montage")
+	TObjectPtr<UAnimMontage> StunMontage;
+
+	// 기절 몽타주 재생 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|Animation|Bull|Montage")
+	float StunMontagePlayRate = 1.0f;
 };
 

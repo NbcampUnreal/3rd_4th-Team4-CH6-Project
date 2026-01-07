@@ -3,6 +3,7 @@
 
 #include "AI/Character/AO_Werewolf.h"
 #include "AI/Component/AO_PackCoordComp.h"
+#include "AI/Animation/AO_Werewolf_AnimInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AAO_Werewolf::AAO_Werewolf()
@@ -36,4 +37,26 @@ void AAO_Werewolf::PostInitializeComponents()
 FEnemyAttackConfig AAO_Werewolf::GetCurrentAttackConfig_Implementation() const
 {
 	return AttackConfig;
+}
+
+void AAO_Werewolf::HandleStunBegin()
+{
+	Super::HandleStunBegin();
+
+	// 기절 애니메이션 재생
+	if (UAO_Werewolf_AnimInstance* WerewolfAnimInstance = Cast<UAO_Werewolf_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		WerewolfAnimInstance->PlayStunMontage();
+	}
+}
+
+void AAO_Werewolf::HandleStunEnd()
+{
+	Super::HandleStunEnd();
+
+	// 기절 애니메이션 중지
+	if (UAO_Werewolf_AnimInstance* WerewolfAnimInstance = Cast<UAO_Werewolf_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		WerewolfAnimInstance->StopStunMontage(0.25f);
+	}
 }

@@ -25,9 +25,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
 	AAO_Stalker* GetStalker() const;
 
-	// 엄폐 위치 찾기 (Hide)
+	// 엄폐 위치 찾기 (Hide) - 다중 플레이어 시야 고려
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
 	FVector FindHideLocation(float Radius, AActor* TargetToHideFrom);
+
+	// KSJ: 다중 플레이어 시야를 고려한 엄폐 위치 찾기
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	FVector FindHideLocationFromMultiple(float Radius, const TArray<AActor*>& PlayersToHideFrom);
+
+	// KSJ: 현재 나를 보고 있는 모든 플레이어 목록 반환
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	TArray<AActor*> GetAllLookingPlayers(float ToleranceDegrees = 45.f) const;
 
 	// KSJ: EQS 기반 엄폐 위치 요청 (비동기). 결과는 Controller에 보관되며 StateTree Task가 소비한다.
 	void RequestHideLocationEQS(UEnvQuery* Query);
@@ -51,6 +59,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
 	bool IsPlayerLookingAtMe(AActor* TargetActor, float ToleranceDegrees = 45.f) const;
 
+	// KSJ: Hysteresis 적용된 LookingPlayer 업데이트 (안정적인 타겟 유지)
+	// 반환값: 타겟이 변경되었으면 true
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	bool UpdateLookingPlayerWithHysteresis(float DeltaTime);
+
+	// KSJ: 현재 Hysteresis가 적용된 LookingPlayer 반환
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	AActor* GetStableLookingPlayer() const { return StableLookingPlayer.Get(); }
+
+	// KSJ: 아무 플레이어가 나를 보고 있는지 여부 (Hysteresis 적용)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Stalker")
+	bool IsAnyPlayerLookingAtMe() const { return StableLookingPlayer.IsValid(); }
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location) override;
@@ -70,6 +91,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AO|AI|Stalker")
 	float TargetPersistenceSeconds = 8.f;
 
+	// KSJ: LookingPlayer Hysteresis 설정
+	// 타겟 최소 유지 시간 (빈번한 타겟 변경 방지)
+	UPROPERTY(EditDefaultsOnly, Category = "AO|AI|Stalker|Hysteresis")
+	float LookingPlayerMinHoldTime = 1.5f;
+
+	// 새 타겟으로 전환하기 위한 거리 비율 (현재 타겟 대비 이 비율 이하로 가까워야 전환)
+	// 예: 0.7 = 새 타겟이 현재 타겟보다 30% 이상 가까워야 전환
+	UPROPERTY(EditDefaultsOnly, Category = "AO|AI|Stalker|Hysteresis")
+	float LookingPlayerSwitchDistanceRatio = 0.7f;
+
 	FTimerHandle RetreatTimerHandle;
 	FTimerHandle TargetPersistenceTimerHandle;
 
@@ -86,5 +117,12 @@ private:
 
 	UPROPERTY()
 	uint32 HideQuerySerial = 0;
+
+	// KSJ: Hysteresis 적용된 안정적인 LookingPlayer
+	UPROPERTY()
+	TWeakObjectPtr<AActor> StableLookingPlayer = nullptr;
+
+	// 현재 타겟 유지 시간
+	float LookingPlayerHoldTimer = 0.f;
 };
 

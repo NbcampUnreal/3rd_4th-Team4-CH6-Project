@@ -16,6 +16,25 @@ void UAO_Insect_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	if (InsectCharacter)
 	{
 		bIsKidnapping = InsectCharacter->IsKidnapping();
+		bIsStunned = InsectCharacter->IsStunned();
+	}
+}
+
+void UAO_Insect_AnimInstance::PlayStunMontage()
+{
+	if (!StunMontage)
+	{
+		return;
+	}
+
+	Montage_Play(StunMontage, StunMontagePlayRate);
+}
+
+void UAO_Insect_AnimInstance::StopStunMontage(float BlendOutTime)
+{
+	if (StunMontage)
+	{
+		Montage_Stop(BlendOutTime, StunMontage);
 	}
 }
 
