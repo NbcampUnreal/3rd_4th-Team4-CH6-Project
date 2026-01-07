@@ -94,6 +94,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Perception|Sight")
 	float PeripheralVisionAngleDegrees = 90.f;
 
+	// 죽은 플레이어도 타겟팅할 것인지 여부 (기본값 false)
+	// Insect 같이 시체를 이용하는 AI는 true로 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Perception")
+	bool bCanTargetDeadPlayer = false;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Perception|Hearing")
 	float HearingRange = 2000.f;
 

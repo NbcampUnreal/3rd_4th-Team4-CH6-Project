@@ -10,8 +10,13 @@ bool FAO_STCond_CeilingAvailable::TestCondition(FStateTreeExecutionContext& Cont
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
 	
-	AAO_Stalker* Stalker = nullptr;
 	AActor* Owner = Cast<AActor>(Context.GetOwner());
+	if (!Owner)
+	{
+		return false;
+	}
+	
+	AAO_Stalker* Stalker = nullptr;
 	
 	if (APawn* Pawn = Cast<APawn>(Owner))
 	{
@@ -19,18 +24,26 @@ bool FAO_STCond_CeilingAvailable::TestCondition(FStateTreeExecutionContext& Cont
 	}
 	else if (AController* Ctrl = Cast<AController>(Owner))
 	{
-		Stalker = Cast<AAO_Stalker>(Ctrl->GetPawn());
-	}
-
-	bool bCeilingAvailable = false;
-	if (Stalker)
-	{
-		if (UAO_CeilingMoveComponent* Comp = Stalker->GetCeilingMoveComponent())
+		APawn* ControlledPawn = Ctrl->GetPawn();
+		if (ControlledPawn)
 		{
-			bCeilingAvailable = Comp->CheckCeilingAvailability();
+			Stalker = Cast<AAO_Stalker>(ControlledPawn);
 		}
 	}
 
-	return InstanceData.bInvert ? !bCeilingAvailable : bCeilingAvailable;
-}
+	if (!Stalker)
+	{
+		return false;
+	}
 
+	UAO_CeilingMoveComponent* Comp = Stalker->GetCeilingMoveComponent();
+	if (!Comp)
+	{
+		return false;
+	}
+
+	bool bCeilingAvailable = Comp->CheckCeilingAvailability();
+	bool bResult = InstanceData.bInvert ? !bCeilingAvailable : bCeilingAvailable;
+	
+	return bResult;
+}

@@ -16,15 +16,20 @@ struct FAO_STTask_Stalk_Ambush_InstanceData
 	UPROPERTY()
 	TObjectPtr<AAO_StalkerController> Controller;
 
-	float AmbushTimer = 0.f;
+	// 공격 중인지 여부 (Troll Attack Task 참고)
+	UPROPERTY()
+	bool bIsAttacking = false;
+
+	UPROPERTY()
+	bool bWaitingForAttackEnd = false;
 };
 
 /**
- * Stalker 기습 대기 Task
- * - 엄폐 상태에서 플레이어가 가까워지거나 등을 보일 때까지 대기
- * - 조건 만족 시 기습 공격 (GAS 실행)
+ * Stalker 공격 실행 Task (구 Ambush)
+ * - EnterState에서 즉시 공격 실행 (GAS)
+ * - 공격 완료 대기
  */
-USTRUCT(meta = (DisplayName = "AO Stalker Ambush", Category = "AI|AO|Stalker"))
+USTRUCT(meta = (DisplayName = "AO Stalker Attack (Ambush)", Category = "AI|AO|Stalker"))
 struct AO_API FAO_STTask_Stalk_Ambush : public FStateTreeAIActionTaskBase
 {
 	GENERATED_BODY()
@@ -35,4 +40,3 @@ struct AO_API FAO_STTask_Stalk_Ambush : public FStateTreeAIActionTaskBase
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const override;
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 };
-

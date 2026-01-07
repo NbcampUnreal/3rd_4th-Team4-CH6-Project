@@ -4,6 +4,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AO_Log.h"
+#include "Kismet/GameplayStatics.h"
 
 AAO_PuzzleReactionActor::AAO_PuzzleReactionActor()
 {
@@ -151,6 +152,11 @@ void AAO_PuzzleReactionActor::ActivateReaction()
         return;
     }
 
+	if (ActivateSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, GetActorLocation());
+	}
+
 	TObjectPtr<UWorld> World = GetWorld();
 	checkf(World, TEXT("World is null in ActivateReaction"));
 
@@ -180,6 +186,11 @@ void AAO_PuzzleReactionActor::DeactivateReaction()
     if (ReactionMode == EPuzzleReactionMode::Toggle)
     {
         bIsActivated = false;
+
+    	if (DeactivateSound)
+    	{
+    		UGameplayStatics::PlaySoundAtLocation(this, DeactivateSound, GetActorLocation());
+    	}
 
     	TObjectPtr<UWorld> World = GetWorld();
     	checkf(World, TEXT("World is null in DeactivateReaction"));
@@ -251,6 +262,21 @@ void AAO_PuzzleReactionActor::OnRep_IsActivated()
     // 클라이언트 Transform 애니메이션 시작
     if (!HasAuthority())
     {
+    	if (bIsActivated)
+    	{
+    		if (ActivateSound)
+    		{
+    			UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, GetActorLocation());
+    		}
+    	}
+    	else
+    	{
+    		if (DeactivateSound)
+    		{
+    			UGameplayStatics::PlaySoundAtLocation(this, DeactivateSound, GetActorLocation());
+    		}
+    	}
+    	
         TWeakObjectPtr<AAO_PuzzleReactionActor> WeakThis(this);
     	TObjectPtr<UWorld> World = GetWorld();
     	if (World)

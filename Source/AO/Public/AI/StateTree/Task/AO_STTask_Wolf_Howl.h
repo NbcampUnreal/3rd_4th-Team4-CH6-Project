@@ -7,7 +7,7 @@
 #include "AO_STTask_Wolf_Howl.generated.h"
 
 class UAO_PackCoordComp;
-class AAO_AggressiveAICtrl;
+class AAO_WerewolfController;
 
 USTRUCT(BlueprintType)
 struct FAO_STTask_Wolf_Howl_InstanceData
@@ -18,7 +18,7 @@ struct FAO_STTask_Wolf_Howl_InstanceData
 	TObjectPtr<UAO_PackCoordComp> PackComp = nullptr;
 
 	UPROPERTY()
-	TObjectPtr<AAO_AggressiveAICtrl> Controller = nullptr;
+	TObjectPtr<AAO_WerewolfController> Controller = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	float HowlDuration = 2.0f; // 애니메이션 길이 등

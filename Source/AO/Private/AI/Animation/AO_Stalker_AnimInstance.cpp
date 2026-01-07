@@ -21,6 +21,16 @@ void UAO_Stalker_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		{
 			bInCeiling = CeilingComp->IsInCeilingMode();
 		}
+
+		// 로컬 속도 계산 (월드 속도를 캐릭터 회전 기준으로 변환)
+		FVector WorldVelocity = StalkerCharacter->GetVelocity();
+		FRotator ActorRotation = StalkerCharacter->GetActorRotation();
+		
+		// UnrotateVector: 월드 벡터를 로컬 벡터로 변환
+		LocalVelocity = ActorRotation.UnrotateVector(WorldVelocity);
+		
+		ForwardSpeed = LocalVelocity.X;
+		RightSpeed = LocalVelocity.Y;
 	}
 }
 

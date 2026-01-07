@@ -41,11 +41,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
 	TArray<FVector> FindPotentialEscapeRoutesImproved(AAO_PlayerCharacter* Target, float SearchRadius = 1000.f, int32 NumSamples = 8);
 
+	// Howl을 실행했거나 참여했는지 여부 (StateTree Evaluator에서 접근용)
+	UFUNCTION(BlueprintPure, Category = "AO|AI|Werewolf")
+	bool HasHowledOrJoined() const { return bHasHowledOrJoined; }
+
+	// Howl/참여 상태 마킹 (Howl Task에서 호출)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	void MarkHowledOrJoined() { bHasHowledOrJoined = true; }
+
+	// Howl/참여 상태 리셋 (배회로 돌아갈 때 사용)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Werewolf")
+	void ResetHowlState();
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 
 	// 플레이어 감지 오버라이드 (Howl 로직)
 	virtual void OnPlayerDetected(AAO_PlayerCharacter* Player, const FVector& Location) override;
+	
+	// 플레이어 놓침 오버라이드 (포위 모드 해제)
+	virtual void OnPlayerLost(AAO_PlayerCharacter* Player, const FVector& LastKnownLocation) override;
+
+	// 수색 완료 오버라이드 (Howl 상태 리셋)
+	virtual void EndSearch() override;
 
 	// Howl 수신 시 처리
 	UFUNCTION()

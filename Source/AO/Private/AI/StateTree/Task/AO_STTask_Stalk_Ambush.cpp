@@ -3,7 +3,6 @@
 #include "AI/StateTree/Task/AO_STTask_Stalk_Ambush.h"
 #include "AI/Controller/AO_StalkerController.h"
 #include "AI/Character/AO_Stalker.h"
-#include "Character/AO_PlayerCharacter.h"
 #include "StateTreeExecutionContext.h"
 #include "AbilitySystemComponent.h"
 
@@ -16,10 +15,45 @@ EStateTreeRunStatus FAO_STTask_Stalk_Ambush::EnterState(FStateTreeExecutionConte
 	{
 		InstanceData.Controller = Cast<AAO_StalkerController>(Pawn->GetController());
 	}
+	else if (AController* Ctrl = Cast<AController>(Owner))
+	{
+		InstanceData.Controller = Cast<AAO_StalkerController>(Ctrl);
+	}
 
-	InstanceData.AmbushTimer = 0.f;
+	if (!InstanceData.Controller)
+	{
+		return EStateTreeRunStatus::Failed;
+	}
 
-	return EStateTreeRunStatus::Running;
+	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
+	if (!Stalker)
+	{
+		return EStateTreeRunStatus::Failed;
+	}
+
+	// 기절 상태면 공격 불가
+	if (Stalker->IsStunned())
+	{
+		return EStateTreeRunStatus::Failed;
+	}
+
+	UAbilitySystemComponent* ASC = Stalker->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return EStateTreeRunStatus::Failed;
+	}
+
+	// 공격 실행 (Ability.Action.Ambush 태그 사용)
+	// Stalker GA는 이 태그로 트리거되도록 설정되어 있어야 함
+	FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Action.Ambush"));
+	if (ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag)))
+	{
+		InstanceData.bIsAttacking = true;
+		InstanceData.bWaitingForAttackEnd = true;
+		return EStateTreeRunStatus::Running;
+	}
+
+	return EStateTreeRunStatus::Failed;
 }
 
 EStateTreeRunStatus FAO_STTask_Stalk_Ambush::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
@@ -28,35 +62,27 @@ EStateTreeRunStatus FAO_STTask_Stalk_Ambush::Tick(FStateTreeExecutionContext& Co
 	if (!InstanceData.Controller) return EStateTreeRunStatus::Failed;
 
 	AAO_Stalker* Stalker = InstanceData.Controller->GetStalker();
-	AAO_PlayerCharacter* Target = InstanceData.Controller->GetChaseTarget();
+	if (!Stalker) return EStateTreeRunStatus::Failed;
 
-	if (!Stalker || !Target) return EStateTreeRunStatus::Failed;
-
-	// 기습 조건 체크 (거리, 후방 등)
-	float Dist = FVector::Dist(Stalker->GetActorLocation(), Target->GetActorLocation());
-	
-	// 공격 사거리 내 진입 시 공격 실행
-	if (Dist < 200.f)
+	// 기절 체크
+	if (Stalker->IsStunned())
 	{
-		UAbilitySystemComponent* ASC = Stalker->GetAbilitySystemComponent();
-		if (ASC)
-		{
-			FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Action.Ambush"));
-			ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
-			return EStateTreeRunStatus::Succeeded; // 공격 실행했으므로 Task 종료 (후퇴 등 다음 상태로)
-		}
+		InstanceData.bIsAttacking = false;
+		return EStateTreeRunStatus::Failed;
 	}
 
-	// 플레이어가 보고 있으면 다시 숨기로 전환 (Task 실패로 처리하여 Selector에서 Hide로 넘어가도록)
-	// Condition으로 빼는게 좋지만 여기서 간단 체크
-	FVector DirToStalker = (Stalker->GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
-	float Dot = FVector::DotProduct(Target->GetActorForwardVector(), DirToStalker);
-	if (Dot > 0.5f) // 전방 60도 내
+	// 공격 완료 대기
+	if (InstanceData.bWaitingForAttackEnd)
 	{
-		// 들켰다! 숨으러 가자
-		return EStateTreeRunStatus::Failed; 
+		// Stalker의 IsAttacking 상태 확인 (GA에서 관리)
+		if (!Stalker->IsAttacking())
+		{
+			// 공격 완료
+			InstanceData.bIsAttacking = false;
+			InstanceData.bWaitingForAttackEnd = false;
+			return EStateTreeRunStatus::Succeeded;
+		}
 	}
 
 	return EStateTreeRunStatus::Running;
 }
-

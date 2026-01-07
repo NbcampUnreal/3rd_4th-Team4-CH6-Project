@@ -3,6 +3,7 @@
 #include "Net/UnrealNetwork.h"
 #include "AO_Log.h"
 #include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameMode/AO_GameMode_Stage.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 
 AAO_GameState::AAO_GameState()
@@ -295,6 +296,73 @@ int32 AAO_GameState::GetSharedReviveCount() const
 	return SharedReviveCount;
 }
 
+
+void AAO_GameState::AddSharedReviveCount(int32 Delta)
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	const int32 OldValue = SharedReviveCount;
+
+	int32 NewValue = SharedReviveCount + Delta;
+	if (NewValue < 0)
+	{
+		NewValue = 0;
+	}
+
+	// SetSharedReviveCount 안에서 Rep / OnRep / 로그 처리
+	SetSharedReviveCount(NewValue);
+
+	// GI 값도 같이 맞춰줌 (GI는 "저장"만 담당)
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		GI->SharedReviveCount = SharedReviveCount;
+	}
+
+	// 값이 증가한 경우에만 Stage GameMode에 알림 (기존 GI 로직 이관)
+	if (SharedReviveCount > OldValue)
+	{
+		UWorld* World = GetWorld();
+		if (World != nullptr)
+		{
+			AAO_GameMode_Stage* StageGM = World->GetAuthGameMode<AAO_GameMode_Stage>();
+			if (StageGM != nullptr)
+			{
+				StageGM->HandleSharedReviveCountIncreased();
+			}
+		}
+	}
+}
+
+bool AAO_GameState::TryConsumeSharedReviveCount()
+{
+	if (HasAuthority() == false)
+	{
+		return false;
+	}
+
+	if (SharedReviveCount <= 0)
+	{
+		return false;
+	}
+
+	const int32 NewValue = SharedReviveCount - 1;
+
+	// SetSharedReviveCount 를 통해 Rep / OnRep / 로그 처리
+	SetSharedReviveCount(NewValue);
+
+	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(GetGameInstance()))
+	{
+		GI->SharedReviveCount = SharedReviveCount;
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("GS: Consume revive -> %d left"), SharedReviveCount);
+
+	return true;
+}
+
 //ms: 패시브 초기화
 void AAO_GameState::Authority_NotifyGlobalReset()
 {
@@ -319,9 +387,19 @@ void AAO_GameState::FindHint(int32 Num)
 	
 	switch (Num)
 	{
-	case 1: bHint1 = true; break;
-	case 2: bHint2 = true; break;
-	case 3: bHint3 = true; break;
+	case 1:
+		if (bHint1 == false)
+		bHint1 = true;
+		CurrentFindHintNum++;
+		break;
+	case 2:
+		if (bHint2 == false)
+			bHint2 = true;
+		CurrentFindHintNum++;
+	case 3:
+		if (bHint3 == false)
+			bHint3 = true;
+		CurrentFindHintNum++;
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
