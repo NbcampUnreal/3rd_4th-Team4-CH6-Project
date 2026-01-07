@@ -124,6 +124,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
 	bool IsRemotePlayerTalking(APlayerState* PS);
+
+	UFUNCTION(BlueprintCallable, Category="AO|VoiceChat")
+	void UpdateVoiceMember(AAO_PlayerState* ChangedPlayerState);
 	
 
 protected:

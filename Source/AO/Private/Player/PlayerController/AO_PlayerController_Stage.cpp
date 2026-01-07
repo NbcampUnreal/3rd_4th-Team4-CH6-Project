@@ -30,6 +30,7 @@
 AAO_PlayerController_Stage::AAO_PlayerController_Stage()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bPendingAutoRespawn = false;
 	
 	AO_LOG(LogJM, Log, TEXT("Start"));
 	AO_LOG(LogJM, Log, TEXT("End"));
@@ -140,6 +141,12 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 {
 	if (!IsLocalController())
 	{
+		return;
+	}
+	
+	if (bPendingAutoRespawn)
+	{
+		// 자동 부활 대기 중이면 관전 UI 띄우지 않음
 		return;
 	}
 
@@ -270,6 +277,83 @@ void AAO_PlayerController_Stage::RequestStopSpectate(EAO_SpectateEndReason Reaso
 
 	// 로컬 정리
 	StopSpectate(Reason);
+}
+
+void AAO_PlayerController_Stage::StartRespawnCountdown(float InDelaySeconds)
+{
+	if (IsLocalController() == false)
+	{
+		return;
+	}
+
+	if (InDelaySeconds <= 0.0f)
+	{
+		return;
+	}
+
+	RespawnRemainingSeconds = InDelaySeconds;
+
+	if (RespawnCountdownWidget == nullptr && RespawnCountdownWidgetClass != nullptr)
+	{
+		RespawnCountdownWidget = CreateWidget<UUserWidget>(this, RespawnCountdownWidgetClass);
+	}
+
+	if (RespawnCountdownWidget)
+	{
+		RespawnCountdownWidget->AddToViewport();
+	}
+
+	// 필요하면 여기에서 UI Only 입력 모드로 변경 가능
+	/*
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(RespawnCountdownWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+	*/
+
+	GetWorldTimerManager().ClearTimer(RespawnCountdownTimerHandle);
+
+	GetWorldTimerManager().SetTimer
+	(
+		RespawnCountdownTimerHandle,
+		this,
+		&AAO_PlayerController_Stage::UpdateRespawnCountdown,
+		1.0f,
+		true
+	);
+}
+
+void AAO_PlayerController_Stage::UpdateRespawnCountdown()
+{
+	if (IsLocalController() == false)
+	{
+		return;
+	}
+
+	RespawnRemainingSeconds -= 1.0f;
+
+	if (RespawnRemainingSeconds <= 0.0f)
+	{
+		StopRespawnCountdown();
+	}
+}
+
+void AAO_PlayerController_Stage::StopRespawnCountdown()
+{
+	if (IsLocalController() == false)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(RespawnCountdownTimerHandle);
+
+	RespawnRemainingSeconds = 0.0f;
+
+	if (RespawnCountdownWidget)
+	{
+		RespawnCountdownWidget->RemoveFromParent();
+	}
 }
 
 void AAO_PlayerController_Stage::ServerRPC_StopSpectate_Implementation()

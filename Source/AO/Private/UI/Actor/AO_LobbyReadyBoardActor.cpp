@@ -152,7 +152,7 @@ void AAO_LobbyReadyBoardActor::RebuildBoard()
 		FAOLobbyReadyBoardEntry Row;
 		Row.PlayerName    = PS->GetPlayerName();
 		Row.bIsHost       = bIsHost;
-		Row.StatusLabel   = bIsHost ? TEXT("게임시작") : TEXT("레디");
+		Row.StatusLabel   = bIsHost ? TEXT("Start") : TEXT("Ready");
 		Row.bStatusActive = bIsHost ? bAllReadyExceptHost : bReady;
 		Row.JoinOrder     = JoinOrder;
 
