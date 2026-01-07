@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "AI/Character/AO_LavaMonster.h"
+#include "NiagaraSystem.h"
 #include "AO_GA_LavaMonster_Attack.generated.h"
 
 class AAO_PlayerCharacter;
+class UNiagaraComponent;
 
 /**
  * 땅속 공격 타겟 정보
@@ -96,6 +98,9 @@ protected:
 	// HitReact 이벤트 발송
 	void SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor);
 
+	// 땅속 공격 VFX 스폰
+	void SpawnGroundStrikeVFX(const FVector& Location, float Radius, float Duration);
+
 	// 몽타주 종료 콜백
 	UFUNCTION()
 	void OnMontageCompleted();
@@ -121,6 +126,10 @@ protected:
 	// 트레이스 채널
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
+
+	// 땅속 공격 VFX (나이아가라 시스템)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
+	TObjectPtr<UNiagaraSystem> GroundStrikeVFX;
 
 	// 땅속 공격 타겟 목록
 	UPROPERTY()

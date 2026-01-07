@@ -4,6 +4,7 @@
 #include "Character/AO_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -103,11 +104,39 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 	// 납치 성공 처리
 	CurrentVictim = TargetPlayer;
 	
+	// 0. 제약 설정 및 태그 적용 (가장 먼저 실행하여 어빌리티 취소)
+	// 파쿠르 등의 어빌리티가 취소되면서 MovementMode를 Walking으로 돌려놓더라도,
+	// 아래의 물리 처리 로직이 나중에 실행되어 Flying으로 덮어씌워야 안전함
+	SetPlayerRestrictions(CurrentVictim, true);
+	
 	// 1. 물리/충돌 처리
 	if (UCapsuleComponent* Capsule = CurrentVictim->GetCapsuleComponent())
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 충돌 끔 (Insect와 겹치기 위해)
 	}
+
+	// 1-1. 메시 물리 시뮬레이션 비활성화 (Ragdoll 상태인 경우 필수)
+	if (USkeletalMeshComponent* Mesh = CurrentVictim->GetMesh())
+	{
+		Mesh->SetSimulatePhysics(false);
+		Mesh->SetCollisionProfileName(TEXT("NoCollision")); // 부착 중 충돌 방지
+
+		// 사망 상태라면 메시 위치 초기화 (래그돌이었을 경우를 대비)
+		// 살아있는 플레이어는 애니메이션이 위치를 제어하므로 건드리지 않음 (방향 꼬임 방지)
+		bool bIsDead = false;
+		if (UAbilitySystemComponent* VictimASC = CurrentVictim->GetAbilitySystemComponent())
+		{
+			bIsDead = VictimASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death")));
+		}
+
+		if (bIsDead)
+		{
+			// 래그돌로 인해 돌아가있을 수 있는 루트 본 등을 초기화
+			Mesh->AttachToComponent(CurrentVictim->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			Mesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator); // 캡슐 기준 정렬
+		}
+	}
+
 	if (UCharacterMovementComponent* MoveComp = CurrentVictim->GetCharacterMovement())
 	{
 		MoveComp->StopMovementImmediately();
@@ -120,10 +149,7 @@ bool UAO_KidnapComponent::TryKidnapPlayer(AAO_PlayerCharacter* TargetPlayer)
 		CurrentVictim->AttachToComponent(OwnerCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, KidnapSocketName);
 	}
 
-	// 3. 제약 설정 및 태그 적용
-	SetPlayerRestrictions(CurrentVictim, true);
-
-	// 4. 플레이어 사망 감지 바인딩
+	// 3. 플레이어 사망 감지 바인딩
 	BindDeathDelegate();
 
 	// 5. DoT 시작
@@ -169,6 +195,10 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 	if (IsValid(ReleasedPlayer))
 	{
 		ReleasedPlayer->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+		// 누워있던 캐릭터를 똑바로 세움 (Pitch, Roll 제거)
+		FRotator CurrentRot = ReleasedPlayer->GetActorRotation();
+		ReleasedPlayer->SetActorRotation(FRotator(0.f, CurrentRot.Yaw, 0.f));
 	}
 
 	// 2. 모든 Ability 취소 (Traversal 등이 실행 중일 수 있음) - 사망한 플레이어는 스킵
@@ -195,11 +225,21 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 				Capsule->SetCollisionProfileName(TEXT("Player"));
 			}
 			
+			// 메시 충돌 프로필 복구 (NoCollision -> CharacterMesh)
+			if (USkeletalMeshComponent* Mesh = ReleasedPlayer->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("CharacterMesh")); // 기본 캐릭터 메시 프로필로 복구
+			}
+			
 			if (MoveComp)
 			{
 				MoveComp->Velocity = FVector::ZeroVector;
 				MoveComp->StopMovementImmediately();
-				MoveComp->SetMovementMode(MOVE_Walking);
+				// 던지기 모드가 아닐 때만 Walking으로 복구 (던지기 시에는 Falling으로 유지)
+				if (!bThrow)
+				{
+					MoveComp->SetMovementMode(MOVE_Walking);
+				}
 				MoveComp->GravityScale = 1.0f;
 			}
 
@@ -213,6 +253,20 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 			{
 				Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 				Capsule->SetCollisionProfileName(TEXT("Ragdoll"));
+			}
+
+			// 사망 상태라면 다시 래그돌(물리) 활성화
+			if (USkeletalMeshComponent* Mesh = ReleasedPlayer->GetMesh())
+			{
+				Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
+				Mesh->SetSimulatePhysics(true);
+				
+				// 물리 힘을 조금 주어 자연스럽게 떨어지게 함
+				if (bThrow)
+				{
+					FVector ThrowDir = GetOwner()->GetActorForwardVector() + FVector::UpVector;
+					Mesh->AddImpulse(ThrowDir * 500.f, NAME_None, true);
+				}
 			}
 			
 			if (MoveComp)
@@ -282,9 +336,17 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ReleasedPlayer, KnockdownTag, EventData);
 		
 		// 살짝 던지는 물리력 (옵션)
+
+		// 1. 확실하게 Falling 상태로 전환 (물리 적용을 위해)
+		if (UCharacterMovementComponent* MC = ReleasedPlayer->GetCharacterMovement())
+		{
+			MC->SetMovementMode(MOVE_Falling);
+		}
+
+		// 2. 던지는 힘 상향 (300 -> 600) 및 방향 보정
 		FVector ThrowDir = GetOwner()->GetActorForwardVector() + FVector::UpVector;
 		ThrowDir.Normalize();
-		ReleasedPlayer->LaunchCharacter(ThrowDir * 300.f, true, true);
+		ReleasedPlayer->LaunchCharacter(ThrowDir * 600.f, true, true);
 	}
 
 	// 5. DoT 중지
@@ -473,9 +535,9 @@ void UAO_KidnapComponent::SetPlayerRestrictions(AAO_PlayerCharacter* Player, boo
 			// 납치 태그 추가 (Loose Tag) -> 이걸로 점프/스킬 차단 (Player Character Ability에서 Tag Block 필요)
 			ASC->AddLooseGameplayTag(KidnappedStatusTag);
 			
-			// 이동/점프 등 Ability Cancel
-			FGameplayTagContainer AbilityTags(FGameplayTag::RequestGameplayTag(FName("Ability")));
-			ASC->CancelAbilities(&AbilityTags);
+			// 이동/점프 등 모든 Ability Cancel
+			// 특정 태그 대신 nullptr을 사용하여 모든 활성 어빌리티를 확실하게 취소
+			ASC->CancelAbilities(nullptr);
 		}
 		else
 		{

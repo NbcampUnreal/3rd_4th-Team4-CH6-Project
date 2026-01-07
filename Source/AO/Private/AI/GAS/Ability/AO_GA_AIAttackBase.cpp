@@ -216,7 +216,10 @@ void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* I
 		}
 	}
 
-	// 2. 넉백 적용
+	// 3. Hit React 이벤트 전송 (먼저 실행하여 피격 상태로 만듦)
+	SendHitReactEvent(TargetActor, InstigatorActor, Config.Damage);
+
+	// 2. 넉백 적용 (피격 상태로 멈춘 것을 강제로 날려버림)
 	ACharacter* TargetChar = Cast<ACharacter>(TargetActor);
 	if (TargetChar && Config.KnockbackStrength > 0.f)
 	{
@@ -230,9 +233,6 @@ void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* I
 		}
 		TargetChar->LaunchCharacter(KnockbackDir * Config.KnockbackStrength, true, true);
 	}
-
-	// 3. Hit React 이벤트 전송
-	SendHitReactEvent(TargetActor, InstigatorActor, Config.Damage);
 
 	// 4. 자식 클래스 오버라이드 콜백
 	OnTargetHit(TargetActor, InstigatorActor);
