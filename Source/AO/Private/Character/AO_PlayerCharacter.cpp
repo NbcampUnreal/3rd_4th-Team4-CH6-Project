@@ -723,7 +723,7 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 	FInventorySlot ItemToAdd;
 	ItemToAdd.ItemID = "chip";
 	ItemToAdd.Quantity = 1;
-	ItemToAdd.ItemType = EItemType::Consumable;
+	ItemToAdd.ItemType = EItemType::RevivalChip;
 		
 	Inventory->PickupItem(ItemToAdd, this);
 	//ms
