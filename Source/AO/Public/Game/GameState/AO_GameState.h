@@ -41,6 +41,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|Revive")
 	int32 GetSharedReviveCount() const;
 
+	UFUNCTION(BlueprintCallable, Category = "AO|Revive")
+	void AddSharedReviveCount(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "AO|Revive")
+	bool TryConsumeSharedReviveCount();
+
 	UFUNCTION(BlueprintCallable, Category = "AO|GameFlow")
 	bool IsStageFailed() const { return bIsStageFailed; }
 

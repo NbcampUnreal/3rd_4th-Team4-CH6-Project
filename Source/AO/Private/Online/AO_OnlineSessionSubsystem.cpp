@@ -1400,3 +1400,57 @@ bool UAO_OnlineSessionSubsystem::IsRemotePlayerTalking(APlayerState* PS)
 	
 	return result;
 }
+
+void UAO_OnlineSessionSubsystem::UpdateVoiceMember(AAO_PlayerState* ChangedPlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!AO_ENSURE(ChangedPlayerState, TEXT("Changed PS is nullptr")))
+	{
+		return;
+	}
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!AO_ENSURE(PC, TEXT("PC is Invalid")))
+	{
+		return;
+	}
+
+	AAO_PlayerState* MyPS = PC->GetPlayerState<AAO_PlayerState>();
+	if (!AO_ENSURE(MyPS, TEXT("My PS is Invalid")))
+	{
+		return;
+	}
+
+	if (ChangedPlayerState == MyPS)	// 변화한 플레이어가 나인 경우
+	{
+		if (ChangedPlayerState->GetIsAlive())	// 내가 부활한 경우
+		{
+			MuteAllDeadRemoteTalker();	// 죽은 사람들만 Mute
+		}
+		else  // 내가 죽은 경우
+		{
+			UnmuteAllRemoteTalker();	// 모두 unmute
+		}
+	}
+	else    // 변화한 플레이어가 타인인 경우
+	{
+		if (MyPS->GetIsAlive())	// 내가 살아있다면
+		{
+			if (ChangedPlayerState->GetIsAlive())	// 타인이 부활한 경우 Unmute
+			{
+				UnmuteRemoteTalker(0, ChangedPlayerState, false);
+			}
+			else								// 타인이 사망한 경우 Mute
+			{
+				MuteRemoteTalker(0, ChangedPlayerState, false);
+			}
+		}
+		else  // 내가 죽어있다면 타인이 부활하든 죽든 일단 다 들리게 유지
+		{
+			UnmuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}

@@ -38,7 +38,6 @@ bool UAO_GameplayAbility_Jump::CanActivateAbility(const FGameplayAbilitySpecHand
 		if (OptionalRelevantTags)
 		{
 			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
-			AO_LOG(LogKH, Warning, TEXT("Jump Ability Failed: NotEnoughStamina"));
 		}
 		return false;
 	}
