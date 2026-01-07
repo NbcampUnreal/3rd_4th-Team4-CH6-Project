@@ -98,6 +98,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Reaction|Animation", meta=(ClampMin="0.1"))
     float TransformSpeed = 2.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Reaction|Sound")
+	TObjectPtr<USoundBase> ActivateSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Reaction|Sound")
+	TObjectPtr<USoundBase> DeactivateSound;
+
 protected:
     UPROPERTY(ReplicatedUsing=OnRep_IsActivated, BlueprintReadOnly, Category="Reaction")
     bool bIsActivated = false;

@@ -87,13 +87,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AO|Revive")
 	int32 GetSharedReviveCount() const;
 
-	// 휴식 레벨 구매 / 시체 회수 등으로 부활 횟수 증감
-	UFUNCTION(BlueprintCallable, Category="AO|Revive")
-	void AddSharedReviveCount(int32 Delta);
-
-	// 부활 시도: 0보다 크면 1 소모 후 true, 0이면 false
-	bool TryConsumeSharedReviveCount();
-
 	//ms : 패시브 초기화
 	void PassiveReset();
 

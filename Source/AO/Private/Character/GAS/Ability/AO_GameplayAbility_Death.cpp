@@ -3,6 +3,7 @@
 #include "Character/GAS/Ability/AO_GameplayAbility_Death.h"
 
 #include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Character/Components/AO_DeathSpectateComponent.h"
@@ -11,7 +12,7 @@
 UAO_GameplayAbility_Death::UAO_GameplayAbility_Death()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 	
 	const FGameplayTagContainer TraversalTag(FGameplayTag::RequestGameplayTag(FName("Ability.State.Death")));
 	SetAssetTags(TraversalTag);
@@ -29,9 +30,11 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 
 	if (!ActorInfo || !ActorInfo->IsNetAuthority())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
+
+	bDeathFinalizeCalled = false;
 
 	TObjectPtr<UAbilitySystemComponent> ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (!ensure(ASC))
@@ -93,7 +96,50 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 		checkf(BlockAbilitiesEffectClass, TEXT("BlockAbilitiesEffectClass is null"));
 		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, BlockAbilitiesEffectClass, 1.f);
 		FActiveGameplayEffectHandle BlockAbilitiesEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+		
+		const float FallbackSeconds = DeathMontage->GetPlayLength();
+		const float SafeSeconds = (FallbackSeconds > 0.f) ? FallbackSeconds : 1.f;
+
+		if (UWorld* World = ActorInfo->AvatarActor->GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				DeathFinalizeTimerHandle,
+				this,
+				&UAO_GameplayAbility_Death::OnDeathFinalizeTimerExpired,
+				SafeSeconds,
+				false);
+		}
 	}
+}
+
+void UAO_GameplayAbility_Death::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
+	{
+		if (UWorld* World = ActorInfo->AvatarActor->GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(DeathFinalizeTimerHandle);
+		}
+	}
+	
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UAO_GameplayAbility_Death::CancelAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateCancelAbility)
+{
+	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
+	{
+		if (UWorld* World = ActorInfo->AvatarActor->GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(DeathFinalizeTimerHandle);
+		}
+	}
+	
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 }
 
 void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payload)
@@ -101,6 +147,22 @@ void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payloa
 	if (!CurrentActorInfo->IsNetAuthority())
 	{
 		return;
+	}
+	
+	FinalizeDeath(CurrentActorInfo, true);
+}
+
+void UAO_GameplayAbility_Death::FinalizeDeath(const FGameplayAbilityActorInfo* ActorInfo, bool bFromNotify)
+{
+	if (bDeathFinalizeCalled)
+	{
+		return;
+	}
+	bDeathFinalizeCalled = true;
+
+	if (!bFromNotify)
+	{
+		AO_LOG(LogKH, Warning, TEXT("FinalizeDeath called without notify"));
 	}
 	
 	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
@@ -120,4 +182,12 @@ void UAO_GameplayAbility_Death::OnRagdollEventReceived(FGameplayEventData Payloa
 	}
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UAO_GameplayAbility_Death::OnDeathFinalizeTimerExpired()
+{
+	if (CurrentActorInfo)
+	{
+		FinalizeDeath(CurrentActorInfo, false);
+	}
 }

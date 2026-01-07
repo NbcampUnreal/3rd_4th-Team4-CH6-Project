@@ -20,7 +20,7 @@ void UAO_Fuel_AttributeSet::InitFromGameInstance()
 
 	if (UAO_GameInstance* GI = Cast<UAO_GameInstance>(World->GetGameInstance()))
 	{
-		const float LastFuel = FMath::Max(0.0f, GI->SharedTrainFuel);
+		const float LastFuel = FMath::Max(30.0f, GI->SharedTrainFuel);
 		Fuel.SetBaseValue(LastFuel);
 		Fuel.SetCurrentValue(LastFuel);
 	}

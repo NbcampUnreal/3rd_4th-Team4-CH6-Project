@@ -4,6 +4,7 @@
 
 #include "EngineUtils.h"
 #include "Game/GameState/AO_GameState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Train/AO_newTrain.h"
 
@@ -13,6 +14,7 @@ AAO_StageInteractable::AAO_StageInteractable(const FObjectInitializer& ObjectIni
 {
 	InteractType = EAO_StageInteractType::ExitToNextArea;
 	RequiredFuel = 20.0f;
+	TutorialExitLevelName = TEXT("LV_MainMenu");
 }
 
 FAO_InteractionInfo AAO_StageInteractable::GetInteractionInfo(const FAO_InteractionQuery& InteractionQuery) const
@@ -58,6 +60,21 @@ FAO_InteractionInfo AAO_StageInteractable::GetInteractionInfo(const FAO_Interact
 void AAO_StageInteractable::OnInteractionSuccess_BP_Implementation(AActor* Interactor)
 {
 	Super::OnInteractionSuccess_BP_Implementation(Interactor);
+
+	if (InteractType == EAO_StageInteractType::Tutorial)
+	{
+		bool bHasFuel = false;
+		bool bHasClues = false;
+		GetCurrentConditions(bHasFuel, bHasClues);
+
+		// 조건 충족 시에만 레벨 이동
+		if (bHasFuel && bHasClues)
+		{
+			UGameplayStatics::OpenLevel(this, TutorialExitLevelName);
+		}
+        
+		return;
+	}
 
 	APawn* Pawn = Cast<APawn>(Interactor);
 	if(!Pawn)

@@ -21,16 +21,6 @@ AAO_GameMode_InGameBase::AAO_GameMode_InGameBase()
 void AAO_GameMode_InGameBase::HandleSeamlessTravelPlayer(AController*& C)
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
-
-	//ms : 패시브 유지
-	if (APlayerController* PC = Cast<APlayerController>(C))
-	{
-		if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
-		{
-			Subsystem->SnapshotPlayerData(PC);
-		}
-	}
-	//ms
 	
 	Super::HandleSeamlessTravelPlayer(C);
 

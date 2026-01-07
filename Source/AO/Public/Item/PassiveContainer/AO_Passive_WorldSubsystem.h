@@ -1,20 +1,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayEffect.h"
+#include "GameplayTagContainer.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "AO_Passive_WorldSubsystem.generated.h"
 
 USTRUCT(BlueprintType)
-struct FAO_PlayerGASSnapshot
+struct FAO_PlayerPassiveData
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY()
-	TMap<FString, float> AttributeBaseValues;
-	
-	UPROPERTY()
-	TArray<FGameplayEffectSpec> ActiveSpecs;
+	TMap<FGameplayTag, float> CumulativePassives;
 };
 
 UCLASS()
@@ -23,11 +20,15 @@ class AO_API UAO_Passive_WorldSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
-	TMap<FString, FAO_PlayerGASSnapshot> PlayerSnapshots;
-
+	void RecordPassiveUpgrade(APlayerController* PC, FGameplayTag PassiveTag, float Amount);
+	
+	void ReapplyAllPassives(APlayerController* PC);
+	
 	FString GetPlayerPersistentId(APlayerController* PC);
-	void SnapshotPlayerData(APlayerController* PC);
-	void RestorePlayerGASData(APlayerController* PC);
+	
 	void ClearAllPlayerData();
+
+private:
+	UPROPERTY()
+	TMap<FString, FAO_PlayerPassiveData> PlayerPassiveStats;
 };

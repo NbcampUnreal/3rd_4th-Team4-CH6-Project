@@ -129,6 +129,25 @@ protected:
 
 	bool bIsSpectating = false;
 	
+private:
+	// ==================== Respawn Countdown ====================
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> RespawnCountdownWidgetClass;
+
+	UPROPERTY()
+	UUserWidget* RespawnCountdownWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Respawn", meta = (AllowPrivateAccess = "true"))
+	float RespawnRemainingSeconds;
+
+	FTimerHandle RespawnCountdownTimerHandle;
+
+	void UpdateRespawnCountdown();
+public:
+	void StartRespawnCountdown(float InDelaySeconds);
+	void StopRespawnCountdown();
+	bool bPendingAutoRespawn;
+	
 public:
 	// 부활 요청 RPC
 	UFUNCTION(Server, Reliable)
@@ -140,4 +159,7 @@ public:
 	//ms : 선발대 흔적
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "GameLogic")
 	void Server_NotifyHintFound(int32 HintNum);
+
+private:
+	void RebuildDefaultHUD();
 };

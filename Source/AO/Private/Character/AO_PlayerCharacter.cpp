@@ -142,7 +142,7 @@ void AAO_PlayerCharacter::PossessedBy(AController* NewController)
 			{
 				if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
 				{
-					Subsystem->RestorePlayerGASData(PC);
+					Subsystem->ReapplyAllPassives(PC);
 				}
 			}
 		});
@@ -383,19 +383,6 @@ void AAO_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		VOIPTalker->DestroyComponent();
 		VOIPTalker = nullptr;
 	}
-
-	//ms : 패시브 다음레벨 이동
-	if (HasAuthority() && EndPlayReason == EEndPlayReason::LevelTransition)
-	{
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
-		{
-			if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
-			{
-				Subsystem->SnapshotPlayerData(PC);
-			}
-		}
-	}
-	//ms
 	
 	Super::EndPlay(EndPlayReason);
 }
