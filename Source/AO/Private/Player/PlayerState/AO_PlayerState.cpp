@@ -8,6 +8,7 @@
 #include "Game/AO_MapRoutes.h"
 #include "Game/GameInstance/AO_GameInstance.h"
 #include "Game/GameMode/AO_GameMode_Stage.h"
+#include "Player/PlayerController/AO_PlayerController_Stage.h"
 #include "Net/UnrealNetwork.h"
 #include "Online/AO_OnlineSessionSubsystem.h"
 #include "Settings/AO_GameSettingsManager.h"
@@ -123,6 +124,29 @@ void AAO_PlayerState::OnRep_IsAlive()
 	{
 		AO_LOG(LogJM, Log, TEXT("Update bIsAlive false -> true"));
 	}
+	
+	APlayerController* OwnerPC = Cast<APlayerController>(GetOwner());
+	if (OwnerPC != nullptr)
+	{
+		AAO_PlayerController_Stage* StagePC = Cast<AAO_PlayerController_Stage>(OwnerPC);
+		if (StagePC != nullptr)
+		{
+			if (OwnerPC->IsLocalController())
+			{
+				if (!bIsAlive)
+				{
+					// 사망 → 5초 카운트다운 시작
+					StagePC->StartRespawnCountdown(5.0f);
+				}
+				else
+				{
+					// 다시 살아남 → 카운트다운 정리
+					StagePC->StopRespawnCountdown();
+				}
+			}
+		}
+	}
+	
 }
 
 void AAO_PlayerState::OnRep_DeathCount()
