@@ -319,9 +319,19 @@ void AAO_GameState::FindHint(int32 Num)
 	
 	switch (Num)
 	{
-	case 1: bHint1 = true; break;
-	case 2: bHint2 = true; break;
-	case 3: bHint3 = true; break;
+	case 1:
+		if (bHint1 == false)
+		bHint1 = true;
+		CurrentFindHintNum++;
+		break;
+	case 2:
+		if (bHint2 == false)
+			bHint2 = true;
+		CurrentFindHintNum++;
+	case 3:
+		if (bHint3 == false)
+			bHint3 = true;
+		CurrentFindHintNum++;
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Find Hint %d"), Num);
