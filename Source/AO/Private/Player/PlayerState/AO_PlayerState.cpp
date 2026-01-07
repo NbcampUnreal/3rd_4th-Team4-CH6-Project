@@ -123,6 +123,12 @@ void AAO_PlayerState::OnRep_IsAlive()
 	{
 		AO_LOG(LogJM, Log, TEXT("Update bIsAlive false -> true"));
 	}
+
+	// JM : 보이스 업데이트
+	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSS->UpdateVoiceMember(this);
+	}
 }
 
 void AAO_PlayerState::OnRep_DeathCount()

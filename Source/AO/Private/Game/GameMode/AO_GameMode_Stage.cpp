@@ -360,10 +360,11 @@ void AAO_GameMode_Stage::NotifyPlayerAliveStateChanged(AAO_PlayerState* ChangedP
 	}
 	
 	// JM : 캐릭터 생존 상태 변경 시, 모든 플레이어의 보이스 채팅 Mute 상태 업데이트 (논리적 분리)
-	if (AAO_PlayerController_InGameBase* AO_PC_InGameBase = Cast<AAO_PlayerController_InGameBase>(ChangedPlayerState->GetPlayerController()))
+	// JM : 이걸 여기서 하면 안돼고, PS에서 bIsAlive 값 OnRep 받아서 각자 업데이트 하도록 해야함
+	/*if (AAO_PlayerController_InGameBase* AO_PC_InGameBase = Cast<AAO_PlayerController_InGameBase>(ChangedPlayerState->GetPlayerController()))
 	{
 		LetUpdateVoiceMemberForAllClients(AO_PC_InGameBase);
-	}
+	}*/
 
 	// 플레이어 한 명의 생존 상태가 바뀔 때마다 전멸 여부 재평가
 	EvaluateTeamWipe();
