@@ -159,4 +159,7 @@ public:
 	//ms : 선발대 흔적
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "GameLogic")
 	void Server_NotifyHintFound(int32 HintNum);
+
+private:
+	void RebuildDefaultHUD();
 };

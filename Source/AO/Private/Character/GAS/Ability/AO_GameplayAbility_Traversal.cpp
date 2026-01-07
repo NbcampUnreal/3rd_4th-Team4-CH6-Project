@@ -64,7 +64,6 @@ bool UAO_GameplayAbility_Traversal::CanActivateAbility(const FGameplayAbilitySpe
 		if (OptionalRelevantTags)
 		{
 			OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina")));
-			AO_LOG(LogKH, Warning, TEXT("Traversal Ability Failed: NotEnoughStamina"));
 		}
 		return false;
 	}
