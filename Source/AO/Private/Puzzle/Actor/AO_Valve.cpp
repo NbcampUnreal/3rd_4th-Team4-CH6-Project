@@ -29,14 +29,11 @@ void AAO_Valve::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (bIsValveOpen)
+	if (HasAuthority())
 	{
-		if (HasAuthority())
-		{
-			SpawnDamageZones();
-		}
-		SpawnEffects();
+		SpawnDamageZones();
 	}
+	SpawnEffects();
 }
 
 void AAO_Valve::CollectVFXPoints()
@@ -147,11 +144,16 @@ void AAO_Valve::OpenValve()
         UGameplayStatics::PlaySoundAtLocation(this, ValveOpenSound, GetActorLocation());
     }
 
+	if (HasAuthority())
+	{
+		DestroyDamageZones();
+	}
+	CleanupEffects();
+
     if (HasAuthority())
     {
         SpawnDamageZones();
     }
-
     SpawnEffects();
 }
 
@@ -162,12 +164,17 @@ void AAO_Valve::CloseValve()
         UGameplayStatics::PlaySoundAtLocation(this, ValveCloseSound, GetActorLocation());
     }
 
-    if (HasAuthority())
-    {
-        DestroyDamageZones();
-    }
+	if (HasAuthority())
+	{
+		DestroyDamageZones();
+	}
+	CleanupEffects();
 
-    CleanupEffects();
+	if (HasAuthority())
+	{
+		SpawnDamageZones();
+	}
+	SpawnEffects();
 }
 
 void AAO_Valve::SpawnDamageZones()
@@ -182,38 +189,51 @@ void AAO_Valve::SpawnDamageZones()
 
     SpawnedDamageZones.Reserve(DamageZoneBoxes.Num());
 
-    for (UBoxComponent* DamageBox : DamageZoneBoxes)
-    {
-        if (!DamageBox)
-        {
-            continue;
-        }
+	for (int32 i = 0; i < DamageZoneBoxes.Num(); ++i)
+	{
+		UBoxComponent* DamageBox = DamageZoneBoxes[i];
+		if (!DamageBox)
+		{
+			continue;
+		}
 
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.Owner = this;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		bool bShouldSpawn = (i % 2 == 0) ? bIsValveOpen : !bIsValveOpen;
+        
+		if (!bShouldSpawn)
+		{
+			SpawnedDamageZones.Add(nullptr);
+			continue;
+		}
 
-        AActor* SpawnedZone = GetWorld()->SpawnActor<AActor>(
-            DamageZoneClass,
-            DamageBox->GetComponentLocation(),
-            DamageBox->GetComponentRotation(),
-            SpawnParams
-        );
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-        if (SpawnedZone)
-        {
-            // 크기를 Box와 동일하게 설정
-            TArray<UBoxComponent*> ZoneBoxComponents;
-            SpawnedZone->GetComponents<UBoxComponent>(ZoneBoxComponents);
+		AActor* SpawnedZone = GetWorld()->SpawnActor<AActor>(
+			DamageZoneClass,
+			DamageBox->GetComponentLocation(),
+			DamageBox->GetComponentRotation(),
+			SpawnParams
+		);
+
+		if (SpawnedZone)
+		{
+			// 크기를 Box와 동일하게 설정
+			TArray<UBoxComponent*> ZoneBoxComponents;
+			SpawnedZone->GetComponents<UBoxComponent>(ZoneBoxComponents);
             
-            if (ZoneBoxComponents.Num() > 0)
-            {
-                ZoneBoxComponents[0]->SetBoxExtent(DamageBox->GetScaledBoxExtent());
-            }
+			if (ZoneBoxComponents.Num() > 0)
+			{
+				ZoneBoxComponents[0]->SetBoxExtent(DamageBox->GetScaledBoxExtent());
+			}
 
-            SpawnedDamageZones.Add(SpawnedZone);
-        }
-    }
+			SpawnedDamageZones.Add(SpawnedZone);
+		}
+		else
+		{
+			SpawnedDamageZones.Add(nullptr);
+		}
+	}
 }
 
 void AAO_Valve::DestroyDamageZones()
@@ -244,6 +264,13 @@ void AAO_Valve::SpawnEffects()
 
     for (int32 i = 0; i < NumEffects; ++i)
     {
+    	bool bShouldSpawn = (i % 2 == 0) ? bIsValveOpen : !bIsValveOpen;
+
+    	if (!bShouldSpawn)
+    	{
+    		continue;
+    	}
+    	
         const FAO_ValveEffectSpawnInfo& EffectInfo = EffectInfoArray[i];
         USceneComponent* VFXPoint = VFXPoints[i];
         
