@@ -21,8 +21,8 @@ AAO_TrainDoor::AAO_TrainDoor(const FObjectInitializer& ObjectInitializer)
     DoorMesh->SetCollisionResponseToAllChannels(ECR_Block);
 
     bIsToggleable = true;
-    InteractionTitle = FText::FromString(TEXT("열차 문"));
-    InteractionContent = FText::FromString(TEXT("열기/닫기"));
+    InteractionTitle = FText::FromString(TEXT("Door"));
+    InteractionContent = FText::FromString(TEXT("Open/Close"));
 }
 
 void AAO_TrainDoor::BeginPlay()
