@@ -33,6 +33,9 @@ void AAO_Troll::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 레벨 기반 머티리얼 적용
+	ApplyLevelBasedMaterials();
+
 	// 기본 공격 설정이 없으면 초기화
 	if (AttackConfigs.Num() == 0)
 	{
@@ -249,5 +252,51 @@ void AAO_Troll::SpawnAndEquipWeapon()
 	{
 		// 바로 장착
 		WeaponHolderComp->PickupWeapon(NewWeapon);
+	}
+}
+
+void AAO_Troll::ApplyLevelBasedMaterials()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 현재 레벨 이름 가져오기
+	FString CurrentLevelName = World->GetMapName();
+	CurrentLevelName.RemoveFromStart(World->StreamingLevelsPrefix); // UEDPIE_ 접두사 제거
+
+	// Ice 레벨 패턴 매칭
+	bool bIsIceLevel = false;
+	for (const FString& Pattern : IceLevelPatterns)
+	{
+		if (CurrentLevelName.Contains(Pattern))
+		{
+			bIsIceLevel = true;
+			break;
+		}
+	}
+
+	if (!bIsIceLevel)
+	{
+		return;
+	}
+
+	// Ice 머티리얼 적용
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!IsValid(MeshComp))
+	{
+		return;
+	}
+
+	if (IsValid(IceArmorMaterial))
+	{
+		MeshComp->SetMaterial(0, IceArmorMaterial); // Element 0: Armor
+	}
+
+	if (IsValid(IceBodyMaterial))
+	{
+		MeshComp->SetMaterial(1, IceBodyMaterial); // Element 1: Body
 	}
 }

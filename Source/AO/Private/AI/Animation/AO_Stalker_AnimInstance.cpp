@@ -22,6 +22,9 @@ void UAO_Stalker_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			bInCeiling = CeilingComp->IsInCeilingMode();
 		}
 
+		// 기절 상태 확인
+		bIsStunned = StalkerCharacter->IsStunned();
+
 		// 로컬 속도 계산 (월드 속도를 캐릭터 회전 기준으로 변환)
 		FVector WorldVelocity = StalkerCharacter->GetVelocity();
 		FRotator ActorRotation = StalkerCharacter->GetActorRotation();
@@ -44,5 +47,23 @@ UAnimMontage* UAO_Stalker_AnimInstance::GetAttackMontage() const
 	// 랜덤 선택 (나중에 거리/방향 기반으로 고도화 가능)
 	int32 Index = FMath::RandRange(0, AttackMontages.Num() - 1);
 	return AttackMontages[Index];
+}
+
+void UAO_Stalker_AnimInstance::PlayStunMontage()
+{
+	if (!StunMontage)
+	{
+		return;
+	}
+
+	Montage_Play(StunMontage, StunMontagePlayRate);
+}
+
+void UAO_Stalker_AnimInstance::StopStunMontage(float BlendOutTime)
+{
+	if (StunMontage)
+	{
+		Montage_Stop(BlendOutTime, StunMontage);
+	}
 }
 

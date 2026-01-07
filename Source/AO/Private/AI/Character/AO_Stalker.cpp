@@ -2,6 +2,7 @@
 
 #include "AI/Character/AO_Stalker.h"
 #include "AI/Component/AO_CeilingMoveComponent.h"
+#include "AI/Animation/AO_Stalker_AnimInstance.h"
 #include "AI/Controller/AO_StalkerController.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -178,5 +179,22 @@ void AAO_Stalker::HandleStunBegin()
 
 	// 기절 시 천장에서 떨어짐
 	SetCeilingMode(false);
+
+	// 기절 애니메이션 재생
+	if (UAO_Stalker_AnimInstance* StalkerAnimInstance = Cast<UAO_Stalker_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		StalkerAnimInstance->PlayStunMontage();
+	}
+}
+
+void AAO_Stalker::HandleStunEnd()
+{
+	Super::HandleStunEnd();
+
+	// 기절 애니메이션 중지
+	if (UAO_Stalker_AnimInstance* StalkerAnimInstance = Cast<UAO_Stalker_AnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		StalkerAnimInstance->StopStunMontage(0.25f);
+	}
 }
 

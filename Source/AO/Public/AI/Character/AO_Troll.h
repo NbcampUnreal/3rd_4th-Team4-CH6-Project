@@ -127,6 +127,22 @@ protected:
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	// 레벨 기반 머티리얼 적용
+	void ApplyLevelBasedMaterials();
+
+public:
+	// Ice 레벨용 머티리얼 (Element 0: Armor)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Troll|Material")
+	TObjectPtr<UMaterialInterface> IceArmorMaterial;
+
+	// Ice 레벨용 머티리얼 (Element 1: Body)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Troll|Material")
+	TObjectPtr<UMaterialInterface> IceBodyMaterial;
+
+	// Ice 레벨 이름 패턴 (이 문자열이 포함된 레벨에서 Ice 머티리얼 적용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Troll|Material")
+	TArray<FString> IceLevelPatterns;
+
 protected:
 	// 무기 관리 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Troll")

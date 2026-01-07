@@ -81,7 +81,9 @@ EStateTreeRunStatus FAO_STTask_Wolf_Attack::Tick(FStateTreeExecutionContext& Con
 	else
 	{
 		// 범위 밖이면 추격
-		Controller->MoveToActor(Target, AI->GetAttackRange() * 0.8f);
+		// KSJ: 공격 사거리의 50%까지 확실하게 접근하도록 수정 (기존 0.8f는 캡슐 크기 때문에 공격 사거리에 못 미쳐서 멈추는 문제 발생)
+		// AcceptanceRadius가 너무 크면 이동 완료(멈춤) 판정이 공격 가능 거리(AttackRange)보다 멀리서 나서 멍하니 서있는 현상 해결
+		Controller->MoveToActor(Target, AI->GetAttackRange() * 0.5f);
 	}
 
 	return EStateTreeRunStatus::Running;
