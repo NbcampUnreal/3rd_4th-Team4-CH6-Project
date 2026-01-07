@@ -879,7 +879,8 @@ void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility
 			{
 				if (UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>())
 				{
-					USoundBase* Sound = SoundSubsystem->GetNotEnoughStaminaSoundFromActor(GetPawn());
+					USoundBase* Sound = SoundSubsystem->GetSoundFromActor(GetPawn(),
+						FGameplayTag::RequestGameplayTag(FName("Sound.Player.NotEnoughStamina")));
 					if (Sound)
 					{
 						UGameplayStatics::PlaySound2D(this, Sound);

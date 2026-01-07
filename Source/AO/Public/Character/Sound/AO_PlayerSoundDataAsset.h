@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Character/Customizing/AO_CustomizingComponent.h"
 #include "Engine/DataAsset.h"
 #include "AO_PlayerSoundDataAsset.generated.h"
@@ -13,10 +14,7 @@ struct FCharacterSoundSet
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
-	TObjectPtr<USoundBase> NotEnoughStamina = nullptr;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
-	TObjectPtr<USoundBase> DamageReact = nullptr;
+	TMap<FGameplayTag, TObjectPtr<USoundBase>> Sounds;
 };
 
 UCLASS()
@@ -29,5 +27,5 @@ public:
 	TMap<ECharacterMesh, FCharacterSoundSet> SoundSetByMesh;
 
 	UFUNCTION(BlueprintCallable, Category = "Sound")
-	bool TryGetSoundSet(ECharacterMesh MeshType, FCharacterSoundSet& OutSet) const;
+	USoundBase* FindSound(ECharacterMesh MeshType, FGameplayTag SoundTag) const;
 };

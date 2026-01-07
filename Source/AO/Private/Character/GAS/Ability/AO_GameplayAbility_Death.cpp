@@ -53,6 +53,9 @@ void UAO_GameplayAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle
 	
 	ASC->CancelAbilities(&HitReactTags);
 
+	// 사망 사운드 재생
+	ASC->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag(FName("GameplayCue.Player.Death")));
+
 	// 래그돌 이벤트 대기
 	UAbilityTask_WaitGameplayEvent* WaitRagdollEventTask
 		= UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, RagdollEventTag, nullptr, true, true);
