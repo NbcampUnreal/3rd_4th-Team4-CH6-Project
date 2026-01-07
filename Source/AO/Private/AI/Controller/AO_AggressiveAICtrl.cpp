@@ -4,6 +4,7 @@
 #include "AI/Base/AO_AggressiveAIBase.h"
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "Player/PlayerState/AO_PlayerState.h"
 #include "Navigation/CrowdFollowingComponent.h"
 
 AAO_AggressiveAICtrl::AAO_AggressiveAICtrl()
@@ -42,7 +43,20 @@ AAO_AggressiveAIBase* AAO_AggressiveAICtrl::GetAggressiveAI() const
 
 AAO_PlayerCharacter* AAO_AggressiveAICtrl::GetChaseTarget() const
 {
-	return ChaseTarget.Get();
+	AAO_PlayerCharacter* Target = ChaseTarget.Get();
+	if (!Target)
+	{
+		return nullptr;
+	}
+	
+	// 타겟이 죽었는지 확인 (시체 타겟팅 불가능한 경우)
+	const AAO_PlayerState* PS = Target->GetPlayerState<AAO_PlayerState>();
+	if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+	{
+		return nullptr;
+	}
+	
+	return Target;
 }
 
 void AAO_AggressiveAICtrl::SetChaseTarget(AAO_PlayerCharacter* NewTarget)

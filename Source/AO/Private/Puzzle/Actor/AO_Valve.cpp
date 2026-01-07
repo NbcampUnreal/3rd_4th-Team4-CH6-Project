@@ -25,6 +25,20 @@ void AAO_Valve::PostInitializeComponents()
     CollectDamageZoneBoxes();
 }
 
+void AAO_Valve::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (bIsValveOpen)
+	{
+		if (HasAuthority())
+		{
+			SpawnDamageZones();
+		}
+		SpawnEffects();
+	}
+}
+
 void AAO_Valve::CollectVFXPoints()
 {
     VFXPoints.Empty();

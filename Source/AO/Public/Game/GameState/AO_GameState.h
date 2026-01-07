@@ -119,5 +119,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void FindHint(int32 Num);
 	bool CheckHintCount();
+	int32 CurrentFindHintNum = 0;
 	//-ms
 };

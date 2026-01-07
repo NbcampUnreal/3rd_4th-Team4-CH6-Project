@@ -55,7 +55,7 @@ public:
 
 	// 수색 완료 (배회로 전환)
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Aggressive")
-	void EndSearch();
+	virtual void EndSearch();
 
 protected:
 	virtual void BeginPlay() override;

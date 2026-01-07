@@ -32,6 +32,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bInCeiling;
 
+	// 로컬 좌표계 속도 (X: 전진/후진, Y: 좌우)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	FVector LocalVelocity;
+
+	// 전진/후진 속도 (양수: 전진, 음수: 후진) - BlendSpace 입력용
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float ForwardSpeed;
+
+	// 좌우 속도 (양수: 오른쪽, 음수: 왼쪽) - BlendSpace 입력용
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float RightSpeed;
+
 	// 공격 몽타주 목록 (BP에서 할당)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
 	TArray<TObjectPtr<UAnimMontage>> AttackMontages;

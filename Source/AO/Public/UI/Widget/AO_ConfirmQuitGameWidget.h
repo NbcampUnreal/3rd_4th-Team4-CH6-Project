@@ -32,19 +32,20 @@ public:
 	FOnCancelQuitGame OnCancelQuitGame;
 
 protected:
-	UPROPERTY(meta = (BindWidget))
+	/* WBP Application Btn으로 수정 (JM)
+	 *UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Confirm;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Cancel;
 
 	UPROPERTY(meta = (BindWidget, OptionalWidget = true))
-	UTextBlock* Txt_Message;
+	UTextBlock* Txt_Message;*/
 
 protected:
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void HandleClicked_Confirm();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void HandleClicked_Cancel();
 };

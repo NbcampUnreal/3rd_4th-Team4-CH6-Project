@@ -3,12 +3,11 @@
 
 #include "Character/GAS/GameplayCue/AO_GameplayCueNotify_Burst_DamageVolume.h"
 
+#include "AbilitySystemComponent.h"
+#include "AO_Log.h"
 #include "Character/Sound/AO_PlayerSoundSubsystem.h"
+#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
-
-UAO_GameplayCueNotify_Burst_DamageVolume::UAO_GameplayCueNotify_Burst_DamageVolume()
-{
-}
 
 bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* MyTarget,
 	const FGameplayCueParameters& Parameters) const
@@ -18,20 +17,15 @@ bool UAO_GameplayCueNotify_Burst_DamageVolume::OnExecute_Implementation(AActor* 
 		return false;
 	}
 
-	UWorld* World = MyTarget->GetWorld();
-	if (!World)
+	// 사망 시에는 사망 소리 재생
+	if (UAbilitySystemComponent* ASC = MyTarget->FindComponentByClass<UAbilitySystemComponent>())
 	{
-		return false;
+		if (ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Status.Death"))))
+		{
+			return false;
+		}
 	}
-
-	// 특정 시간이 지나지 않으면 사운드 재생하지 않음
-	const double Now = World->GetTimeSeconds();
-	if (Now - LastPlayTime <= MinInterval)
-	{
-		return false;
-	}
-	LastPlayTime = Now;
-
+	
 	PlayDamageReactSound(MyTarget);
 	return true;
 }
@@ -44,7 +38,8 @@ void UAO_GameplayCueNotify_Burst_DamageVolume::PlayDamageReactSound(AActor* Targ
 	UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>();
 	checkf(SoundSubsystem, TEXT("Failed to get SoundSubsystem"));
 
-	USoundBase* DamageReactSound = SoundSubsystem->GetDamageReactSoundFromActor(Target);
+	USoundBase* DamageReactSound = SoundSubsystem->GetSoundFromActor(Target,
+		FGameplayTag::RequestGameplayTag(FName("Sound.Player.DamageReact")));
 	if (!ensure(DamageReactSound))
 	{
 		return;
@@ -58,6 +53,15 @@ void UAO_GameplayCueNotify_Burst_DamageVolume::PlayDamageReactSound(AActor* Targ
 		if (bIsLocal)
 		{
 			UGameplayStatics::PlaySound2D(Target, DamageReactSound);
+			return;
+		}
+	}
+
+	if (ACharacter* Character = Cast<ACharacter>(Target))
+	{
+		if (USkeletalMeshComponent* MeshComp = Character->GetMesh())
+		{
+			UGameplayStatics::SpawnSoundAttached(DamageReactSound, MeshComp, NAME_None);
 			return;
 		}
 	}

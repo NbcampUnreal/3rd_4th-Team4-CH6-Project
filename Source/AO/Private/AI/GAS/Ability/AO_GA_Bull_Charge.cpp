@@ -162,6 +162,9 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
+	// 넉다운 HitReact 이벤트 발송 (먼저 실행)
+	SendKnockdownEvent(TargetActor, InstigatorActor);
+
 	// 넉백 적용
 	ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor);
 	if (TargetCharacter)
@@ -184,9 +187,6 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 			TargetCharacter->LaunchCharacter(KnockbackDirection * KnockbackStrength, true, true);
 		}
 	}
-
-	// 넉다운 HitReact 이벤트 발송
-	SendKnockdownEvent(TargetActor, InstigatorActor);
 }
 
 void UAO_GA_Bull_Charge::SendKnockdownEvent(AActor* TargetActor, AActor* InstigatorActor)

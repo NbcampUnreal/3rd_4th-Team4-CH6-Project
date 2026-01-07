@@ -83,62 +83,10 @@ EStateTreeRunStatus FAO_STTask_Chase::Tick(FStateTreeExecutionContext& Context, 
 	// 더 가까운 플레이어로 대상 갱신 (Controller에서 처리)
 	Controller->UpdateChaseTargetToNearest();
 
-	// Stalker 전용: 천장 감지 및 조건부 천장 모드 전환
-	// 플레이어 시야에 있으면 바닥 모드, 없으면 천장 모드 가능
-	if (AAO_Stalker* Stalker = Cast<AAO_Stalker>(AI))
-	{
-		if (UAO_CeilingMoveComponent* CeilingComp = Stalker->GetCeilingMoveComponent())
-		{
-			// 플레이어가 Stalker를 보고 있는지 확인
-			bool bPlayerCanSeeStalker = false;
-			if (AAO_AIControllerBase* AICtrl = Cast<AAO_AIControllerBase>(Controller))
-			{
-				// 플레이어가 Stalker를 볼 수 있는지 체크 (간단한 LineTrace)
-				FVector StalkerLocation = Stalker->GetActorLocation();
-				FVector PlayerLocation = Target->GetActorLocation();
-				FVector DirToStalker = (StalkerLocation - PlayerLocation).GetSafeNormal();
-				
-				// 플레이어의 시야각 체크 (플레이어가 Stalker 쪽을 보고 있는지)
-				float Dot = FVector::DotProduct(Target->GetActorForwardVector(), DirToStalker);
-				if (Dot > 0.3f) // 약 70도 이내
-				{
-					// LineTrace로 장애물 체크
-					FHitResult Hit;
-					FCollisionQueryParams Params;
-					Params.AddIgnoredActor(Stalker);
-					Params.AddIgnoredActor(Target);
-					
-					if (AI->GetWorld()->LineTraceSingleByChannel(Hit, PlayerLocation, StalkerLocation, ECC_Visibility, Params))
-					{
-						// 장애물이 있으면 플레이어가 볼 수 없음
-						bPlayerCanSeeStalker = false;
-					}
-					else
-					{
-						// 장애물이 없으면 플레이어가 볼 수 있음
-						bPlayerCanSeeStalker = true;
-					}
-				}
-			}
-
-			// 플레이어가 Stalker를 볼 수 있으면 바닥 모드 유지
-			if (bPlayerCanSeeStalker)
-			{
-				if (CeilingComp->IsInCeilingMode())
-				{
-					Stalker->SetCeilingMode(false);
-				}
-			}
-			else
-			{
-				// 플레이어가 Stalker를 볼 수 없으면 천장 모드 가능
-				if (!CeilingComp->IsInCeilingMode() && CeilingComp->CheckCeilingAvailability())
-				{
-					Stalker->SetCeilingMode(true);
-				}
-			}
-		}
-	}
+	// KSJ:
+	// Stalker 요구사항: 추적/은신 접근(Engage) 로직에서는 "천장 상태이면 안된다".
+	// 천장 이동은 배회(Roam)에서만 수행하며, 전환은 전용 StateTree 상태에서만 수행한다.
+	// 따라서 Chase 태스크에서의 천장 토글 로직은 제거한다.
 
 	return EStateTreeRunStatus::Running;
 }

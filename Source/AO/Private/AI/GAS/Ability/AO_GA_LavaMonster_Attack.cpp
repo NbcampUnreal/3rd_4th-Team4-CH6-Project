@@ -11,6 +11,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Components/CapsuleComponent.h"
 
 UAO_GA_LavaMonster_Attack::UAO_GA_LavaMonster_Attack()
 {
@@ -260,13 +263,27 @@ void UAO_GA_LavaMonster_Attack::StartGroundStrike()
 		const float Distance = FVector::Dist(LavaMonsterLocation, Player->GetActorLocation());
 		if (Distance <= StrikeRange)
 		{
+			// 플레이어 발밑 위치 계산 (캡슐 하단)
+			FVector FootLocation = Player->GetActorLocation();
+			if (UCapsuleComponent* Capsule = Player->GetCapsuleComponent())
+			{
+				FootLocation.Z -= Capsule->GetScaledCapsuleHalfHeight();
+			}
+
 			FAO_GroundStrikeTarget Target;
 			Target.Player = Player;
-			Target.StrikeLocation = Player->GetActorLocation();
+			Target.StrikeLocation = FootLocation;
 			Target.WarningStartTime = World->GetTimeSeconds();
 			Target.bHasStruck = false;
 
 			GroundStrikeTargets.Add(Target);
+
+			// VFX 스폰 - 플레이어 발밑에 전조 현상 표시
+			SpawnGroundStrikeVFX(
+				FootLocation,
+				CurrentAttackConfig.AttackRadius,
+				CurrentAttackConfig.WarningDuration
+			);
 		}
 	}
 
@@ -402,6 +419,9 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
+	// HitReact 이벤트 발송 (먼저 실행)
+	SendHitReactEvent(TargetActor, GetAvatarActorFromActorInfo());
+
 	// 넉백 적용
 	ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor);
 	if (TargetCharacter && Config.KnockbackStrength > 0.f)
@@ -424,9 +444,6 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 			TargetCharacter->LaunchCharacter(KnockbackDirection * Config.KnockbackStrength, true, true);
 		}
 	}
-
-	// HitReact 이벤트 발송
-	SendHitReactEvent(TargetActor, GetAvatarActorFromActorInfo());
 }
 
 void UAO_GA_LavaMonster_Attack::SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor)
@@ -486,6 +503,45 @@ void UAO_GA_LavaMonster_Attack::OnMontageCancelled()
 	if (CurrentActorInfo)
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	}
+}
+
+void UAO_GA_LavaMonster_Attack::SpawnGroundStrikeVFX(const FVector& Location, float Radius, float Duration)
+{
+	// VFX 에셋이 설정되지 않았으면 리턴
+	if (!GroundStrikeVFX)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 위치를 약간 위로 올림 (바닥에 묻히지 않게, Z-fighting 방지)
+	FVector SpawnLocation = Location;
+	SpawnLocation.Z += 1.f;
+
+	// 나이아가라 시스템 스폰
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		World,
+		GroundStrikeVFX,
+		SpawnLocation,
+		FRotator::ZeroRotator,
+		FVector::OneVector,
+		true,  // bAutoDestroy - VFX 종료 후 자동 삭제
+		true,  // bAutoActivate - 즉시 활성화
+		ENCPoolMethod::None,
+		true   // bPreCullCheck
+	);
+
+	if (NiagaraComp)
+	{
+		// User Parameter 설정 - 나이아가라 시스템에서 정의한 파라미터에 값 전달
+		NiagaraComp->SetFloatParameter(FName("StrikeRadius"), Radius);
+		NiagaraComp->SetFloatParameter(FName("WarningDuration"), Duration);
 	}
 }
 
