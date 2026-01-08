@@ -71,7 +71,17 @@ void UAO_GameplayAbility_Interact_Execute::ActivateAbility(const FGameplayAbilit
 	if (TObjectPtr<UAbilitySystemComponent> ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		FGameplayTag FinalizeTag = AO_InteractionTags::Ability_Action_AbilityInteract_Finalize;
-		ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).AddUObject(this, &ThisClass::OnAnimNotifyReceived);
+        
+		// 서버인 경우 직접 처리
+		if (GetOwningActorFromActorInfo()->HasAuthority())
+		{
+			ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).AddUObject(this, &ThisClass::OnAnimNotifyReceived);
+		}
+		// 클라이언트인 경우 로컬 노티파이 감지 후 서버로 전송
+		else
+		{
+			ASC->GenericGameplayEventCallbacks.FindOrAdd(FinalizeTag).AddUObject(this, &ThisClass::OnLocalAnimNotifyReceived);
+		}
 	}
 
 	// 홀딩 시작 알림
@@ -480,6 +490,11 @@ void UAO_GameplayAbility_Interact_Execute::OnAnimNotifyReceived(const FGameplayE
 	{
 		return;
 	}
+
+	if (!GetOwningActorFromActorInfo()->HasAuthority())
+	{
+		return;
+	}
     
 	// DecayHold인 경우 내부 상태로 처리
 	if (TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
@@ -489,6 +504,24 @@ void UAO_GameplayAbility_Interact_Execute::OnAnimNotifyReceived(const FGameplayE
 	}
     
 	// 일반 상호작용인 경우 바로 Finalize 전송
+	SendFinalizeEvent();
+}
+
+void UAO_GameplayAbility_Interact_Execute::OnLocalAnimNotifyReceived(const FGameplayEventData* EventData)
+{
+	// 클라이언트에서 노티파이 받으면 서버로 전송
+	ServerNotifyAnimationEvent(AO_InteractionTags::Ability_Action_AbilityInteract_Finalize);
+}
+
+void UAO_GameplayAbility_Interact_Execute::ServerNotifyAnimationEvent_Implementation(const FGameplayTag EventTag)
+{
+	// 서버에서 실제 처리
+	if (TObjectPtr<AAO_DecayHoldElement> DecayElement = Cast<AAO_DecayHoldElement>(InteractableActor))
+	{
+		DecayElement->OnNotifyReceived();
+		return;
+	}
+    
 	SendFinalizeEvent();
 }
 

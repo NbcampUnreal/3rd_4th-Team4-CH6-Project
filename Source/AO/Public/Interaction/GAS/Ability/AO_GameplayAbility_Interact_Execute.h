@@ -42,6 +42,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyDecayHoldInputReleased();
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyAnimationEvent(const FGameplayTag EventTag);
+
+	// 로컬 애니메이션 노티파이 수신
+	void OnLocalAnimNotifyReceived(const FGameplayEventData* EventData);
+
 	UPROPERTY(EditDefaultsOnly, Category="AO|Interaction")
 	float AcceptanceAngle = 120.f;
 
