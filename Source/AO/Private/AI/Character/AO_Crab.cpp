@@ -11,6 +11,8 @@
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "Materials/MaterialInterface.h"
 
 AAO_Crab::AAO_Crab()
 {
