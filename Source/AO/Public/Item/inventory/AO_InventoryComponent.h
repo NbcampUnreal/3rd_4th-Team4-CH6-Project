@@ -10,6 +10,7 @@
 
 struct FGameplayEventData;
 class AAO_MasterItem;
+class USoundBase;
 
 USTRUCT(BlueprintType)
 struct FInventorySlot
@@ -95,6 +96,21 @@ protected:
     void OnRep_SelectedIndex();
     
     bool IsValidSlotIndex(int32 Index) const { return Index >= 0 && Index < Slots.Num(); }
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Sound")
+    TObjectPtr<USoundBase> PickupSound;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Sound")
+    TObjectPtr<USoundBase> DropSound;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Sound")
+    TObjectPtr<USoundBase> UseSound;
+    
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayInventorySound(uint8 ActionType);
+
+    void PlayInventorySound(USoundBase* SoundToPlay);
+    
 
 public:
     UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
