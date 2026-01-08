@@ -203,10 +203,17 @@ void AAO_Troll::HandleStunBegin()
 	// 무기 줍기 중이면 취소
 	bIsPickingUpWeapon = false;
 
-	// 기절 애니메이션 재생
-	if (UAO_Troll_AnimInstance* TrollAnimInstance = Cast<UAO_Troll_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
 	{
-		TrollAnimInstance->PlayStunMontage();
+		if (UAO_Troll_AnimInstance* TrollAnimInstance = Cast<UAO_Troll_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = TrollAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, TrollAnimInstance->GetStunMontagePlayRate());
+			}
+		}
 	}
 }
 
@@ -214,10 +221,10 @@ void AAO_Troll::HandleStunEnd()
 {
 	Super::HandleStunEnd();
 
-	// 기절 애니메이션 중지
-	if (UAO_Troll_AnimInstance* TrollAnimInstance = Cast<UAO_Troll_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
 	{
-		TrollAnimInstance->StopStunMontage(0.25f);
+		Multicast_StopStunMontage(0.25f);
 	}
 
 	// 기절 해제 후 특별한 처리는 State Tree에서 담당

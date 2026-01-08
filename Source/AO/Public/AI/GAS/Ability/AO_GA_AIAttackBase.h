@@ -72,4 +72,8 @@ protected:
 	// 타격음 감쇠 설정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
 	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
+
+	// 타격음 멀티캐스트 재생
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitSound(const FVector& Location);
 };

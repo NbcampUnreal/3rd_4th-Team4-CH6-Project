@@ -149,10 +149,17 @@ void AAO_Bull::HandleStunBegin()
 	// 돌진 중단
 	SetIsCharging(false);
 
-	// 기절 애니메이션 재생
-	if (UAO_Bull_AnimInstance* BullAnimInstance = Cast<UAO_Bull_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
 	{
-		BullAnimInstance->PlayStunMontage();
+		if (UAO_Bull_AnimInstance* BullAnimInstance = Cast<UAO_Bull_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = BullAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, BullAnimInstance->GetStunMontagePlayRate());
+			}
+		}
 	}
 }
 
@@ -160,10 +167,10 @@ void AAO_Bull::HandleStunEnd()
 {
 	Super::HandleStunEnd();
 
-	// 기절 애니메이션 중지
-	if (UAO_Bull_AnimInstance* BullAnimInstance = Cast<UAO_Bull_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
 	{
-		BullAnimInstance->StopStunMontage(0.25f);
+		Multicast_StopStunMontage(0.25f);
 	}
 }
 

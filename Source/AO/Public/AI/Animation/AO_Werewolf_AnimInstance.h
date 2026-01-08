@@ -42,6 +42,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|Animation|Werewolf")
 	bool IsMoving() const { return bIsMoving; }
 
+	// 기절 몽타주 정보 Getter (Multicast용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Werewolf")
+	UAnimMontage* GetStunMontage() const { return StunMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Werewolf")
+	float GetStunMontagePlayRate() const { return StunMontagePlayRate; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Werewolf")
 	TObjectPtr<AAO_Werewolf> WerewolfCharacter;

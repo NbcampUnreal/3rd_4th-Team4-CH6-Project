@@ -276,9 +276,12 @@ bool FAO_STTask_Troll_PickWeapon::MoveToWeapon(AAO_TrollController* Controller, 
 	}
 
 	FAIMoveRequest MoveRequest;
-	MoveRequest.SetGoalLocation(Weapon->GetActorLocation());
+	// 무기가 물리 시뮬레이션으로 움직일 수 있으므로 Actor를 직접 추적
+	MoveRequest.SetGoalActor(Weapon);
 	MoveRequest.SetAcceptanceRadius(AcceptRadius);
 	MoveRequest.SetUsePathfinding(true);
+	// 무기가 움직이면 경로를 업데이트하도록 설정
+	MoveRequest.SetAllowPartialPath(true);
 
 	const FPathFollowingRequestResult Result = Controller->MoveTo(MoveRequest);
 	return Result.Code != EPathFollowingRequestResult::Failed;

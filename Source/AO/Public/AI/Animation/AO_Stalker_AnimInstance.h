@@ -45,6 +45,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|Animation|Stalker")
 	bool IsInCeiling() const { return bInCeiling; }
 
+	// 기절 몽타주 정보 Getter (Multicast용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Stalker")
+	UAnimMontage* GetStunMontage() const { return StunMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Stalker")
+	float GetStunMontagePlayRate() const { return StunMontagePlayRate; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Stalker")
 	TObjectPtr<AAO_Stalker> StalkerCharacter;
