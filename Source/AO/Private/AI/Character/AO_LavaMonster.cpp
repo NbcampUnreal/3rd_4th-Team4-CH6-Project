@@ -8,6 +8,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundAttenuation.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AAO_LavaMonster::AAO_LavaMonster()
 {
@@ -465,10 +468,83 @@ void AAO_LavaMonster::HandleStunBegin()
 		bIsAttacking = false;
 	}
 
-	// 기절 애니메이션 재생
-	if (UAO_LavaMonster_AnimInstance* LavaMonsterAnimInstance = Cast<UAO_LavaMonster_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
 	{
-		LavaMonsterAnimInstance->PlayStunMontage();
+		if (UAO_LavaMonster_AnimInstance* LavaMonsterAnimInstance = Cast<UAO_LavaMonster_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = LavaMonsterAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, LavaMonsterAnimInstance->GetStunMontagePlayRate());
+			}
+		}
 	}
+}
+
+void AAO_LavaMonster::Multicast_SpawnGroundStrikeVFX_Implementation(const FVector& Location, float Radius, float Duration)
+{
+	// VFX 에셋이 설정되지 않았으면 리턴
+	if (!GroundStrikeVFX)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 위치를 약간 위로 올림 (바닥에 묻히지 않게, Z-fighting 방지)
+	FVector SpawnLocation = Location;
+	SpawnLocation.Z += 1.f;
+
+	// 나이아가라 시스템 스폰
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		World,
+		GroundStrikeVFX,
+		SpawnLocation,
+		FRotator::ZeroRotator,
+		FVector::OneVector,
+		true,  // bAutoDestroy - VFX 종료 후 자동 삭제
+		true,  // bAutoActivate - 즉시 활성화
+		ENCPoolMethod::None,
+		true   // bPreCullCheck
+	);
+
+	if (NiagaraComp)
+	{
+		// User Parameter 설정 - 나이아가라 시스템에서 정의한 파라미터에 값 전달
+		NiagaraComp->SetFloatParameter(FName("StrikeRadius"), Radius);
+		NiagaraComp->SetFloatParameter(FName("WarningDuration"), Duration);
+	}
+}
+
+void AAO_LavaMonster::Multicast_SpawnEruptionVFX_Implementation(const FVector& Location)
+{
+	// VFX 에셋이 설정되지 않았으면 리턴
+	if (!EruptionVFX)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 분출 VFX 스폰 (Cascade)
+	UGameplayStatics::SpawnEmitterAtLocation(
+		World,
+		EruptionVFX,
+		Location + FVector(0.f, 0.f, 1.f),  // 바닥에서 약간 위
+		FRotator::ZeroRotator,
+		FVector(1.f),  // 스케일
+		true,  // bAutoDestroy
+		EPSCPoolMethod::None,
+		true   // bAutoActivate
+	);
 }
 

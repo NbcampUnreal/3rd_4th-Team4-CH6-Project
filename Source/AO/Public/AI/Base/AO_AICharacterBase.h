@@ -13,6 +13,7 @@ class UAO_AIAttributeSet;
 class UAO_AIMemoryComponent;
 class UGameplayAbility;
 class UGameplayEffect;
+class UAnimMontage;
 
 UCLASS()
 class AO_API AAO_AICharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -32,6 +33,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Status")
 	void OnStunEnd();
+
+	// 기절 몽타주 멀티캐스트 재생 - 모든 클라이언트에서 재생
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayStunMontage(UAnimMontage* Montage, float PlayRate = 1.0f);
+
+	// 기절 몽타주 멀티캐스트 중지
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StopStunMontage(float BlendOutTime = 0.25f);
 
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Memory")
 	UAO_AIMemoryComponent* GetMemoryComponent() const { return MemoryComponent; }
@@ -87,4 +96,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AO|AI|Combat")
 	bool bIsAttacking = false;
+
+	// 현재 재생 중인 기절 몽타주 (멀티캐스트 중지용)
+	UPROPERTY()
+	TObjectPtr<UAnimMontage> CurrentStunMontage = nullptr;
 };

@@ -62,6 +62,9 @@ protected:
 	// 이동 속도 업데이트
 	void UpdateMovementSpeed();
 
+	// 레벨 기반 메쉬 및 머티리얼 적용
+	void ApplyLevelBasedMeshAndMaterials();
+
 	// 아이템 픽업/드롭 이벤트 핸들러
 	UFUNCTION()
 	void OnItemPickedUp(AAO_MasterItem* Item);
@@ -99,4 +102,41 @@ protected:
 	// 아이템 줏을 때 기록한 플레이어 위치들 (드롭 위치 계산용)
 	UPROPERTY()
 	TArray<FVector> CachedPlayerLocationsOnPickup;
+
+public:
+	// Meadow 레벨용 스켈레탈 메쉬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Meadow")
+	TObjectPtr<USkeletalMesh> MeadowSkeletalMesh;
+
+	// Meadow 레벨용 머티리얼
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Meadow")
+	TObjectPtr<UMaterialInterface> MeadowMaterial;
+
+	// Meadow 레벨 이름 패턴 (이 문자열이 포함된 레벨에서 Meadow 메쉬 및 머티리얼 적용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Meadow")
+	TArray<FString> MeadowLevelPatterns;
+
+	// Lava 레벨용 스켈레탈 메쉬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Lava")
+	TObjectPtr<USkeletalMesh> LavaSkeletalMesh;
+
+	// Lava 레벨용 머티리얼
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Lava")
+	TObjectPtr<UMaterialInterface> LavaMaterial;
+
+	// Lava 레벨 이름 패턴 (이 문자열이 포함된 레벨에서 Lava 메쉬 및 머티리얼 적용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Lava")
+	TArray<FString> LavaLevelPatterns;
+
+	// Ice 레벨용 스켈레탈 메쉬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Ice")
+	TObjectPtr<USkeletalMesh> IceSkeletalMesh;
+
+	// Ice 레벨용 머티리얼
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Ice")
+	TObjectPtr<UMaterialInterface> IceMaterial;
+
+	// Ice 레벨 이름 패턴 (이 문자열이 포함된 레벨에서 Ice 메쉬 및 머티리얼 적용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Crab|Level|Ice")
+	TArray<FString> IceLevelPatterns;
 };

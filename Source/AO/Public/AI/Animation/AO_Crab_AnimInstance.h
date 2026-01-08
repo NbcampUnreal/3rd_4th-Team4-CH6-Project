@@ -52,6 +52,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|Animation|Crab")
 	bool IsFleeing() const { return bIsFleeing; }
 
+	// 기절 몽타주 정보 Getter (Multicast용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Crab")
+	UAnimMontage* GetStunMontage() const { return StunMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Crab")
+	float GetStunMontagePlayRate() const { return StunMontagePlayRate; }
+
 protected:
 	// 캐릭터 참조 업데이트
 	void UpdateCharacterReference();
