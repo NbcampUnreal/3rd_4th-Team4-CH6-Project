@@ -8,6 +8,8 @@
 
 class UAO_ItemCarryComponent;
 class AAO_MasterItem;
+class USkeletalMesh;
+class UMaterialInterface;
 
 /**
  * Crab AI 캐릭터
