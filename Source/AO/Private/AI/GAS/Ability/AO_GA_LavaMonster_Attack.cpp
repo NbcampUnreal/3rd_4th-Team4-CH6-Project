@@ -350,15 +350,36 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 	}
 
 	FAO_GroundStrikeTarget& Target = GroundStrikeTargets[TargetIndex];
-	if (Target.bHasStruck || !Target.Player.IsValid())
+	if (Target.bHasStruck)
 	{
 		return;
 	}
 
 	Target.bHasStruck = true;
 
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 분출 VFX 스폰 (Cascade) - 플레이어 피해 여부와 관계없이 항상 스폰
+	if (EruptionVFX)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			World,
+			EruptionVFX,
+			Target.StrikeLocation + FVector(0.f, 0.f, 1.f),  // 바닥에서 약간 위
+			FRotator::ZeroRotator,
+			FVector(1.f),  // 스케일
+			true,  // bAutoDestroy
+			EPSCPoolMethod::None,
+			true   // bAutoActivate
+		);
+	}
+
 	// 플레이어가 여전히 해당 위치 근처에 있는지 확인
-	AAO_PlayerCharacter* Player = Target.Player.Get();
+	AAO_PlayerCharacter* Player = Target.Player.IsValid() ? Target.Player.Get() : nullptr;
 	if (!Player)
 	{
 		return;
@@ -371,13 +392,12 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 	{
 		// 데미지 및 넉백 적용
 		ApplyDamageAndKnockback(Player, CurrentAttackConfig);
-
 	}
 
 	// 타이머 제거
 	if (GroundStrikeAttackTimers.Contains(TargetIndex))
 	{
-		if (UWorld* World = GetWorld())
+		if (World)
 		{
 			World->GetTimerManager().ClearTimer(GroundStrikeAttackTimers[TargetIndex]);
 		}
@@ -405,6 +425,20 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
 		return;
+	}
+
+	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			TargetActor->GetActorLocation(),
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
 	}
 
 	// 데미지 적용
