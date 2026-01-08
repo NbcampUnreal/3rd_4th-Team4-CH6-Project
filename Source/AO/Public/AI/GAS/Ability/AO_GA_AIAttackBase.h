@@ -64,4 +64,16 @@ protected:
     // 일반 히트 리액트 태그 (기본값: Event.Combat.HitReact.Light)
     UPROPERTY(EditDefaultsOnly, Category = "Combat")
     FGameplayTag DefaultHitReactTag;
+
+	// 타격음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	// 타격음 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
+
+	// 타격음 멀티캐스트 재생
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitSound(const FVector& Location);
 };

@@ -5,11 +5,9 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "AI/Character/AO_LavaMonster.h"
-#include "NiagaraSystem.h"
 #include "AO_GA_LavaMonster_Attack.generated.h"
 
 class AAO_PlayerCharacter;
-class UNiagaraComponent;
 
 /**
  * 땅속 공격 타겟 정보
@@ -98,8 +96,7 @@ protected:
 	// HitReact 이벤트 발송
 	void SendHitReactEvent(AActor* TargetActor, AActor* InstigatorActor);
 
-	// 땅속 공격 VFX 스폰
-	void SpawnGroundStrikeVFX(const FVector& Location, float Radius, float Duration);
+	// NOTE: SpawnGroundStrikeVFX는 AAO_LavaMonster::Multicast_SpawnGroundStrikeVFX로 이동됨
 
 	// 몽타주 종료 콜백
 	UFUNCTION()
@@ -127,9 +124,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
 
-	// 땅속 공격 VFX (나이아가라 시스템)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
-	TObjectPtr<UNiagaraSystem> GroundStrikeVFX;
+	// NOTE: VFX 에셋은 AAO_LavaMonster에서 관리 (Multicast RPC로 모든 클라이언트에서 스폰하기 위함)
 
 	// 땅속 공격 타겟 목록
 	UPROPERTY()
@@ -140,5 +135,13 @@ protected:
 
 	// 땅속 공격 타겟별 공격 타이머 핸들
 	TMap<int32, FTimerHandle> GroundStrikeAttackTimers;
+
+	// 타격음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	// 타격음 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|Sound")
+	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
 };
 

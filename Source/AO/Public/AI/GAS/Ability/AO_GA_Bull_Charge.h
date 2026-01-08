@@ -70,4 +70,12 @@ protected:
     // 데미지 Effect 클래스
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
     TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	// 타격음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	// 타격음 감쇠 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundAttenuation> HitSoundAttenuation;
 };

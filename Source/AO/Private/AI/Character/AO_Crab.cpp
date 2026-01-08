@@ -2,6 +2,7 @@
 
 #include "AI/Character/AO_Crab.h"
 #include "AI/Component/AO_ItemCarryComponent.h"
+#include "AI/Animation/AO_Crab_AnimInstance.h"
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "AI/Controller/AO_CrabController.h"
 #include "Item/AO_MasterItem.h"
@@ -10,6 +11,8 @@
 #include "AI/Component/AO_AIMemoryComponent.h"
 #include "Character/AO_PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "Materials/MaterialInterface.h"
 
 AAO_Crab::AAO_Crab()
 {
@@ -32,6 +35,9 @@ AAO_Crab::AAO_Crab()
 void AAO_Crab::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 레벨 기반 메쉬 및 머티리얼 적용
+	ApplyLevelBasedMeshAndMaterials();
 
 	// 이동 속도 초기화
 	UpdateMovementSpeed();
@@ -56,6 +62,19 @@ void AAO_Crab::HandleStunBegin()
 
 	// 도망 상태 해제
 	bIsFleeingFromPlayer = false;
+
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
+	{
+		if (UAO_Crab_AnimInstance* CrabAnimInstance = Cast<UAO_Crab_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = CrabAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, CrabAnimInstance->GetStunMontagePlayRate());
+			}
+		}
+	}
 }
 
 void AAO_Crab::HandleStunEnd()
@@ -64,6 +83,12 @@ void AAO_Crab::HandleStunEnd()
 
 	// 이동 속도 복구
 	UpdateMovementSpeed();
+
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
+	{
+		Multicast_StopStunMontage(0.25f);
+	}
 }
 
 void AAO_Crab::SetFleeMode(bool bFleeing)
@@ -289,4 +314,101 @@ void AAO_Crab::OnItemDropped(AAO_MasterItem* Item)
 
 	// 속도 업데이트
 	UpdateMovementSpeed();
+}
+
+void AAO_Crab::ApplyLevelBasedMeshAndMaterials()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 현재 레벨 이름 가져오기
+	FString CurrentLevelName = World->GetMapName();
+	CurrentLevelName.RemoveFromStart(World->StreamingLevelsPrefix); // UEDPIE_ 접두사 제거
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!IsValid(MeshComp))
+	{
+		return;
+	}
+
+	// Meadow 레벨 패턴 매칭
+	bool bIsMeadowLevel = false;
+	for (const FString& Pattern : MeadowLevelPatterns)
+	{
+		if (CurrentLevelName.Contains(Pattern))
+		{
+			bIsMeadowLevel = true;
+			break;
+		}
+	}
+
+	if (bIsMeadowLevel)
+	{
+		// Meadow 스켈레탈 메쉬 및 머티리얼 적용
+		if (IsValid(MeadowSkeletalMesh))
+		{
+			MeshComp->SetSkeletalMesh(MeadowSkeletalMesh);
+		}
+
+		if (IsValid(MeadowMaterial))
+		{
+			MeshComp->SetMaterial(0, MeadowMaterial);
+		}
+		return;
+	}
+
+	// Lava 레벨 패턴 매칭
+	bool bIsLavaLevel = false;
+	for (const FString& Pattern : LavaLevelPatterns)
+	{
+		if (CurrentLevelName.Contains(Pattern))
+		{
+			bIsLavaLevel = true;
+			break;
+		}
+	}
+
+	if (bIsLavaLevel)
+	{
+		// Lava 스켈레탈 메쉬 및 머티리얼 적용
+		if (IsValid(LavaSkeletalMesh))
+		{
+			MeshComp->SetSkeletalMesh(LavaSkeletalMesh);
+		}
+
+		if (IsValid(LavaMaterial))
+		{
+			MeshComp->SetMaterial(0, LavaMaterial);
+		}
+		return;
+	}
+
+	// Ice 레벨 패턴 매칭
+	bool bIsIceLevel = false;
+	for (const FString& Pattern : IceLevelPatterns)
+	{
+		if (CurrentLevelName.Contains(Pattern))
+		{
+			bIsIceLevel = true;
+			break;
+		}
+	}
+
+	if (bIsIceLevel)
+	{
+		// Ice 스켈레탈 메쉬 및 머티리얼 적용
+		if (IsValid(IceSkeletalMesh))
+		{
+			MeshComp->SetSkeletalMesh(IceSkeletalMesh);
+		}
+
+		if (IsValid(IceMaterial))
+		{
+			MeshComp->SetMaterial(0, IceMaterial);
+		}
+		return;
+	}
 }

@@ -7,6 +7,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
@@ -148,6 +149,20 @@ void UAO_GA_Bull_Charge::ApplyDamageAndKnockback(AActor* TargetActor, AActor* In
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
 		return;
+	}
+
+	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			TargetActor->GetActorLocation(),
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
 	}
 
 	// 데미지 적용

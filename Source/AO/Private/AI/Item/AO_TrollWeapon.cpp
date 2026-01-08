@@ -72,7 +72,8 @@ bool AAO_TrollWeapon::PickupByTroll(AAO_Troll* Troll)
 	USkeletalMeshComponent* TrollMesh = Troll->GetMesh();
 	if (TrollMesh)
 	{
-		AttachToComponent(TrollMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
+		AttachToComponent(TrollMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
+		SetActorRelativeScale3D(FVector(1.0f)); 
 	}
 
 	return true;
@@ -108,7 +109,7 @@ void AAO_TrollWeapon::OnRep_OwningTroll()
 		USkeletalMeshComponent* TrollMesh = OwningTroll->GetMesh();
 		if (TrollMesh)
 		{
-			AttachToComponent(TrollMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
+			AttachToComponent(TrollMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
 		}
 	}
 	else

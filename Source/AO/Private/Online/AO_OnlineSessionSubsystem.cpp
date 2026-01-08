@@ -1225,7 +1225,8 @@ void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AA
 	}
 	
 	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
-	if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	if (!TargetPSId.IsValid())
+	// if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
 	{
 		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
 		return;

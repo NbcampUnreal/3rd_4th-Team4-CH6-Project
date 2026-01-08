@@ -11,8 +11,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
 #include "Components/CapsuleComponent.h"
 
 UAO_GA_LavaMonster_Attack::UAO_GA_LavaMonster_Attack()
@@ -278,12 +276,15 @@ void UAO_GA_LavaMonster_Attack::StartGroundStrike()
 
 			GroundStrikeTargets.Add(Target);
 
-			// VFX 스폰 - 플레이어 발밑에 전조 현상 표시
-			SpawnGroundStrikeVFX(
-				FootLocation,
-				CurrentAttackConfig.AttackRadius,
-				CurrentAttackConfig.WarningDuration
-			);
+			// VFX 스폰 - 플레이어 발밑에 전조 현상 표시 (Multicast로 모든 클라이언트에서 스폰)
+			if (LavaMonster)
+			{
+				LavaMonster->Multicast_SpawnGroundStrikeVFX(
+					FootLocation,
+					CurrentAttackConfig.AttackRadius,
+					CurrentAttackConfig.WarningDuration
+				);
+			}
 		}
 	}
 
@@ -350,15 +351,28 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 	}
 
 	FAO_GroundStrikeTarget& Target = GroundStrikeTargets[TargetIndex];
-	if (Target.bHasStruck || !Target.Player.IsValid())
+	if (Target.bHasStruck)
 	{
 		return;
 	}
 
 	Target.bHasStruck = true;
 
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 분출 VFX 스폰 (Multicast로 모든 클라이언트에서 스폰)
+	AAO_LavaMonster* LavaMonster = Cast<AAO_LavaMonster>(GetAvatarActorFromActorInfo());
+	if (LavaMonster)
+	{
+		LavaMonster->Multicast_SpawnEruptionVFX(Target.StrikeLocation);
+	}
+
 	// 플레이어가 여전히 해당 위치 근처에 있는지 확인
-	AAO_PlayerCharacter* Player = Target.Player.Get();
+	AAO_PlayerCharacter* Player = Target.Player.IsValid() ? Target.Player.Get() : nullptr;
 	if (!Player)
 	{
 		return;
@@ -371,13 +385,12 @@ void UAO_GA_LavaMonster_Attack::ExecuteGroundStrikeAtTarget(int32 TargetIndex)
 	{
 		// 데미지 및 넉백 적용
 		ApplyDamageAndKnockback(Player, CurrentAttackConfig);
-
 	}
 
 	// 타이머 제거
 	if (GroundStrikeAttackTimers.Contains(TargetIndex))
 	{
-		if (UWorld* World = GetWorld())
+		if (World)
 		{
 			World->GetTimerManager().ClearTimer(GroundStrikeAttackTimers[TargetIndex]);
 		}
@@ -405,6 +418,20 @@ void UAO_GA_LavaMonster_Attack::ApplyDamageAndKnockback(AActor* TargetActor, con
 	if (TargetASC->HasMatchingGameplayTag(InvulnerableTag))
 	{
 		return;
+	}
+
+	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			TargetActor->GetActorLocation(),
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
 	}
 
 	// 데미지 적용
@@ -506,42 +533,6 @@ void UAO_GA_LavaMonster_Attack::OnMontageCancelled()
 	}
 }
 
-void UAO_GA_LavaMonster_Attack::SpawnGroundStrikeVFX(const FVector& Location, float Radius, float Duration)
-{
-	// VFX 에셋이 설정되지 않았으면 리턴
-	if (!GroundStrikeVFX)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	// 위치를 약간 위로 올림 (바닥에 묻히지 않게, Z-fighting 방지)
-	FVector SpawnLocation = Location;
-	SpawnLocation.Z += 1.f;
-
-	// 나이아가라 시스템 스폰
-	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		World,
-		GroundStrikeVFX,
-		SpawnLocation,
-		FRotator::ZeroRotator,
-		FVector::OneVector,
-		true,  // bAutoDestroy - VFX 종료 후 자동 삭제
-		true,  // bAutoActivate - 즉시 활성화
-		ENCPoolMethod::None,
-		true   // bPreCullCheck
-	);
-
-	if (NiagaraComp)
-	{
-		// User Parameter 설정 - 나이아가라 시스템에서 정의한 파라미터에 값 전달
-		NiagaraComp->SetFloatParameter(FName("StrikeRadius"), Radius);
-		NiagaraComp->SetFloatParameter(FName("WarningDuration"), Duration);
-	}
-}
+// NOTE: SpawnGroundStrikeVFX는 AAO_LavaMonster::Multicast_SpawnGroundStrikeVFX로 이동됨
+// 모든 클라이언트에서 VFX가 보이도록 Multicast RPC 사용
 

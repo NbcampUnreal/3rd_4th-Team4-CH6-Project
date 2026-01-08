@@ -2,6 +2,7 @@
 
 #include "AI/Character/AO_Insect.h"
 #include "AI/Component/AO_KidnapComponent.h"
+#include "AI/Animation/AO_Insect_AnimInstance.h"
 #include "AI/Subsystem/AO_AISubsystem.h"
 #include "AI/Controller/AO_InsectController.h"
 #include "Character/AO_PlayerCharacter.h"
@@ -62,12 +63,31 @@ void AAO_Insect::HandleStunBegin()
 	{
 		KidnapComponent->ReleaseKidnap(false);
 	}
+
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
+	{
+		if (UAO_Insect_AnimInstance* InsectAnimInstance = Cast<UAO_Insect_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = InsectAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, InsectAnimInstance->GetStunMontagePlayRate());
+			}
+		}
+	}
 }
 
 void AAO_Insect::HandleStunEnd()
 {
 	Super::HandleStunEnd();
 	UpdateMovementSpeed();
+
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
+	{
+		Multicast_StopStunMontage(0.25f);
+	}
 }
 
 void AAO_Insect::OnKidnapStateChanged(bool bIsKidnapping)

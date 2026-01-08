@@ -18,6 +18,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnKidnapStateChanged, bool, bIsKidn
  * - 플레이어 부착/분리
  * - DoT 데미지 적용
  * - 납치 상태 관리
+ * 
+ * 네트워크: CurrentVictim을 복제하여 클라이언트에서도 납치 상태 동기화
  */
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AO_API UAO_KidnapComponent : public UActorComponent
@@ -26,6 +28,8 @@ class AO_API UAO_KidnapComponent : public UActorComponent
 
 public:	
 	UAO_KidnapComponent();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -65,6 +69,13 @@ protected:
 	// Kidnapped 태그만 제거 (사망한 플레이어용)
 	void RemoveKidnappedTag(AAO_PlayerCharacter* Player);
 
+	// 복제 콜백: 클라이언트에서 납치 상태 동기화
+	UFUNCTION()
+	void OnRep_CurrentVictim();
+
+	// 클라이언트에서 납치 상태 적용 (Attach, 입력 차단 등)
+	void ApplyKidnapStateOnClient(AAO_PlayerCharacter* Victim, bool bIsKidnapped);
+
 public:
 	// 납치 상태 변경 델리게이트
 	UPROPERTY(BlueprintAssignable, Category = "AO|AI|Kidnap")
@@ -100,9 +111,13 @@ protected:
 	FGameplayTag KnockdownTag;
 
 private:
-	// 현재 납치 중인 플레이어
-	UPROPERTY()
+	// 현재 납치 중인 플레이어 (복제됨 - 클라이언트 동기화용)
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentVictim)
 	TObjectPtr<AAO_PlayerCharacter> CurrentVictim;
+
+	// 이전 Victim 캐시 (OnRep에서 해제 처리용)
+	UPROPERTY()
+	TObjectPtr<AAO_PlayerCharacter> PreviousVictim;
 
 	// DoT 타이머 핸들
 	FTimerHandle DotTimerHandle;

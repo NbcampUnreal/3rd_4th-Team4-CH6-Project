@@ -20,3 +20,21 @@ void UAO_Bull_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 }
 
+void UAO_Bull_AnimInstance::PlayStunMontage()
+{
+	if (!StunMontage)
+	{
+		return;
+	}
+
+	Montage_Play(StunMontage, StunMontagePlayRate);
+}
+
+void UAO_Bull_AnimInstance::StopStunMontage(float BlendOutTime)
+{
+	if (StunMontage)
+	{
+		Montage_Stop(BlendOutTime, StunMontage);
+	}
+}
+

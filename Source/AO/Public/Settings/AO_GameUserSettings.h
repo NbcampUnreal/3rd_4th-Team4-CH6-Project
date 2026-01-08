@@ -85,5 +85,8 @@ public:
 
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Voice")
 	bool bIsEnableVoiceChat = false;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Language")
+	int32 Language = 0;
 	
 };

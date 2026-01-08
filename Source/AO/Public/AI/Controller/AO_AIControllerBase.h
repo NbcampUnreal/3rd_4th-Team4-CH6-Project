@@ -13,6 +13,7 @@ class UAISenseConfig_Hearing;
 class UStateTree;
 class UStateTreeAIComponent;
 class AAO_PlayerCharacter;
+class UNavigationSystemV1;
 
 /**
  * 모든 AI Controller의 공통 베이스 클래스
@@ -66,6 +67,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|Perception")
 	bool HasPlayerInSight() const;
 
+	// NavMesh 도달 가능성 검증 함수들
+	// 플레이어가 NavMesh 위에 있는지 확인 (AI가 도달 가능한 위치인지)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Navigation")
+	bool IsPlayerOnNavMesh(const AAO_PlayerCharacter* Player) const;
+
+	// 플레이어까지 실제 경로가 존재하는지 확인 (더 정확하지만 비용이 높음)
+	UFUNCTION(BlueprintCallable, Category = "AO|AI|Navigation")
+	bool CanReachPlayer(const AAO_PlayerCharacter* Player) const;
+
 protected:
 	// Perception
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Perception")
@@ -98,6 +108,15 @@ protected:
 	// Insect 같이 시체를 이용하는 AI는 true로 설정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Perception")
 	bool bCanTargetDeadPlayer = false;
+
+	// NavMesh 도달 불가능한 플레이어 필터링 여부 (기본값 true)
+	// NavMesh 경계에서 AI가 멈추는 문제 방지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Navigation")
+	bool bFilterUnreachablePlayers = true;
+
+	// NavMesh 검색 범위 (플레이어 위치에서 NavMesh를 찾는 범위)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Navigation")
+	FVector NavMeshProjectionExtent = FVector(100.f, 100.f, 250.f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AO|AI|Perception|Hearing")
 	float HearingRange = 2000.f;

@@ -242,7 +242,18 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 			PS->PersistentInventory.Empty();
 		}
 		//ms
-		PS->DeathCount = this->DeathCount;	// JM : 해당 캐릭터 죽음 횟수 유지
+
+		// JM : 해당 캐릭터 죽음 횟수 유지 (로비에서 넘어갈 때는 초기화)
+		FString CurrentMapName = GetWorld()->GetMapName();
+		FString LobbyName = FPackageName::GetShortName(AO_MapRoutes::LOBBY_MAP);
+		if (CurrentMapName.Contains(LobbyName))
+		{
+			DeathCount = 0;	// 죽음 횟수 초기화
+		}
+		else
+		{
+			PS->DeathCount = this->DeathCount;	// JM : 해당 캐릭터 죽음 횟수 유지
+		}
 	}
 }
 
@@ -278,7 +289,8 @@ void AAO_PlayerState::BeginPlay()
 
 	InitVoiceChat();	// JM : 레벨 이동시 보이스 채팅 초기화 (Unmute 해제)
 
-	if (HasAuthority())
+	// JM : 버그 존재 (클라쪽 PS가 이전 값을 승계하기 전에, 
+	/*if (HasAuthority())
 	{
 		FString CurrentMapName = GetWorld()->GetMapName();
 		FString LobbyName = FPackageName::GetShortName(AO_MapRoutes::LOBBY_MAP);
@@ -286,8 +298,7 @@ void AAO_PlayerState::BeginPlay()
 		{
 			DeathCount = 0;
 		}
-	}
-	
+	}*/
 	
 	AO_LOG(LogJM, Log, TEXT("End"));
 }

@@ -56,7 +56,8 @@ struct AO_API FAO_STEval_StalkerContext : public FAO_STEval_AggressiveCtx
 	virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 
 protected:
-	void UpdateStalkerContextData(FStateTreeExecutionContext& Context, FAO_STEval_StalkerCtx_InstanceData& InstanceData) const;
+	// KSJ: DeltaTime 추가 - Hysteresis 로직에 필요
+	void UpdateStalkerContextData(FStateTreeExecutionContext& Context, FAO_STEval_StalkerCtx_InstanceData& InstanceData, float DeltaTime) const;
 };
 
 

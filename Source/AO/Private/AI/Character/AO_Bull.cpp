@@ -3,6 +3,7 @@
 #include "AI/Character/AO_Bull.h"
 #include "AI/Controller/AO_BullController.h"
 #include "AI/Controller/AO_AggressiveAICtrl.h"
+#include "AI/Animation/AO_Bull_AnimInstance.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -147,11 +148,30 @@ void AAO_Bull::HandleStunBegin()
 
 	// 돌진 중단
 	SetIsCharging(false);
+
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
+	{
+		if (UAO_Bull_AnimInstance* BullAnimInstance = Cast<UAO_Bull_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = BullAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, BullAnimInstance->GetStunMontagePlayRate());
+			}
+		}
+	}
 }
 
 void AAO_Bull::HandleStunEnd()
 {
 	Super::HandleStunEnd();
+
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
+	{
+		Multicast_StopStunMontage(0.25f);
+	}
 }
 
 void AAO_Bull::BeginDestroy()

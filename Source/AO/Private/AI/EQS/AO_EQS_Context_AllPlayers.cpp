@@ -8,7 +8,15 @@
 
 void UAO_EQS_Context_AllPlayers::ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryContextData& ContextData) const
 {
-	UWorld* World = GetWorld();
+	// QueryInstance의 Owner에서 World 가져오기 (올바른 방법)
+	// GetWorld()를 직접 호출하면 CDO에서 nullptr을 반환할 수 있음
+	UObject* QueryOwner = QueryInstance.Owner.Get();
+	if (!QueryOwner)
+	{
+		return;
+	}
+
+	UWorld* World = GEngine->GetWorldFromContextObject(QueryOwner, EGetWorldErrorMode::LogAndReturnNull);
 	if (!World)
 	{
 		return;
@@ -20,11 +28,6 @@ void UAO_EQS_Context_AllPlayers::ProvideContext(FEnvQueryInstance& QueryInstance
 	if (Players.Num() > 0)
 	{
 		UEnvQueryItemType_Actor::SetContextHelper(ContextData, Players);
-	}
-	else
-	{
-		// 플레이어가 없으면 Owner(AI 자신)라도 넣어서 쿼리가 실패하지 않도록 처리할 수도 있으나,
-		// 여기서는 문맥상 플레이어가 없으면 결과가 없는 것이 맞음.
 	}
 }
 
