@@ -40,6 +40,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|Animation|Insect")
 	bool IsKidnapping() const { return bIsKidnapping; }
 
+	// 기절 몽타주 정보 Getter (Multicast용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Insect")
+	UAnimMontage* GetStunMontage() const { return StunMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|Insect")
+	float GetStunMontagePlayRate() const { return StunMontagePlayRate; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|Animation|Insect")
 	TObjectPtr<AAO_Insect> InsectCharacter;

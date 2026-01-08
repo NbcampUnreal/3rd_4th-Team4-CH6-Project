@@ -9,6 +9,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Animation/AnimInstance.h"
 
 AAO_AICharacterBase::AAO_AICharacterBase()
 {
@@ -106,19 +107,62 @@ void AAO_AICharacterBase::OnStunEnd()
 
 void AAO_AICharacterBase::HandleStunBegin()
 {
-	if (!HasAuthority())
+	// 서버에서만 이동 중지 처리
+	if (HasAuthority())
 	{
-		return;
+		if (GetCharacterMovement())
+		{
+			GetCharacterMovement()->StopMovementImmediately();
+		}
 	}
-
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->StopMovementImmediately();
-	}
+	// 기절 시작 시 추가 처리는 자식 클래스에서 오버라이드
 }
 
 void AAO_AICharacterBase::HandleStunEnd()
 {
+	// 기절 종료 시 추가 처리는 자식 클래스에서 오버라이드
+}
+
+void AAO_AICharacterBase::Multicast_PlayStunMontage_Implementation(UAnimMontage* Montage, float PlayRate)
+{
+	if (!Montage)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	// 이미 재생 중이면 무시
+	if (!AnimInstance->Montage_IsPlaying(Montage))
+	{
+		AnimInstance->Montage_Play(Montage, PlayRate);
+		CurrentStunMontage = Montage;
+	}
+}
+
+void AAO_AICharacterBase::Multicast_StopStunMontage_Implementation(float BlendOutTime)
+{
+	if (!CurrentStunMontage)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	if (AnimInstance->Montage_IsPlaying(CurrentStunMontage))
+	{
+		AnimInstance->Montage_Stop(BlendOutTime, CurrentStunMontage);
+	}
+
+	CurrentStunMontage = nullptr;
 }
 
 void AAO_AICharacterBase::TestStun()
@@ -211,3 +255,4 @@ void AAO_AICharacterBase::BindDefaultEffects()
 		}
 	}
 }
+

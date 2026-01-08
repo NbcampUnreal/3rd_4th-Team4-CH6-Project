@@ -204,15 +204,7 @@ void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* I
 	// 타격음 재생 (무적 체크 통과 후, 실제로 맞았을 때만)
 	if (HitSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(
-			GetWorld(),
-			HitSound,
-			TargetActor->GetActorLocation(),
-			1.f,
-			1.f,
-			0.f,
-			HitSoundAttenuation
-		);
+		MulticastPlayHitSound(TargetActor->GetActorLocation());
 	}
 
 	// 1. 데미지 적용
@@ -251,6 +243,22 @@ void UAO_GA_AIAttackBase::ApplyDamageAndKnockback(AActor* TargetActor, AActor* I
 
 	// 4. 자식 클래스 오버라이드 콜백
 	OnTargetHit(TargetActor, InstigatorActor);
+}
+
+void UAO_GA_AIAttackBase::MulticastPlayHitSound_Implementation(const FVector& Location)
+{
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			HitSound,
+			Location,
+			1.f,
+			1.f,
+			0.f,
+			HitSoundAttenuation
+		);
+	}
 }
 
 void UAO_GA_AIAttackBase::OnTargetHit(AActor* TargetActor, AActor* InstigatorActor)

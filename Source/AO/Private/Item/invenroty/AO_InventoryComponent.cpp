@@ -146,6 +146,7 @@ void UAO_InventoryComponent::PickupItem(const FInventorySlot& IncomingItem, AAct
     }
     if (bPickupSuccess && Instigator)
     {
+        Multicast_PlayInventorySound(0);
         if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Instigator))
         {
             if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
@@ -205,7 +206,7 @@ void UAO_InventoryComponent::UseInventoryItem_Server_Implementation()
               ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
            }
        }
-       
+       Multicast_PlayInventorySound(2);
        ClearSlot();
     }
     else if (Slots[SelectedSlotIndex].ItemType == EItemType::Weapon)
@@ -252,6 +253,7 @@ void UAO_InventoryComponent::DropInventoryItem_Server_Implementation()
           DropItem->ItemID = CurrentSlot.ItemID;
           UGameplayStatics::FinishSpawningActor(DropItem, SpawnTransform);
        }
+        Multicast_PlayInventorySound(1);
        ClearSlot();
     }
 }
@@ -395,4 +397,29 @@ bool UAO_InventoryComponent::CanInventoryAction() const
 		}
 	}
 	return true;
+}
+
+void UAO_InventoryComponent::Multicast_PlayInventorySound_Implementation(uint8 ActionType)
+{
+    USoundBase* SoundToPlay = nullptr;
+
+    switch (ActionType)
+    {
+    case 0: SoundToPlay = PickupSound; break;
+    case 1: SoundToPlay = DropSound;   break;
+    case 2: SoundToPlay = UseSound;   break;
+    }
+
+    if (SoundToPlay)
+    {
+        PlayInventorySound(SoundToPlay);
+    }
+}
+
+void UAO_InventoryComponent::PlayInventorySound(USoundBase* SoundToPlay)
+{
+    if (SoundToPlay && GetOwner())
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, SoundToPlay, GetOwner()->GetActorLocation());
+    }
 }

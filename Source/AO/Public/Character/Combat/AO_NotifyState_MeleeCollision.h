@@ -49,7 +49,7 @@ public:
 	float DamageAmount = -20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GAS|Damage")
-	float TraceRadius = 25.f;
+	float TraceRadius = 30.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GAS|Damage")
 	FGameplayTag HitConfirmEventTag;

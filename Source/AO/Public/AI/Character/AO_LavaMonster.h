@@ -8,6 +8,8 @@
 
 class UAudioComponent;
 class USoundAttenuation;
+class UNiagaraSystem;
+class UParticleSystem;
 
 /**
  * 용암 몬스터 공격 타입 열거형
@@ -120,6 +122,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster")
 	float GetMaxAttackRange() const;
 
+	// ===== VFX 멀티캐스트 (모든 클라이언트에서 스폰) =====
+	
+	// 땅속 공격 전조 VFX 스폰 (나이아가라)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnGroundStrikeVFX(const FVector& Location, float Radius, float Duration);
+
+	// 땅속 공격 분출 VFX 스폰 (Cascade)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnEruptionVFX(const FVector& Location);
+
 public:
 	// ===== 앰비언트 사운드 제어 =====
 	UFUNCTION(BlueprintCallable, Category = "AO|AI|LavaMonster|Audio")
@@ -229,5 +241,15 @@ protected:
 	// 데미지 Effect 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|GAS")
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	// ===== VFX 설정 (멀티캐스트용) =====
+	
+	// 땅속 공격 전조 VFX (나이아가라 시스템)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
+	TObjectPtr<UNiagaraSystem> GroundStrikeVFX = nullptr;
+
+	// 땅속 공격 분출 VFX (Cascade 파티클)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|AI|LavaMonster|VFX")
+	TObjectPtr<UParticleSystem> EruptionVFX = nullptr;
 };
 

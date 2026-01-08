@@ -48,6 +48,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AO|Animation|LavaMonster")
 	bool IsAttacking() const { return bIsAttacking; }
 
+	// 기절 몽타주 정보 Getter (Multicast용)
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|LavaMonster")
+	UAnimMontage* GetStunMontage() const { return StunMontage; }
+
+	UFUNCTION(BlueprintPure, Category = "AO|Animation|LavaMonster")
+	float GetStunMontagePlayRate() const { return StunMontagePlayRate; }
+
 protected:
 	// 캐릭터 참조 업데이트
 	void UpdateCharacterReference();

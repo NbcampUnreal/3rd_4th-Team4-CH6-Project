@@ -43,10 +43,17 @@ void AAO_Werewolf::HandleStunBegin()
 {
 	Super::HandleStunBegin();
 
-	// 기절 애니메이션 재생
-	if (UAO_Werewolf_AnimInstance* WerewolfAnimInstance = Cast<UAO_Werewolf_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 재생 (모든 클라이언트에서 보이도록)
+	if (HasAuthority())
 	{
-		WerewolfAnimInstance->PlayStunMontage();
+		if (UAO_Werewolf_AnimInstance* WerewolfAnimInstance = Cast<UAO_Werewolf_AnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			UAnimMontage* StunMontage = WerewolfAnimInstance->GetStunMontage();
+			if (StunMontage)
+			{
+				Multicast_PlayStunMontage(StunMontage, WerewolfAnimInstance->GetStunMontagePlayRate());
+			}
+		}
 	}
 }
 
@@ -54,9 +61,9 @@ void AAO_Werewolf::HandleStunEnd()
 {
 	Super::HandleStunEnd();
 
-	// 기절 애니메이션 중지
-	if (UAO_Werewolf_AnimInstance* WerewolfAnimInstance = Cast<UAO_Werewolf_AnimInstance>(GetMesh()->GetAnimInstance()))
+	// 서버에서 Multicast로 기절 애니메이션 중지
+	if (HasAuthority())
 	{
-		WerewolfAnimInstance->StopStunMontage(0.25f);
+		Multicast_StopStunMontage(0.25f);
 	}
 }
