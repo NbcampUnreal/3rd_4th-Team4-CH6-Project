@@ -16,7 +16,7 @@ UAO_GameInstance::UAO_GameInstance()
 	TeamDeathCount = 0;
 
 	// 최초 기본 부활 횟수
-	InitialSharedReviveCount = 1;
+	InitialSharedReviveCount = 2;
 	SharedReviveCount = InitialSharedReviveCount;
 
 	SharedTrainFuel = 43.0f; //에셋로드 실패 대비
