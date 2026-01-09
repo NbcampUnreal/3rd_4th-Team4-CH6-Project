@@ -44,6 +44,10 @@ void AAO_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAO_PlayerState, CharacterCustomizingData);
 	DOREPLIFETIME(AAO_PlayerState, PersistentInventory); // ms : 인벤토리
 	DOREPLIFETIME(AAO_PlayerState, DeathCount);
+
+	// KH : 체력 유지용 변수
+	DOREPLIFETIME(AAO_PlayerState, bHasPersistentHealth);
+	DOREPLIFETIME(AAO_PlayerState, PersistentHealth);
 }
 
 /* ==================== 로비 레디 상태 ==================== */
@@ -254,6 +258,10 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 		{
 			PS->DeathCount = this->DeathCount;	// JM : 해당 캐릭터 죽음 횟수 유지
 		}
+
+		// KH : 이전 레벨 체력 유지
+		PS->bHasPersistentHealth = this->bHasPersistentHealth;
+		PS->PersistentHealth = this->PersistentHealth;
 	}
 }
 
@@ -383,4 +391,16 @@ void AAO_PlayerState::ResetStateInventory()
 void AAO_PlayerState::SetSafeZoneState(bool bInZone)
 {
 	bInsideTravelSafeZone = bInZone;
+}
+
+void AAO_PlayerState::SaveHealthBeforeTravel(float InHealth)
+{
+	bHasPersistentHealth = true;
+	PersistentHealth = InHealth;
+}
+
+void AAO_PlayerState::ResetStateHealth()
+{
+	bHasPersistentHealth = false;
+	PersistentHealth = 0.0f;
 }

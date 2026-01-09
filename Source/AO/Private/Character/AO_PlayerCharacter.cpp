@@ -248,6 +248,11 @@ void AAO_PlayerCharacter::StartSprint_GAS(bool bShouldSprint)
 	}
 }
 
+float AAO_PlayerCharacter::GetCurrentHealth() const
+{
+	return AttributeSet ? AttributeSet->GetHealth() : 0.f;
+}
+
 void AAO_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -593,15 +598,33 @@ void AAO_PlayerCharacter::InitializeAttributes()
 		return;
 	}
 
-	AttributeSet->InitHealth(AttributeDefaults->Health);
 	AttributeSet->InitMaxHealth(AttributeDefaults->MaxHealth);
-
 	AttributeSet->InitStamina(AttributeDefaults->Stamina);
 	AttributeSet->InitMaxStamina(AttributeDefaults->MaxStamina);
 
 	AttributeSet->InitWalkSpeed(AttributeDefaults->WalkSpeed);
 	AttributeSet->InitRunSpeed(AttributeDefaults->RunSpeed);
 	AttributeSet->InitSprintSpeed(AttributeDefaults->SprintSpeed);
+
+	AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>();
+
+	const float MaxHealth = AttributeSet->GetMaxHealth();
+
+	if (PS && PS->bHasPersistentHealth)
+	{
+		const float SavedHealth = PS->PersistentHealth;
+
+		// 현재 체력이 0이면 50으로
+		const float NewHealth = (SavedHealth <= 0.f)
+			? 50.f
+			: FMath::Clamp(SavedHealth, 0.f, MaxHealth);
+
+		AttributeSet->InitHealth(NewHealth);
+	}
+	else
+	{
+		AttributeSet->InitHealth(AttributeDefaults->Health);
+	}
 }
 
 void AAO_PlayerCharacter::BindGameplayAbilities()
@@ -804,6 +827,15 @@ void AAO_PlayerCharacter::RegisterVoiceTalker()
 //ms: 사망시 아이템 버리기
 void AAO_PlayerCharacter::HandlePlayerDeath()
 {
+	if (HasAuthority())
+	{
+		if (AAO_PlayerState* PS = GetPlayerState<AAO_PlayerState>())
+		{
+			PS->bHasPersistentHealth = true;
+			PS->PersistentHealth = 0.f;
+		}
+	}
+	
 	if (InventoryComp)
 	{
 		InventoryComp->CharDead();
