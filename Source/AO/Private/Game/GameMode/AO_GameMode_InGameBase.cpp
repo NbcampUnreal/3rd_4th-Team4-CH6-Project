@@ -5,6 +5,7 @@
 
 #include "AO_Log.h"
 #include "EngineUtils.h"
+#include "Character/AO_PlayerCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Item/InventoryTravelSafeZone/AO_InventorySaveZone.h"
 #include "Item/PassiveContainer/AO_Passive_WorldSubsystem.h"
@@ -39,6 +40,18 @@ void AAO_GameMode_InGameBase::HandlePlayerTravel(AAO_PlayerState* PS)
 		if (UAO_InventoryComponent* Inv = Pawn->FindComponentByClass<UAO_InventoryComponent>())
 		{
 			PS->SaveInventoryBeforeTravel(Inv);
+		}
+	}
+
+	// 1-2. 데이터 확보: 캐릭터 Health를 PS로 복사
+	if (APawn* Pawn = PS->GetPawn())
+	{
+		if (AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(Pawn))
+		{
+			const float CurrentHealth = PlayerCharacter->GetCurrentHealth();
+
+			PS->SaveHealthBeforeTravel(CurrentHealth);
+			AO_LOG(LogKH, Warning, TEXT("Current Health: %f"), CurrentHealth);
 		}
 	}
 
