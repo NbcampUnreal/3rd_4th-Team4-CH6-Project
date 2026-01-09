@@ -132,10 +132,8 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 		UAbilitySystemComponent* PlayerASC = Character->GetAbilitySystemComponent();
 		if (PlayerASC)
 		{
-			// 1. 현재 살아있는 캐릭터에게 즉시 적용
 			PlayerASC->HandleGameplayEvent(ActivationEventTag, &EventData);
-
-			// 2. 서브시스템에 기록 (나중에 죽고 부활했을 때를 위해)
+			
 			if (APlayerController* PC = Cast<APlayerController>(Character->GetController()))
 			{
 				if (UAO_Passive_WorldSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UAO_Passive_WorldSubsystem>())
