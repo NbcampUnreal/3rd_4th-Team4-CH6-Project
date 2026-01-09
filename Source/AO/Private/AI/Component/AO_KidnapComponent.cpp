@@ -17,6 +17,7 @@
 #include "AI/Character/AO_Insect.h"
 #include "Interaction/Component/AO_InspectionComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Interaction/GAS/Ability/AO_InteractionGameplayAbility.h"
 
 UAO_KidnapComponent::UAO_KidnapComponent()
 {
@@ -253,6 +254,25 @@ void UAO_KidnapComponent::ReleaseKidnap(bool bThrow)
 
 			// 제약 해제 및 태그 제거
 			SetPlayerRestrictions(ReleasedPlayer, false);
+
+			// 취소되었던 Passive 어빌리티(상호작용 감지 등) 재가동
+			if (!bIsDead)
+			{
+				if (UAbilitySystemComponent* ASC = ReleasedPlayer->GetAbilitySystemComponent())
+				{
+					for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+					{
+						if (const UAO_InteractionGameplayAbility* InteractionAbility = Cast<UAO_InteractionGameplayAbility>(Spec.Ability))
+						{
+							// OnSpawn 정책(자동 실행)인 어빌리티는 다시 켜줍니다.
+							if (InteractionAbility->GetActivationPolicy() == EAOAbilityActivationPolicy::OnSpawn)
+							{
+								ASC->TryActivateAbility(Spec.Handle);
+							}
+						}
+					}
+				}
+			}
 		}
 		else
 		{
@@ -733,6 +753,21 @@ void UAO_KidnapComponent::ApplyKidnapStateOnClient(AAO_PlayerCharacter* Victim, 
 				if (USpringArmComponent* SpringArm = Victim->GetSpringArm())
 				{
 					SpringArm->bDoCollisionTest = bOriginalCameraCollision;
+				}
+
+				// 로컬 클라이언트에서 상호작용 어빌리티(Trace) 재가동
+				if (UAbilitySystemComponent* ASC = Victim->GetAbilitySystemComponent())
+				{
+					for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+					{
+						if (const UAO_InteractionGameplayAbility* InteractionAbility = Cast<UAO_InteractionGameplayAbility>(Spec.Ability))
+						{
+							if (InteractionAbility->GetActivationPolicy() == EAOAbilityActivationPolicy::OnSpawn)
+							{
+								ASC->TryActivateAbility(Spec.Handle);
+							}
+						}
+					}
 				}
 			}
 		}
