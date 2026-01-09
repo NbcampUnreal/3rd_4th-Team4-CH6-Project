@@ -88,6 +88,7 @@ public:
 	virtual void OnRep_Controller() override;
 
 	void StartSprint_GAS(bool bShouldSprint);
+	float GetCurrentHealth() const;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacter|Components")

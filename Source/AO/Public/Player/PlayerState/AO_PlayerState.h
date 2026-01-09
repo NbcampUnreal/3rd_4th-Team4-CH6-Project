@@ -21,6 +21,7 @@ public:
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void CopyProperties(APlayerState* PlayerState) override;
 	virtual void OnRep_PlayerName() override;
 
 	// JM : 생명주기 테스트용
@@ -110,8 +111,6 @@ public:
 	// 캐릭터 커스터마이징 옵션 데이터 (작성자: 김세훈)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Customizing", Replicated)
 	FCustomizingData CharacterCustomizingData;
-	
-	virtual void CopyProperties(APlayerState* PlayerState) override;
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetCharacterCustomizingData(const FCustomizingData& CustomizingData);
@@ -129,4 +128,15 @@ public:
 	bool bInventoryShouldPersist = false;
 	bool bIsTraveling = false;
 	void SetSafeZoneState(bool bInZone);
+
+	// KH : Health Persistence
+public:
+	UPROPERTY(Replicated)
+	bool bHasPersistentHealth = false;
+
+	UPROPERTY(Replicated)
+	float PersistentHealth = 0.f;
+
+	void SaveHealthBeforeTravel(float InHealth);
+	void ResetStateHealth();
 };
