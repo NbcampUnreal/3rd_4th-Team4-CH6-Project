@@ -72,7 +72,7 @@ void AAO_ShopManager::UpdateMoneyDisplay()
 {
 	if (MoneyDisplayText)
 	{
-		MoneyDisplayText->SetText(FText::FromString(FString::Printf(TEXT("Shop Money: %d"), SharedShopMoney)));
+		MoneyDisplayText->SetText(FText::FromString(FString::Printf(TEXT("Fuel: %d"), SharedShopMoney)));	// JM : Shop Money -> Fuel 으로 변경
 	}
 }
 
