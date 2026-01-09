@@ -31,39 +31,52 @@ void UAO_PassiveComponent::BeginPlay()
 
 void UAO_PassiveComponent::OnGameplayEventReceived(const FGameplayEventData* Payload)
 {
-	if (!Payload)
-	{
-		return;
-	}
+    if (!Payload || !GetOwner()) return;
 
-	UAbilitySystemComponent* ASC = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
-	if (!ASC)
-	{
-		return;
-	}
+    UAbilitySystemComponent* ASC = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+    if (!ASC) return;
 
-	static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.PassiveAmount"));
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+    TSubclassOf<UGameplayEffect> SelectedPassive = nullptr;
+    bool bIsMaxHPEvent = false;
 	
-	TSubclassOf<UGameplayEffect> SelectedPassive = MaxHpPassive;
-	if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.Stamina")
-	{
-		SelectedPassive = MaxStaminaPassive;
-	}
-	else if (Payload->EventTag.ToString() == "Event.Interaction.AddPassive.MoveSpeed")
-	{
-		SelectedPassive = MovementPassive;
-	}
+    FGameplayTag MaxHPTag = FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.MaxHP"));
+    
+    if (Payload->EventTag.MatchesTag(MaxHPTag))
+    {
+        SelectedPassive = MaxHpPassive;
+        bIsMaxHPEvent = true;
+    }
+    else if (Payload->EventTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.Stamina"))))
+    {
+        SelectedPassive = MaxStaminaPassive;
+    }
+    else if (Payload->EventTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.AddPassive.MoveSpeed"))))
+    {
+        SelectedPassive = MovementPassive;
+    }
 
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(SelectedPassive, 1.f, Context);
-
-	if (!SelectedPassive)
-	{
-		return;
-	}
-	if (SpecHandle.IsValid())
-	{
-		SpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, Payload->EventMagnitude);
-		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-	}
+    if (!SelectedPassive) return;
+	
+    FGameplayEffectContextHandle MaxContext = ASC->MakeEffectContext();
+    FGameplayEffectSpecHandle MaxSpecHandle = ASC->MakeOutgoingSpec(SelectedPassive, 1.f, MaxContext);
+    if (MaxSpecHandle.IsValid())
+    {
+        static FGameplayTag PassiveAmountTag = FGameplayTag::RequestGameplayTag(TEXT("Data.PassiveAmount"));
+        MaxSpecHandle.Data->SetSetByCallerMagnitude(PassiveAmountTag, Payload->EventMagnitude);
+        ASC->ApplyGameplayEffectSpecToSelf(*MaxSpecHandle.Data.Get());
+    }
+    if (bIsMaxHPEvent && AddHpPassive)
+    {
+        FGameplayEffectContextHandle HealthContext = ASC->MakeEffectContext();
+        FGameplayEffectSpecHandle HealthSpecHandle = ASC->MakeOutgoingSpec(AddHpPassive, 1.f, HealthContext);
+        
+        if (HealthSpecHandle.IsValid())
+        {
+            static FGameplayTag RecoveryTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Item")); 
+            
+            HealthSpecHandle.Data->SetSetByCallerMagnitude(RecoveryTag, Payload->EventMagnitude);
+        	
+            FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*HealthSpecHandle.Data.Get());
+        }
+    }
 }
