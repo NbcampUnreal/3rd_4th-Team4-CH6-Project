@@ -25,6 +25,12 @@ void AAO_GameMode_Rest::BeginPlay()
 		if(UAO_GameInstance* AO_GI = Cast<UAO_GameInstance>(GI))
 		{
 			AO_LOG(LogJSH, Log, TEXT("Stage BeginPlay: GI Fuel = %.1f"), AO_GI->SharedTrainFuel);
+			// JM : Rest에도 Revival Chip 개수 나오도록 함
+			if (AAO_GameState* AO_GS = GetGameState<AAO_GameState>())
+			{
+				const int32 ReviveCount = AO_GI->GetSharedReviveCount();
+				AO_GS->SetSharedReviveCount(ReviveCount);
+			}
 		}
 	}
 }
