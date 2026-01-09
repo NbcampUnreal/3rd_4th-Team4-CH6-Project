@@ -614,8 +614,6 @@ void AAO_PlayerCharacter::InitializeAttributes()
 	{
 		const float SavedHealth = PS->PersistentHealth;
 
-		AO_LOG(LogKH, Warning, TEXT("SavedHealth : %f"), SavedHealth);
-
 		// 현재 체력이 0이면 50으로
 		const float NewHealth = (SavedHealth <= 0.f)
 			? 50.f
@@ -625,8 +623,6 @@ void AAO_PlayerCharacter::InitializeAttributes()
 	}
 	else
 	{
-		AO_LOG(LogKH, Warning, TEXT("!PS - Health : %f"), AttributeDefaults->Health);
-		
 		AttributeSet->InitHealth(AttributeDefaults->Health);
 	}
 }

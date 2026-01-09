@@ -51,7 +51,6 @@ void AAO_GameMode_InGameBase::HandlePlayerTravel(AAO_PlayerState* PS)
 			const float CurrentHealth = PlayerCharacter->GetCurrentHealth();
 
 			PS->SaveHealthBeforeTravel(CurrentHealth);
-			AO_LOG(LogKH, Warning, TEXT("Current Health: %f"), CurrentHealth);
 		}
 	}
 
