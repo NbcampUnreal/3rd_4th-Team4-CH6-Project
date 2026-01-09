@@ -90,8 +90,8 @@ void AAO_PlayerController_InGameBase::SetupInputComponent()
 		AO_LOG(LogJSH, Log, TEXT("InGameBase SetupInputComponent: Binding Test Keys on %s"), *GetName());
 
 		// JM 코드추가 : 테스트용 키 직접 바인딩 (좋지 않음, 나중에 지워야함)
-		InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
-		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);
+		/*InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
+		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);*/
 	}
 	
 	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
