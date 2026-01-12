@@ -748,6 +748,18 @@ void AAO_PlayerCharacter::HandleInteractableComponentSuccess(AActor* Interactor)
 void AAO_PlayerCharacter::TryRegisterVoiceTalker()
 {
 	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (!GetMesh())
+	{
+		AO_LOG(LogJM, Warning, TEXT("Mesh is Null"));
+		return;
+	}
+
+	if (!SA_VoiceChat)
+	{
+		AO_LOG(LogJM, Warning, TEXT("SA_VoiceChat is Null"));
+		return;
+	}
+	
 	if (APlayerState* PS = GetPlayerState())
 	{
 		if (AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS))
