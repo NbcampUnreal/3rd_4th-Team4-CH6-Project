@@ -144,6 +144,20 @@ void AAO_PlayerController_Stage::ShowDeathUI()
 		return;
 	}
 	
+	// 공용 부활칩이 남아 있으면 Death UI를 띄우지 않는다.
+	UWorld* World = GetWorld();
+	AAO_GameState* AO_GS = nullptr;
+	if (World != nullptr)
+	{
+		AO_GS = World->GetGameState<AAO_GameState>();
+	}
+
+	if (AO_GS != nullptr && AO_GS->GetSharedReviveCount() > 0)
+	{
+		// 부활칩이 1개 이상 있으면 자동 부활 예정 → Death 위젯 출력 X
+		return;
+	}
+	
 	if (bPendingAutoRespawn)
 	{
 		// 자동 부활 대기 중이면 관전 UI 띄우지 않음
