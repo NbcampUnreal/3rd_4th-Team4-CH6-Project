@@ -5,6 +5,8 @@
 #include "EnvironmentQuery/Items/EnvQueryItemType_Actor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Character/AO_PlayerCharacter.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 
 void UAO_EQS_Context_AllPlayers::ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryContextData& ContextData) const
 {
@@ -22,12 +24,31 @@ void UAO_EQS_Context_AllPlayers::ProvideContext(FEnvQueryInstance& QueryInstance
 		return;
 	}
 
-	TArray<AActor*> Players;
-	UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), Players);
+	TArray<AActor*> AllPlayers;
+	UGameplayStatics::GetAllActorsOfClass(World, AAO_PlayerCharacter::StaticClass(), AllPlayers);
 
-	if (Players.Num() > 0)
+	// KSJ: 죽은 플레이어 필터링 (Status.Death 태그 확인)
+	TArray<AActor*> AlivePlayers;
+	static const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+	
+	for (AActor* PlayerActor : AllPlayers)
 	{
-		UEnvQueryItemType_Actor::SetContextHelper(ContextData, Players);
+		if (AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(PlayerActor))
+		{
+			// Status.Death 태그가 없는 플레이어만 포함 (살아있는 플레이어)
+			if (const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+			{
+				if (!ASC->HasMatchingGameplayTag(DeathTag))
+				{
+					AlivePlayers.Add(PlayerActor);
+				}
+			}
+		}
+	}
+
+	if (AlivePlayers.Num() > 0)
+	{
+		UEnvQueryItemType_Actor::SetContextHelper(ContextData, AlivePlayers);
 	}
 }
 
