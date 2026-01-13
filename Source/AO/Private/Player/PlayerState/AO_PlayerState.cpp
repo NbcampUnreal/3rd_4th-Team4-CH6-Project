@@ -253,15 +253,15 @@ void AAO_PlayerState::CopyProperties(APlayerState* PlayerState)
 		if (CurrentMapName.Contains(LobbyName))
 		{
 			DeathCount = 0;	// 죽음 횟수 초기화
+			PS->bHasPersistentHealth = false;
+			PS->PersistentHealth = 0.f;
 		}
 		else
 		{
 			PS->DeathCount = this->DeathCount;	// JM : 해당 캐릭터 죽음 횟수 유지
+			PS->bHasPersistentHealth = this->bHasPersistentHealth;
+			PS->PersistentHealth = this->PersistentHealth;
 		}
-
-		// KH : 이전 레벨 체력 유지
-		PS->bHasPersistentHealth = this->bHasPersistentHealth;
-		PS->PersistentHealth = this->PersistentHealth;
 	}
 }
 
