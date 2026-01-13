@@ -77,6 +77,10 @@ public:
 	bool CanReachPlayer(const AAO_PlayerCharacter* Player) const;
 
 protected:
+	/** 플레이어가 생존 상태인지 확인 (bIsAlive 플래그와 Status.Death 태그 모두 확인) */
+	bool IsPlayerAlive(const AAO_PlayerCharacter* Player) const;
+
+protected:
 	// Perception
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AO|AI|Perception")
 	TObjectPtr<UAIPerceptionComponent> AIPerceptionComponent;

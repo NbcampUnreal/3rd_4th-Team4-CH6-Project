@@ -3,6 +3,7 @@
 #include "Interaction/Interactables/AO_StageInteractable.h"
 
 #include "EngineUtils.h"
+#include "LoadingScreenManager.h"
 #include "Game/GameState/AO_GameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/PlayerController/AO_PlayerController_Stage.h"
@@ -70,6 +71,13 @@ void AAO_StageInteractable::OnInteractionSuccess_BP_Implementation(AActor* Inter
 		// 조건 충족 시에만 레벨 이동
 		if (bHasFuel && bHasClues)
 		{
+			// JM : 로딩화면이 잘 안떠서, 이동할 레벨 기록
+			ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
+			if (LSM)
+			{
+				LSM->PendingMapName = TutorialExitLevelName.ToString();
+			}
+			
 			UGameplayStatics::OpenLevel(this, TutorialExitLevelName);
 		}
         

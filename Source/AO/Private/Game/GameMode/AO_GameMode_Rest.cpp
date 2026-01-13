@@ -10,6 +10,8 @@
 AAO_GameMode_Rest::AAO_GameMode_Rest()
 {
 	PlayerControllerClass = AAO_PlayerController_Stage::StaticClass();
+	
+	bRestExitHandled = false;
 
 	AO_LOG(LogJSH, Log, TEXT("RestGameMode: Constructor"));
 }
@@ -47,6 +49,12 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 	{
 		return;
 	}
+	
+	if (bRestExitHandled)
+	{
+		AO_LOG(LogJSH, Log, TEXT("RestExit: Already handled, ignore duplicate request"));
+		return;
+	}
 
 	UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>();
 	if(AO_GI == nullptr)
@@ -66,6 +74,7 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 			AO_GI->ResetRun();
 			// World->ServerTravel(LobbyPath);
 			// JM : voice crash 막기 위해 확인 후 레벨이동 시작
+			bRestExitHandled = true;
 			RequestSynchronizedServerTravel(LobbyPath);
 		}
 		else
@@ -102,5 +111,6 @@ void AAO_GameMode_Rest::HandleRestExitRequest(AController* Requester)
 	AO_LOG(LogJSH, Log, TEXT("RestExit: Travel to %s"), *Path);
 	// World->ServerTravel(Path);
 	// JM : Voice crash 막기 위해 확인 후 레벨이동 시작
+	bRestExitHandled = true;
 	RequestSynchronizedServerTravel(Path);
 }

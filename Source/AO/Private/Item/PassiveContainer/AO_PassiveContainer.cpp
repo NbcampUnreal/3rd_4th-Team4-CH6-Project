@@ -28,6 +28,14 @@ AAO_PassiveContainer::AAO_PassiveContainer()
 	}
 }
 
+void AAO_PassiveContainer::Multicast_PlayInteractionSound_Implementation()
+{
+	if (IncomeSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, IncomeSound, GetActorLocation());
+	}
+}
+
 void AAO_PassiveContainer::BeginPlay()
 {
 	Super::BeginPlay();
@@ -143,6 +151,6 @@ void AAO_PassiveContainer::HandleInteractionSuccess(AActor* Interactor)
 			}
 		}
 	}
-	
+	Multicast_PlayInteractionSound();
 	Inventory->ClearSlot();	
 }

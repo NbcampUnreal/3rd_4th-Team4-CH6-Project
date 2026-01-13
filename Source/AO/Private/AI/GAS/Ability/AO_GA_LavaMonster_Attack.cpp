@@ -250,12 +250,24 @@ void UAO_GA_LavaMonster_Attack::StartGroundStrike()
 
 	GroundStrikeTargets.Empty();
 
+	// KSJ: Status.Death 태그 확인용
+	static const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+
 	for (AActor* Actor : AllPlayers)
 	{
 		AAO_PlayerCharacter* Player = Cast<AAO_PlayerCharacter>(Actor);
 		if (!Player)
 		{
 			continue;
+		}
+
+		// KSJ: 죽은 플레이어는 공격 대상에서 제외
+		if (const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+		{
+			if (ASC->HasMatchingGameplayTag(DeathTag))
+			{
+				continue; // 죽은 플레이어는 스킵
+			}
 		}
 
 		const float Distance = FVector::Dist(LavaMonsterLocation, Player->GetActorLocation());
