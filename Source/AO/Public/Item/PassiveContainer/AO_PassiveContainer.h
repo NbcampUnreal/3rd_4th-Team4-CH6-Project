@@ -31,7 +31,12 @@ public:
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Item")
 	UDataTable* ItemDataTable;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="TrainDoor")
+	TObjectPtr<USoundBase> IncomeSound;
 protected:
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayInteractionSound();
+	
 	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
