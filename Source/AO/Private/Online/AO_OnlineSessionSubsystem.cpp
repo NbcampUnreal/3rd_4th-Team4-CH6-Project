@@ -1,0 +1,1457 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "Online/AO_OnlineSessionSubsystem.h"
+
+#include "LoadingScreenManager.h"
+#include "OnlineSessionSettings.h"
+#include "OnlineSubsystem.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "Interfaces/OnlineIdentityInterface.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Online/OnlineSessionNames.h"
+#include "Misc/SecureHash.h"
+#include "Engine/Engine.h"
+#include "Engine/EngineBaseTypes.h"
+#include "AO/AO_Log.h"
+#include "Game/GameState/AO_GameState.h"
+#include "Interfaces/VoiceInterface.h"	// JM : VoiceInterface
+#include "Player/PlayerState/AO_PlayerState.h"
+
+#include "Misc/Base64.h"
+#include "Containers/StringConv.h"
+#include "Misc/Char.h"
+
+namespace
+{
+	static bool IsNullOSS()
+	{
+		if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+		{
+			return OSS->GetSubsystemName() == FName(TEXT("NULL"));
+		}
+		return false;
+	}
+}
+
+using namespace AO_SessionKeys;
+
+UAO_OnlineSessionSubsystem::UAO_OnlineSessionSubsystem()
+{
+}
+
+void UAO_OnlineSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		InviteAcceptedHandle = Session->AddOnSessionUserInviteAcceptedDelegate_Handle(
+			FOnSessionUserInviteAcceptedDelegate::CreateUObject(
+				this, &ThisClass::OnSessionUserInviteAccepted));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Initialize: Session interface invalid, invite delegate not bound"));
+	}
+
+	if (GEngine && !NetFailHandle.IsValid())
+	{
+		NetFailHandle = GEngine->OnNetworkFailure().AddUObject(this, &ThisClass::HandleNetworkFailure);
+	}
+	else if (!GEngine)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Initialize: GEngine is null, network failure delegate not bound"));
+	}
+}
+
+void UAO_OnlineSessionSubsystem::Deinitialize()
+{
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (InviteAcceptedHandle.IsValid())
+		{
+			Session->ClearOnSessionUserInviteAcceptedDelegate_Handle(InviteAcceptedHandle);
+			InviteAcceptedHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("Deinitialize: Session interface invalid, invite delegate not cleared"));
+	}
+
+	if (GEngine && NetFailHandle.IsValid())
+	{
+		GEngine->OnNetworkFailure().Remove(NetFailHandle);
+		NetFailHandle.Reset();
+	}
+
+	// JM : 종료시 보이스 세션 정리 로직
+	if (IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface())
+	{
+		VoiceInterface->Shutdown();
+	}
+	else
+	{
+		AO_LOG(LogJM, Warning, TEXT("Cant Get Voice Interface"));
+	}
+	
+	
+	Super::Deinitialize();
+}
+
+/* ==================== 유틸 ==================== */
+FString UAO_OnlineSessionSubsystem::EncodeRoomNameForSession(const FString& InRoomName)
+{
+	FTCHARToUTF8 Utf8(*InRoomName);
+
+	const uint8* Source = reinterpret_cast<const uint8*>(Utf8.Get());
+	const uint32 Length = static_cast<uint32>(Utf8.Length());
+	
+	return FBase64::Encode(Source, Length);
+}
+
+FString UAO_OnlineSessionSubsystem::DecodeRoomNameFromSession(const FString& InEncoded)
+{
+	if (InEncoded.IsEmpty())
+	{
+		return FString();
+	}
+
+	TArray<uint8> Bytes;
+	if (!FBase64::Decode(InEncoded, Bytes) || Bytes.Num() == 0)
+	{
+		// Base64 가 아니면 그냥 원본 문자열을 그대로 사용
+		return InEncoded;
+	}
+
+	// UTF-8 문자열 널 종료
+	Bytes.Add(0);
+
+	const char* Utf8Ptr = reinterpret_cast<const char*>(Bytes.GetData());
+	const TCHAR* WidePtr = UTF8_TO_TCHAR(Utf8Ptr);
+
+	return FString(WidePtr);
+}
+
+FString UAO_OnlineSessionSubsystem::ToMD5(const FString& In)
+{
+	return FMD5::HashAnsiString(*In);
+}
+
+IOnlineSessionPtr UAO_OnlineSessionSubsystem::GetSessionInterface() const
+{
+	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		return OSS->GetSessionInterface();
+	}
+
+	AO_LOG(LogJSH, Warning, TEXT("GetSessionInterface: OnlineSubsystem is null"));
+	return nullptr;
+}
+
+IOnlineVoicePtr UAO_OnlineSessionSubsystem::GetOnlineVoiceInterface() const
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())		// JM : raw pointer 타입으로 반환됨
+	{
+		AO_LOG(LogJM, Log, TEXT("return OSS::Voice Interface"));
+		return OSS->GetVoiceInterface();
+	}
+	AO_LOG(LogJM, Warning, TEXT("OSS is Null: return nullptr"));
+	return nullptr;
+}
+
+void UAO_OnlineSessionSubsystem::SetSessionInGame(const bool bInGame)
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: Session interface invalid"));
+		return;
+	}
+
+	FOnlineSessionSettings* Settings = Session->GetSessionSettings(NAME_GameSession);
+	if (!Settings)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: Session settings not found"));
+		return;
+	}
+
+	Settings->Set(
+		AO_SessionKeys::KEY_IN_GAME,
+		bInGame,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+	
+	Settings->bAllowJoinInProgress = !bInGame;
+	Settings->bAllowJoinViaPresence = !bInGame;
+
+	if (!Session->UpdateSession(NAME_GameSession, *Settings))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("SetSessionInGame: UpdateSession failed (bInGame=%d)"), static_cast<int32>(bInGame));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("SetSessionInGame: Updated (bInGame=%d)"), static_cast<int32>(bInGame));
+	}
+}
+
+// JM NOTE : 이렇게 Depth 가 깊어지는 경우 Early Return 방식을 쓰면 코드가 조금 더 깔끔해집니다
+bool UAO_OnlineSessionSubsystem::IsLocalHost() const
+{
+	if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
+	{
+		if (const FNamedOnlineSession* NS = S->GetNamedSession(NAME_GameSession))
+		{
+			if (const IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+			{
+				if (IOnlineIdentityPtr Identity = OSS->GetIdentityInterface(); Identity.IsValid())
+				{
+					TSharedPtr<const FUniqueNetId> LocalId = Identity->GetUniquePlayerId(0);
+					if (LocalId.IsValid() && NS->OwningUserId.IsValid())
+					{
+						return *NS->OwningUserId == *LocalId;
+					}
+
+					if (!LocalId.IsValid())
+					{
+						AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: LocalId invalid"));
+					}
+					if (!NS->OwningUserId.IsValid())
+					{
+						AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: OwningUserId invalid"));
+					}
+				}
+				else
+				{
+					AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: Identity interface invalid"));
+				}
+			}
+			else
+			{
+				AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: OnlineSubsystem is null"));
+			}
+		}
+		else
+		{
+			AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: NamedSession not found"));
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("IsLocalHost: Session interface invalid"));
+	}
+	return false;
+}
+
+void UAO_OnlineSessionSubsystem::HandleNetworkFailure(
+	UWorld* World, UNetDriver* NetDriver,
+	ENetworkFailure::Type FailureType, const FString& ErrorString)
+{
+	AO_LOG(LogJSH, Warning, TEXT("[NetworkFailure] Code=%d, Msg=%s"),
+		static_cast<int32>(FailureType), *ErrorString);
+
+	// JM : 연결 끊어지면 보이스 채팅 중지
+	StopVoiceChat();
+
+	// JM : 연결이 끊어지면 로딩화면을 네트워크 실패 (혹은 메인메뉴) 로딩화면으로 설정
+	ULoadingScreenManager* LSM = GetGameInstance()->GetSubsystem<ULoadingScreenManager>();
+	if (AO_ENSURE(LSM, TEXT("LSM is Not Valid")))
+	{
+		LSM->PendingMapName = TEXT("NetworkFailure");
+	}
+
+	// 세션 정리: 이후 조인/호스트 재시도 꼬임 방지
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (Session->GetNamedSession(NAME_GameSession) != nullptr)
+		{
+			Session->DestroySession(NAME_GameSession); // 콜백 대기 불필요
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HandleNetworkFailure: Session interface invalid, DestroySession skipped"));
+	}
+
+	// 내부 상태 리셋
+	bFinding = false;
+	bOpInProgress = false;
+	bPendingRehost = false;
+	bPendingInviteJoin = false;
+
+	// 델리게이트 핸들 해제
+	if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
+	{
+		if (CreateHandle.IsValid())
+		{
+			S->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
+			CreateHandle.Reset();
+		}
+		if (FindHandle.IsValid())
+		{
+			S->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+			FindHandle.Reset();
+		}
+		if (JoinHandle.IsValid())
+		{
+			S->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+			JoinHandle.Reset();
+		}
+		if (DestroyHandle.IsValid())
+		{
+			S->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HandleNetworkFailure: Session interface invalid, delegate handles not cleared"));
+	}
+}
+
+/* ==================== Host ==================== */
+void UAO_OnlineSessionSubsystem::HostSession(int32 NumPublicConnections, bool bIsLAN)
+{
+	HostSessionEx(NumPublicConnections, bIsLAN, TEXT("New Room"), TEXT(""));
+}
+
+void UAO_OnlineSessionSubsystem::HostSessionEx(int32 NumPublicConnections, bool bIsLAN, const FString& RoomName, const FString& Password)
+{
+	if (bOpInProgress)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HostSessionEx: Operation in progress, request ignored (Room=%s)"), *RoomName);
+		return;
+	}
+	bOpInProgress = true;
+
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HostSessionEx: Session interface invalid, hosting aborted"));
+		bOpInProgress = false;
+		return;
+	}
+
+	/* 기존 세션이면 제거 후 재호스트 */
+	if (Session->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HostSessionEx: Existing session found, will destroy then rehost (Room=%s)"), *RoomName);
+
+		CachedNumPublicConnections = NumPublicConnections;
+		bCachedIsLAN = bIsLAN;
+		CachedRoomName = RoomName;
+		CachedPassword = Password;
+		bPendingRehost = true;
+
+		if (DestroyHandle.IsValid())
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
+
+		if (!Session->DestroySession(NAME_GameSession))
+		{
+			AO_LOG(LogJSH, Warning, TEXT("HostSessionEx: DestroySession failed, rehost canceled"));
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+			bOpInProgress = false;
+		}
+		return;
+	}
+
+	FOnlineSessionSettings Settings;
+	Settings.bIsLANMatch = bIsLAN;
+	Settings.NumPublicConnections = NumPublicConnections;
+	Settings.bAllowJoinInProgress = true;
+	Settings.bShouldAdvertise = true;
+	Settings.bUsesPresence = true;
+	Settings.bAllowJoinViaPresence = true;
+	Settings.bUseLobbiesIfAvailable = true;
+
+	const bool bHasPassword = !Password.IsEmpty();
+	Settings.Set(KEY_SERVER_NAME, EncodeRoomNameForSession(RoomName), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_HAS_PASSWORD, bHasPassword, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_PASSWORD_MD5, ToMD5(Password), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_CURRENT_PLAYERS, 1, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(KEY_IN_GAME, false, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	Settings.Set(SEARCH_LOBBIES, true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	if (CreateHandle.IsValid())
+	{
+		Session->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
+		CreateHandle.Reset();
+	}
+	CreateHandle = Session->AddOnCreateSessionCompleteDelegate_Handle(
+		FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete));
+
+	if (!Session->CreateSession(0, NAME_GameSession, Settings))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("HostSessionEx: CreateSession returned false (Room=%s)"), *RoomName);
+		Session->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
+		CreateHandle.Reset();
+		bOpInProgress = false;
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("HostSessionEx: CreateSession requested (LAN=%d, NumPublic=%d, Room=%s, HasPw=%d)"),
+			static_cast<int32>(bIsLAN),
+			NumPublicConnections,
+			*RoomName,
+			static_cast<int32>(bHasPassword));
+	}
+}
+
+void UAO_OnlineSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (CreateHandle.IsValid())
+		{
+			Session->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
+			CreateHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnCreateSessionComplete: Session interface invalid when clearing delegate"));
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("OnCreateSessionComplete: SessionName=%s, Success=%d"),
+		*SessionName.ToString(),
+		static_cast<int32>(bWasSuccessful));
+
+	if (!bWasSuccessful)
+	{
+		bOpInProgress = false;
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		UGameplayStatics::OpenLevel(World, GetLobbyMapName(), true, TEXT("?listen"));
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnCreateSessionComplete: World is null, cannot travel to lobby"));
+	}
+
+	bOpInProgress = false;
+}
+
+/* ==================== Find ==================== */
+void UAO_OnlineSessionSubsystem::FindSessions(int32 MaxResults, bool bIsLAN)
+{
+	/* 진행 중이면 먼저 취소 */
+	if (bFinding)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("FindSessions: Already finding, CancelFind first"));
+		CancelFind();
+	}
+
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("FindSessions: Session interface invalid, search aborted"));
+		OnFindSessionsCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	LastSearch = MakeShared<FOnlineSessionSearch>();
+	LastSearch->MaxSearchResults = MaxResults;
+	LastSearch->bIsLanQuery = bIsLAN;
+
+	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+
+	if (FindHandle.IsValid())
+	{
+		Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+		FindHandle.Reset();
+	}
+	FindHandle = Session->AddOnFindSessionsCompleteDelegate_Handle(
+		FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete));
+
+	bFinding = true;
+
+	if (!Session->FindSessions(0, LastSearch.ToSharedRef()))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("FindSessions: FindSessions returned false"));
+		Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+		FindHandle.Reset();
+		bFinding = false;
+		OnFindSessionsCompleteEvent.Broadcast(false);
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("FindSessions: Requested (MaxResults=%d, LAN=%d)"),
+			MaxResults,
+			static_cast<int32>(bIsLAN));
+	}
+}
+
+void UAO_OnlineSessionSubsystem::CancelFind()
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (Session.IsValid())
+	{
+		AO_LOG(LogJSH, Log, TEXT("CancelFind: CancelFindSessions requested"));
+		Session->CancelFindSessions();
+		if (FindHandle.IsValid())
+		{
+			Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+			FindHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("CancelFind: Session interface invalid, cancel skipped"));
+	}
+	LastSearch.Reset();
+	bFinding = false;
+
+	OnFindSessionsCompleteEvent.Broadcast(false);
+}
+
+void UAO_OnlineSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
+{
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (FindHandle.IsValid())
+		{
+			Session->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+			FindHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: Session interface invalid when clearing delegate"));
+	}
+
+	bFinding = false;
+	LastSearchResults.Reset();
+
+	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: Success=%d"), static_cast<int32>(bWasSuccessful));
+
+	if (!bWasSuccessful || !LastSearch.IsValid())
+	{
+		if (!LastSearch.IsValid())
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OnFindSessionsComplete: LastSearch invalid"));
+		}
+		OnFindSessionsCompleteEvent.Broadcast(false);
+		return;
+	}
+	
+	LastSearchResults = LastSearch->SearchResults;
+	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: RawResults=%d"), LastSearchResults.Num());
+	
+	{
+		TSet<FString> SeenIds;
+		LastSearchResults.RemoveAll(
+			[&SeenIds](const FOnlineSessionSearchResult& R)
+			{
+				const FString Id = R.GetSessionIdStr();
+				if (SeenIds.Contains(Id))
+				{
+					return true;
+				}
+				SeenIds.Add(Id);
+
+				const auto& S = R.Session;
+
+				bool bLobbyTag = false;
+				S.SessionSettings.Get(SEARCH_LOBBIES, bLobbyTag);
+
+				FString EncodedRoomName;
+				const bool bHasName = S.SessionSettings.Get(KEY_SERVER_NAME, EncodedRoomName);
+				const FString RoomName = DecodeRoomNameFromSession(EncodedRoomName);
+
+				const bool bBad =
+					!bLobbyTag ||
+					!bHasName || RoomName.IsEmpty() ||
+					S.OwningUserName.IsEmpty();
+
+				return bBad;
+			});
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("OnFindSessionsComplete: ValidResults=%d"), LastSearchResults.Num());
+
+	OnFindSessionsCompleteEvent.Broadcast(true);
+}
+
+/* ==================== Join ==================== */
+void UAO_OnlineSessionSubsystem::JoinSessionByIndex(int32 Index)
+{
+	if (bOpInProgress)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("JoinSessionByIndex: Operation in progress, request ignored (Index=%d)"), Index);
+		return;
+	}
+	if (!LastSearch.IsValid() || Index < 0 || Index >= LastSearchResults.Num())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("JoinSessionByIndex: Invalid index or LastSearch (Index=%d, ResultCount=%d)"),
+			Index, LastSearchResults.Num());
+		return;
+	}
+	bOpInProgress = true;
+
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("JoinSessionByIndex: Session interface invalid, join aborted"));
+		bOpInProgress = false;
+		return;
+	}
+
+	if (JoinHandle.IsValid())
+	{
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+		JoinHandle.Reset();
+	}
+	JoinHandle = Session->AddOnJoinSessionCompleteDelegate_Handle(
+		FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete));
+
+	if (!Session->JoinSession(0, NAME_GameSession, LastSearchResults[Index]))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("JoinSessionByIndex: JoinSession returned false (Index=%d)"), Index);
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+		JoinHandle.Reset();
+		bOpInProgress = false;
+	}
+	else
+	{
+		AO_LOG(LogJSH, Log, TEXT("JoinSessionByIndex: JoinSession requested (Index=%d)"), Index);
+	}
+}
+
+void UAO_OnlineSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnJoinSessionComplete: Session interface invalid"));
+		bOpInProgress = false;
+		return;
+	}
+
+	if (JoinHandle.IsValid())
+	{
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+		JoinHandle.Reset();
+	}
+
+	AO_LOG(LogJSH, Log, TEXT("OnJoinSessionComplete: SessionName=%s, Result=%d"),
+		*SessionName.ToString(),
+		static_cast<int32>(Result));
+
+	if (Result != EOnJoinSessionCompleteResult::Success)
+	{
+		bOpInProgress = false;
+		return;
+	}
+
+	FString ConnectString;
+	if (!Session->GetResolvedConnectString(SessionName, ConnectString))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnJoinSessionComplete: GetResolvedConnectString failed"));
+		bOpInProgress = false;
+		return;
+	}
+
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+	{
+		AO_LOG(LogJSH, Log, TEXT("OnJoinSessionComplete: ClientTravel to %s"), *ConnectString);
+		PC->ClientTravel(ConnectString, TRAVEL_Absolute);
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnJoinSessionComplete: PlayerController is null, cannot ClientTravel"));
+	}
+
+	bOpInProgress = false;
+}
+
+void UAO_OnlineSessionSubsystem::ShowInviteUI()
+{
+	const IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS == nullptr)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: OSS null"));
+		return;
+	}
+
+	IOnlineExternalUIPtr ExternalUI = OSS->GetExternalUIInterface();
+	if (!ExternalUI.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("ShowInviteUI: ExternalUI invalid"));
+		return;
+	}
+	
+	const int32 LocalUserNum = 0;
+	ExternalUI->ShowInviteUI(LocalUserNum, NAME_GameSession);
+}
+
+/* ==================== Destroy (호스트/클라 분리) ==================== */
+void UAO_OnlineSessionSubsystem::DestroyCurrentSession()
+{
+	if (bOpInProgress)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("DestroyCurrentSession: Operation in progress, request ignored"));
+		return;
+	}
+	bOpInProgress = true;
+
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("DestroyCurrentSession: Session interface invalid, fallback to main menu"));
+		bOpInProgress = false;
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
+		else
+		{
+			AO_LOG(LogJSH, Warning, TEXT("DestroyCurrentSession: World is null, cannot travel to main menu"));
+		}
+		return;
+	}
+
+	// JM : 세션 이탈시 보이스 채팅 나가기
+	StopVoiceChat();
+
+	const bool bIsHost = IsLocalHost();
+
+	if (bIsHost)
+	{
+		/* 호스트: 세션 파괴 완료 콜백에서 메인 메뉴 복귀 */
+		bPendingReturnToMenu = true;
+
+		if (DestroyHandle.IsValid())
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
+
+		if (!Session->DestroySession(NAME_GameSession))
+		{
+			AO_LOG(LogJSH, Warning, TEXT("DestroyCurrentSession: DestroySession failed (Host path)"));
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+			bPendingReturnToMenu = false;
+			bOpInProgress = false;
+		}
+		else
+		{
+			AO_LOG(LogJSH, Log, TEXT("DestroyCurrentSession: DestroySession requested (Host path)"));
+		}
+	}
+	else
+	{
+		/* 클라이언트: 로컬 세션 파괴 요청 후 즉시 메인 메뉴로 이동 (콜백 기다리지 않음) */
+		AO_LOG(LogJSH, Log, TEXT("DestroyCurrentSession: DestroySession requested (Client path)"));
+		Session->DestroySession(NAME_GameSession);
+		bOpInProgress = false;
+
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
+		else
+		{
+			AO_LOG(LogJSH, Warning, TEXT("DestroyCurrentSession: World is null, cannot travel to main menu (Client path)"));
+		}
+	}
+}
+
+void UAO_OnlineSessionSubsystem::OnDestroyThenRecreateSession(FName SessionName, bool bWasSuccessful)
+{
+	if (IOnlineSessionPtr Session = GetSessionInterface(); Session.IsValid())
+	{
+		if (DestroyHandle.IsValid())
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+	}
+	else
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnDestroyThenRecreateSession: Session interface invalid when clearing delegate"));
+	}
+	
+	AO_LOG(LogJSH, Log, TEXT("OnDestroyThenRecreateSession: SessionName=%s, Success=%d, PendingReturnToMenu=%d, PendingRehost=%d, PendingInviteJoin=%d"),
+		*SessionName.ToString(),
+		static_cast<int32>(bWasSuccessful),
+		static_cast<int32>(bPendingReturnToMenu),
+		static_cast<int32>(bPendingRehost),
+		static_cast<int32>(bPendingInviteJoin));
+
+	if (bWasSuccessful && bPendingReturnToMenu)
+	{
+		bPendingReturnToMenu = false;
+		bOpInProgress = false;
+
+		if (UWorld* World = GetWorld())
+		{
+			UGameplayStatics::OpenLevel(World, GetMainMenuMapName(), true);
+		}
+		else
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OnDestroyThenRecreateSession: World is null, cannot travel to main menu"));
+		}
+		return;
+	}
+
+	/* 1) 재호스트 */
+	if (bWasSuccessful && bPendingRehost)
+	{
+		bPendingRehost = false;
+		const int32 ReNum = CachedNumPublicConnections;
+		const bool ReLAN = bCachedIsLAN;
+		const FString ReName = CachedRoomName;
+		const FString RePw = CachedPassword;
+
+		AO_LOG(LogJSH, Log, TEXT("OnDestroyThenRecreateSession: Rehost path (Num=%d, LAN=%d, Room=%s)"),
+			ReNum,
+			static_cast<int32>(ReLAN),
+			*ReName);
+
+		bOpInProgress = false;
+		HostSessionEx(ReNum, ReLAN, ReName, RePw);
+		return;
+	}
+	/* 2) 초대 합류 */
+	else if (bWasSuccessful && bPendingInviteJoin)
+	{
+		bPendingInviteJoin = false;
+
+		if (IOnlineSessionPtr S = GetSessionInterface(); S.IsValid())
+		{
+			AO_LOG(LogJSH, Log, TEXT("OnDestroyThenRecreateSession: InviteJoin path"));
+
+			if (JoinHandle.IsValid())
+			{
+				S->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+				JoinHandle.Reset();
+			}
+			JoinHandle = S->AddOnJoinSessionCompleteDelegate_Handle(
+				FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete));
+
+			if (!S->JoinSession(0, NAME_GameSession, CachedInviteResult))
+			{
+				AO_LOG(LogJSH, Warning, TEXT("OnDestroyThenRecreateSession: JoinSession failed on InviteJoin path"));
+				S->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+				JoinHandle.Reset();
+				bOpInProgress = false;
+			}
+			return;
+		}
+		else
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OnDestroyThenRecreateSession: Session interface invalid on InviteJoin path"));
+		}
+	}
+
+	if (!bWasSuccessful)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnDestroyThenRecreateSession: DestroySession was not successful and no pending actions handled"));
+	}
+	bOpInProgress = false;
+}
+
+/* ==================== 조회/검증 ==================== */
+FString UAO_OnlineSessionSubsystem::GetSessionOwnerNameByIndex(int32 Index) const
+{
+	return (Index >= 0 && Index < LastSearchResults.Num()) ? LastSearchResults[Index].Session.OwningUserName : FString();
+}
+
+int32 UAO_OnlineSessionSubsystem::GetOpenPublicConnectionsByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return 0;
+	}
+	return LastSearchResults[Index].Session.NumOpenPublicConnections;
+}
+
+int32 UAO_OnlineSessionSubsystem::GetMaxPublicConnectionsByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return 0;
+	}
+	return LastSearchResults[Index].Session.SessionSettings.NumPublicConnections;
+}
+
+FString UAO_OnlineSessionSubsystem::GetServerNameByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return FString();
+	}
+
+	FString EncodedName;
+	const bool bHasName =
+		LastSearchResults[Index].Session.SessionSettings.Get(KEY_SERVER_NAME, EncodedName);
+
+	if (!bHasName || EncodedName.IsEmpty())
+	{
+		return FString();
+	}
+
+	return DecodeRoomNameFromSession(EncodedName);
+}
+
+bool UAO_OnlineSessionSubsystem::IsInGameByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return false;
+	}
+
+	bool bInGame = false;
+	LastSearchResults[Index].Session.SessionSettings.Get(KEY_IN_GAME, bInGame);
+	return bInGame;
+}
+
+bool UAO_OnlineSessionSubsystem::IsPasswordRequiredByIndex(int32 Index) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return false;
+	}
+	bool bHasPw = false;
+	LastSearchResults[Index].Session.SessionSettings.Get(KEY_HAS_PASSWORD, bHasPw);
+	return bHasPw;
+}
+
+bool UAO_OnlineSessionSubsystem::VerifyPasswordAgainstIndex(int32 Index, const FString& PlainPassword) const
+{
+	if (Index < 0 || Index >= LastSearchResults.Num())
+	{
+		return false;
+	}
+
+	FString SavedHash;
+	if (!LastSearchResults[Index].Session.SessionSettings.Get(KEY_PASSWORD_MD5, SavedHash))
+	{
+		return PlainPassword.IsEmpty();
+	}
+	
+	FString Pw = PlainPassword;
+	if (Pw.Len() > 4)
+	{
+		Pw.LeftInline(4, EAllowShrinking::No);
+	}
+	
+	return SavedHash.Equals(ToMD5(Pw), ESearchCase::IgnoreCase);
+}
+
+int32 UAO_OnlineSessionSubsystem::GetCurrentPlayersByIndex(int32 Index) const
+{
+	if(Index < 0)
+	{
+		return -1;
+	}
+
+	if(LastSearchResults.Num() <= Index)
+	{
+		return -1;
+	}
+
+	const FOnlineSessionSearchResult& Result = LastSearchResults[Index];
+
+	int32 CurrentPlayers = -1;
+
+	const FOnlineSessionSettings& Settings = Result.Session.SessionSettings;
+
+	if(Settings.Get(KEY_CURRENT_PLAYERS, CurrentPlayers))
+	{
+		return CurrentPlayers;
+	}
+
+	return -1;
+}
+
+void UAO_OnlineSessionSubsystem::UpdateCurrentPlayers(int32 CurrentPlayers)
+{
+	IOnlineSessionPtr SessionInterface = GetSessionInterface();
+	if(!SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if(NamedSession == nullptr)
+	{
+		return;
+	}
+
+	FOnlineSessionSettings& Settings = NamedSession->SessionSettings;
+
+	Settings.Set(
+		KEY_CURRENT_PLAYERS,
+		CurrentPlayers,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+
+	const FName SessionName = NamedSession->SessionName;
+
+	SessionInterface->UpdateSession(SessionName, Settings);
+}
+
+/* ==================== 초대 ==================== */
+void UAO_OnlineSessionSubsystem::OnSessionUserInviteAccepted(
+	bool bWasSuccessful, int32 LocalUserNum,
+	TSharedPtr<const FUniqueNetId> UserId,
+	const FOnlineSessionSearchResult& InviteResult)
+{
+	if (bOpInProgress)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnSessionUserInviteAccepted: Operation in progress, invite ignored"));
+		return;
+	}
+	bOpInProgress = true;
+
+	AO_LOG(LogJSH, Log, TEXT("OnSessionUserInviteAccepted: Success=%d, LocalUserNum=%d"),
+		static_cast<int32>(bWasSuccessful),
+		LocalUserNum);
+
+	if (!bWasSuccessful)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnSessionUserInviteAccepted: bWasSuccessful is false"));
+		bOpInProgress = false;
+		return;
+	}
+
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnSessionUserInviteAccepted: Session interface invalid"));
+		bOpInProgress = false;
+		return;
+	}
+
+	if (Session->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		AO_LOG(LogJSH, Log, TEXT("OnSessionUserInviteAccepted: Already in session, will destroy then join invite"));
+
+		bPendingInviteJoin = true;
+		CachedInviteResult = InviteResult;
+		bPendingRehost = false;
+
+		if (DestroyHandle.IsValid())
+		{
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+		}
+		DestroyHandle = Session->AddOnDestroySessionCompleteDelegate_Handle(
+			FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroyThenRecreateSession));
+
+		if (!Session->DestroySession(NAME_GameSession))
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OnSessionUserInviteAccepted: DestroySession failed while processing invite"));
+			Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+			DestroyHandle.Reset();
+			bOpInProgress = false;
+		}
+		return;
+	}
+
+	if (JoinHandle.IsValid())
+	{
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+		JoinHandle.Reset();
+	}
+	JoinHandle = Session->AddOnJoinSessionCompleteDelegate_Handle(
+		FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete));
+
+	if (!Session->JoinSession(LocalUserNum, NAME_GameSession, InviteResult))
+	{
+		AO_LOG(LogJSH, Warning, TEXT("OnSessionUserInviteAccepted: JoinSession failed (LocalUserNum=%d)"), LocalUserNum);
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
+		JoinHandle.Reset();
+		bOpInProgress = false;
+		return;
+	}
+}
+
+/* ==================== 자동 분기 API ==================== */
+void UAO_OnlineSessionSubsystem::HostSessionAuto(int32 NumPublicConnections, const FString& RoomName, const FString& Password)
+{
+	const bool bLAN = IsNullOSS(); // NULL이면 LAN, Steam이면 Online
+	AO_LOG(LogJSH, Log, TEXT("HostSessionAuto: Auto-selected mode (LAN=%d, Room=%s)"),
+		static_cast<int32>(bLAN),
+		*RoomName);
+	HostSessionEx(NumPublicConnections, bLAN, RoomName, Password);
+}
+
+void UAO_OnlineSessionSubsystem::FindSessionsAuto(int32 MaxResults)
+{
+	const bool bLAN = IsNullOSS();
+	AO_LOG(LogJSH, Log, TEXT("FindSessionsAuto: Auto-selected mode (LAN=%d, MaxResults=%d)"),
+		static_cast<int32>(bLAN),
+		MaxResults);
+	FindSessions(MaxResults, bLAN);
+}
+
+/* ==================== Voice Chat (JM) ================ */
+void UAO_OnlineSessionSubsystem::StartVoiceChat()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
+		return;
+	}
+	VoiceInterface->RegisterLocalTalker(0);
+	VoiceInterface->StartNetworkedVoice(0);
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::StopVoiceChat()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("Voice Interface is not Valid"));
+		return;
+	}
+
+	VoiceInterface->StopNetworkedVoice(0);
+	VoiceInterface->ClearVoicePackets();			// 권장사항(추가됨)
+	VoiceInterface->RemoveAllRemoteTalkers();	// 이거 추가하니까 크래시 안남
+	for (int32 i = 0; i < MAX_LOCAL_PLAYERS; ++i)	// 콘솔 게임의 경우 4명의 플레이어까지 입력 가능
+	{
+		VoiceInterface->UnregisterLocalTalker(i);
+	}
+	VoiceInterface->DisconnectAllEndpoints();	// 이거 추가하니까 크래시 안남
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::MuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	// TODO : ensure로 코드 리펙토링
+	if (!TargetPS)
+	{
+		AO_LOG(LogJM, Warning, TEXT("Target PS is Null"));
+		return;
+	}
+
+	if(UWorld* World = GetWorld())		// MuteRemoteTalker로 자신은 Mute할 수 없음
+    {
+    	if(APlayerController* LocalPC = World->GetFirstPlayerController())
+    	{
+    		if(LocalPC->PlayerState == TargetPS)
+    		{
+    			return;
+    		}
+    	}
+    }
+	
+	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
+	if (!TargetPSId.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
+		return;
+	}
+	
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!VoiceInterface.IsValid())
+	{
+		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
+		return;
+	}
+
+	if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+	{
+		AO_LOG(LogJM, Log, TEXT("PS(%s) Muted"), *TargetPS->GetPlayerName());
+	}
+	else
+	{
+		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Mute 시도)
+		AO_LOG(LogJM, Warning, TEXT("Mute Failed. Try RegisterRemoteTalker & Mute Again"));
+		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
+		{
+			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+			if (VoiceInterface->MuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+			{
+				AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Muted Successfully"), *TargetPS->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Mute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+			}
+		}
+		else
+		{
+			AO_LOG(LogJM, Error, TEXT("PS(%s), Register Remote Talker Failed"), *TargetPS->GetPlayerName());
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::UnmuteRemoteTalker(const uint8 LocalUserNum, AAO_PlayerState* TargetPS, const bool bIsSystemWide)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!AO_ENSURE(TargetPS, TEXT("TargetPS is Null")))
+	{
+		return;
+	}
+
+	if(UWorld* World = GetWorld())		// UnmuteRemoteTalker로 자신은 Mute할 수 없음
+	{
+		if(APlayerController* LocalPC = World->GetFirstPlayerController())
+		{
+			if(LocalPC->PlayerState == TargetPS)
+			{
+				return;
+			}
+		}
+	}
+	
+	TSharedPtr<const FUniqueNetId> TargetPSId = TargetPS->GetUniqueId().GetUniqueNetId();
+	if (!TargetPSId.IsValid())
+	// if (!AO_ENSURE(TargetPSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	{
+		AO_LOG(LogJM, Warning, TEXT("TargetPSId is Not Valid"));
+		return;
+	}
+	
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	{
+		AO_LOG(LogJM, Warning, TEXT("InValid Voice Interface"));
+		return;
+	}
+
+	if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+	{
+		AO_LOG(LogJM, Log, TEXT("PS(%s) Unmuted"), *TargetPS->GetPlayerName());
+	}
+	else
+	{
+		// 호스트의 경우 Register가 안되어있는 문제가 있음 (Register Remote Talker 후, Unmute 시도)
+		AO_ENSURE(false, TEXT("Unmute Failed. Try Register Remote Talker & Unmute Again"));
+		if (VoiceInterface->RegisterRemoteTalker(*TargetPSId))
+		{
+			AO_LOG(LogJM, Log, TEXT("Success to Register Remote Talker"));
+			if (VoiceInterface->UnmuteRemoteTalker(LocalUserNum, *TargetPSId, bIsSystemWide))
+			{
+				AO_LOG(LogJM, Log, TEXT("PS(%s) Registered Remote Talker and Unmuted Successfully"), *TargetPS->GetPlayerName());
+			}
+			else
+			{
+				AO_LOG(LogJM, Error, TEXT("PS(%s), Finally Unmute Failed even after Register Remote Talker"), *TargetPS->GetPlayerName());
+			}
+		}
+		else
+		{
+			AO_ENSURE(false, TEXT("Failed to Register Remote Talker"));
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::MuteAllRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("World is Null")))
+	{
+		return;
+	}
+
+	APlayerController* LocalPC = World->GetFirstPlayerController();
+	if (!AO_ENSURE(LocalPC, TEXT("LocalPC is Null")))
+	{
+		return;
+	}
+
+	AGameStateBase* GS_Base = World->GetGameState();
+	if (!AO_ENSURE(GS_Base, TEXT("GameState is Null")))
+	{
+		return;
+	}
+
+	for (APlayerState* PS : GS_Base->PlayerArray)
+	{
+		if (!AO_ENSURE(PS, TEXT("PS is Null")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
+		if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		MuteRemoteTalker(0, AO_PS, false);
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::UnmuteAllRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("World is Null")))
+	{
+		return;
+	}
+
+	APlayerController* LocalPC = World->GetFirstPlayerController();
+	if (!AO_ENSURE(LocalPC, TEXT("LocalPC is Null")))
+	{
+		return;
+	}
+
+	AGameStateBase* GS_Base = World->GetGameState();
+	if (!AO_ENSURE(GS_Base, TEXT("GameState is Null")))
+	{
+		return;
+	}
+
+	for (APlayerState* PS : GS_Base->PlayerArray)
+	{
+		if (!AO_ENSURE(PS, TEXT("PS is Null")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_PS = Cast<AAO_PlayerState>(PS);
+		if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		UnmuteRemoteTalker(0, AO_PS, false);
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void UAO_OnlineSessionSubsystem::MuteAllDeadRemoteTalker()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("Invalid World")))
+	{
+		return;
+	}
+	
+	for (APlayerState* OtherPS : World->GetGameState()->PlayerArray)
+	{
+		if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Invalid")))
+		{
+			continue;
+		}
+
+		AAO_PlayerState* AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+		if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		if (AO_OtherPS->bIsAlive)
+		{
+			continue;
+		}
+
+		MuteRemoteTalker(0, AO_OtherPS, false);
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+bool UAO_OnlineSessionSubsystem::IsRemotePlayerTalking(APlayerState* PS)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	IOnlineVoicePtr VoiceInterface = GetOnlineVoiceInterface();
+	if (!AO_ENSURE(VoiceInterface.IsValid(), TEXT("InValid Voice Interface")))
+	{
+		return false;
+	}
+
+	TSharedPtr<const FUniqueNetId> PSId = PS->GetUniqueId().GetUniqueNetId();
+	if (!AO_ENSURE(PSId.IsValid(), TEXT("TargetPSId is Not Valid")))
+	{
+		return false;
+	}
+
+	bool result = VoiceInterface->IsRemotePlayerTalking(*PSId); 
+	AO_LOG(LogJM, Log, TEXT("End (return %d)"), result);
+	
+	return result;
+}
+
+void UAO_OnlineSessionSubsystem::UpdateVoiceMember(AAO_PlayerState* ChangedPlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!AO_ENSURE(ChangedPlayerState, TEXT("Changed PS is nullptr")))
+	{
+		return;
+	}
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!AO_ENSURE(PC, TEXT("PC is Invalid")))
+	{
+		return;
+	}
+
+	AAO_PlayerState* MyPS = PC->GetPlayerState<AAO_PlayerState>();
+	if (!AO_ENSURE(MyPS, TEXT("My PS is Invalid")))
+	{
+		return;
+	}
+
+	if (ChangedPlayerState == MyPS)	// 변화한 플레이어가 나인 경우
+	{
+		if (ChangedPlayerState->GetIsAlive())	// 내가 부활한 경우
+		{
+			MuteAllDeadRemoteTalker();	// 죽은 사람들만 Mute
+		}
+		else  // 내가 죽은 경우
+		{
+			UnmuteAllRemoteTalker();	// 모두 unmute
+		}
+	}
+	else    // 변화한 플레이어가 타인인 경우
+	{
+		if (MyPS->GetIsAlive())	// 내가 살아있다면
+		{
+			if (ChangedPlayerState->GetIsAlive())	// 타인이 부활한 경우 Unmute
+			{
+				UnmuteRemoteTalker(0, ChangedPlayerState, false);
+			}
+			else								// 타인이 사망한 경우 Mute
+			{
+				MuteRemoteTalker(0, ChangedPlayerState, false);
+			}
+		}
+		else  // 내가 죽어있다면 타인이 부활하든 죽든 일단 다 들리게 유지
+		{
+			UnmuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}

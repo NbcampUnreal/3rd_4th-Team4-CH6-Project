@@ -1,0 +1,165 @@
+// AO_PlayerController_Stage.h (장주만)
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "AO_PlayerController_InGameBase.h"
+#include "AO_PlayerController_Stage.generated.h"
+
+class UCameraComponent;
+
+UENUM()
+enum EAO_SpectateEndReason : uint8
+{
+	Revived,
+	NoValidTarget,
+	TargetDestroyed
+};
+
+UCLASS()
+class AO_API AAO_PlayerController_Stage : public AAO_PlayerController_InGameBase
+{
+	GENERATED_BODY()
+
+public:
+	AAO_PlayerController_Stage();
+
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	// JM : 생명주기 테스트용
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnRep_Pawn() override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> HUDWidget;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
+	TSubclassOf<UUserWidget> DeathWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> DeathWidget;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AO|UI")
+	TSubclassOf<UUserWidget> SpectateWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> SpectateWidget;
+
+public:
+	// 서버로 출발 보내는 RPC
+	UFUNCTION(Server, Reliable)
+    void Server_RequestStageExit();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void ShowDeathUI();
+
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void RequestSpectate();
+	
+	UFUNCTION(BlueprintCallable, Category = "AO|UI")
+	void RequestSpectateNext(bool bForward);
+
+	UFUNCTION()
+	void ForceReselectSpectateTarget(APawn* InvalidTarget);
+
+	UFUNCTION(BlueprintCallable, Category = "AO|Spectate")
+	void RequestStopSpectate(EAO_SpectateEndReason Reason);
+
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_RequestSpectate();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_RequestSpectateNext(bool bForward);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_SetSpectateTarget(APawn* NewTarget, int32 NewPlayerIndex);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetSpectateTarget(APawn* NewTarget);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StopSpectate();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_StopSpectate(EAO_SpectateEndReason Reason);
+
+	void StopSpectate(EAO_SpectateEndReason Reason);
+
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<APawn> CurrentSpectateTarget;
+	UPROPERTY()
+	TObjectPtr<APawn> PrevSpectateTarget;
+
+	int32 CurrentSpectatePlayerIndex = INDEX_NONE;
+
+	TObjectPtr<APawn> FindNextSpectateTarget(bool bForward, int32& OutNewIndex);
+
+	// == 관전 카메라 스무딩용 로직 == //
+	
+	// 관전 카메라 보간 로직
+	void UpdateSpectateCamera(float DeltaSeconds);
+	void EnsureSpectateCameraActor();
+	void ResetSpectateSmoothing();
+
+	UPROPERTY(Transient)
+	TObjectPtr<ACameraActor> SpectateCameraActor = nullptr;
+
+	// 스무딩된 현재값
+	FVector  SmoothedLoc = FVector::ZeroVector;
+	FRotator SmoothedRot = FRotator::ZeroRotator;
+	float    SmoothedFOV = 90.f;
+	
+	// 타겟 (복제된 값)
+	FVector  TargetLoc = FVector::ZeroVector;
+	FRotator TargetRot = FRotator::ZeroRotator;
+	float    TargetFOV = 90.f;
+
+	bool bSpectateCamInitialized = false;
+
+	// 보간 속도
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float PosInterpSpeed = 12.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float RotInterpSpeed = 12.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AO|Spectate|Smoothing")
+	float FovInterpSpeed = 8.f;
+
+	bool bIsSpectating = false;
+	
+private:
+	// ==================== Respawn Countdown ====================
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> RespawnCountdownWidgetClass;
+
+	UPROPERTY()
+	UUserWidget* RespawnCountdownWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Respawn", meta = (AllowPrivateAccess = "true"))
+	float RespawnRemainingSeconds;
+
+	FTimerHandle RespawnCountdownTimerHandle;
+
+	void UpdateRespawnCountdown();
+public:
+	void StartRespawnCountdown(float InDelaySeconds);
+	void StopRespawnCountdown();
+	bool bPendingAutoRespawn;
+	
+public:
+	// 부활 요청 RPC
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRevive();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OnRevived();
+
+	//ms : 선발대 흔적
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "GameLogic")
+	void Server_NotifyHintFound(int32 HintNum);
+
+private:
+	void RebuildDefaultHUD();
+};

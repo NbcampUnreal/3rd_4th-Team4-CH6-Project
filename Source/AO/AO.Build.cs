@@ -1,0 +1,81 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+using UnrealBuildTool;
+
+public class AO : ModuleRules
+{
+	public AO(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+	
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			// Initial Dependencies
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			
+			//UI
+			"UMG",
+			
+			// Session
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			
+			// Pose Search
+			"PoseSearch",
+			
+			// GAS
+			"GameplayTags",
+			"GameplayAbilities",
+			"GameplayTasks",
+			
+			// 카오스 디스트럭션
+			"ChaosCaching",
+			"GeometryCollectionEngine",
+			
+			// AI
+			"AIModule",
+			"NavigationSystem",
+			"StateTreeModule",
+			"GameplayStateTreeModule",
+			
+			// Chooser
+			"Chooser",
+			
+			// Motion Warping
+			"MotionWarping",
+			"AnimationWarpingRuntime",
+			
+			// Voice Chat
+			"Voice",
+			
+			// Loading Screen
+			"MoviePlayer",
+			"CommonLoadingScreen",
+			
+			// Mutable
+			"CustomizableObject",
+			
+			// VFX
+			"Niagara",
+			
+			// Develop Settings for Subsystem Data
+			"DeveloperSettings",
+		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			//UI
+			"Slate",
+			"SlateCore",
+			
+			// Session
+			"OnlineSubsystemSteam"
+		});
+
+		PublicIncludePaths.AddRange(new string[] { "AO", "AO/Public" });
+	}
+}

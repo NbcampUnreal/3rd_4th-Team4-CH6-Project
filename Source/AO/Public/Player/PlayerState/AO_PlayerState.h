@@ -1,0 +1,142 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Character/Customizing/AO_CustomizingComponent.h"
+#include "GameFramework/PlayerState.h"
+#include "Public/Item/inventory/AO_InventoryComponent.h"
+#include "AO_PlayerState.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAOLobbyReadyChanged, bool, bNewReady);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameReady, const FText&);
+
+UCLASS()
+class AO_API AAO_PlayerState : public APlayerState
+{
+	GENERATED_BODY()
+
+public:
+	AAO_PlayerState();
+
+public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+	virtual void OnRep_PlayerName() override;
+
+	// JM : 생명주기 테스트용
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	/* ==================== 로비 레디 상태 ==================== */
+
+	// 로비 Ready 플래그 설정
+	void SetLobbyReady(bool bNewReady);
+	bool IsLobbyReady() const;
+
+	// Ready 플래그 변경 브로드캐스트 (UI 바인딩용)
+	UPROPERTY(BlueprintAssignable)
+	FAOLobbyReadyChanged OnLobbyReadyChanged;
+
+	/* ==================== 로비 입장 순서 / 호스트 ==================== */
+
+	// 로비 입장 순서 설정 (서버 전용)
+	void SetLobbyJoinOrder(int32 InOrder);
+
+	// 로비 입장 순서 조회
+	int32 GetLobbyJoinOrder() const;
+
+	// 호스트 플래그 설정 (서버 전용)
+	void SetIsLobbyHost(bool bNewIsHost);
+
+	// 호스트 여부 (입장 순서 0번을 호스트로 간주)
+	bool IsLobbyHost() const;
+
+	// 레디 상태가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_LobbyIsReady();
+
+	// 플레이어 이름 준비 완료되면 델리게이트 호출
+	FOnPlayerNameReady OnPlayerNameReady;
+
+protected:
+	// 레디 상태 (변경 시 OnRep_LobbyIsReady 호출)
+	UPROPERTY(ReplicatedUsing=OnRep_LobbyIsReady)
+	bool bLobbyIsReady;
+
+	// 로비 입장 순서 (0부터 시작, -1이면 아직 미할당)
+	UPROPERTY(ReplicatedUsing=OnRep_LobbyJoinOrder)
+	int32 LobbyJoinOrder;
+
+	// 호스트 여부 (세션 동안 유지, GameInstance 기반)
+	UPROPERTY(ReplicatedUsing=OnRep_IsLobbyHost)
+	bool bIsLobbyHost;
+	
+	// 입장 순서가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_LobbyJoinOrder();
+
+	// 호스트 플래그가 복제될 때 호출
+	UFUNCTION()
+	void OnRep_IsLobbyHost();
+
+	// JM : 플레이어 생존 여부 확인
+	UFUNCTION()
+	void OnRep_IsAlive();
+
+	UFUNCTION()
+	void OnRep_DeathCount();
+
+private:
+	// 현재 월드의 모든 LobbyReadyBoardActor에 보드 재빌드 요청
+	void RefreshLobbyReadyBoard();
+
+	void InitVoiceChat();
+	// 플레이어 이름 준비 완료시 브로드캐스트
+	void BroadcastPlayerNameReady();
+
+// JM : 생존 여부 판단용 변수 추가 (임시)
+public:
+	UPROPERTY(ReplicatedUsing=OnRep_IsAlive)
+	bool bIsAlive = true;
+
+	UPROPERTY(ReplicatedUsing = OnRep_DeathCount, VisibleAnywhere, BlueprintReadOnly, Category = "AO|Statistics")	// JM : 통계용 데스 수 세기
+	int32 DeathCount = 0;
+
+	void AddDeathCount();
+
+	FORCEINLINE bool GetIsAlive() const { return bIsAlive; };
+	void SetIsAlive(bool bInIsAlive);
+
+	// 캐릭터 커스터마이징 옵션 데이터 (작성자: 김세훈)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Customizing", Replicated)
+	FCustomizingData CharacterCustomizingData;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetCharacterCustomizingData(const FCustomizingData& CustomizingData);
+
+// ms : 레벨이동시 인벤토리 저장
+	UPROPERTY(Replicated)
+	TArray<FInventorySlot> PersistentInventory;
+
+	void SaveInventoryBeforeTravel(UAO_InventoryComponent* Inv);
+	void ResetStateInventory();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bInsideTravelSafeZone = false;
+	UPROPERTY()
+	bool bInventoryShouldPersist = false;
+	bool bIsTraveling = false;
+	void SetSafeZoneState(bool bInZone);
+
+	// KH : Health Persistence
+public:
+	UPROPERTY(Replicated)
+	bool bHasPersistentHealth = false;
+
+	UPROPERTY(Replicated)
+	float PersistentHealth = 0.f;
+
+	void SaveHealthBeforeTravel(float InHealth);
+	void ResetStateHealth();
+};

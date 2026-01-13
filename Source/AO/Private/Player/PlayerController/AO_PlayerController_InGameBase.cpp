@@ -1,0 +1,892 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "Player/PlayerController/AO_PlayerController_InGameBase.h"
+
+#include "AO_DelegateManager.h"
+#include "AO/AO_Log.h"
+#include "UI/AO_UIStackManager.h"
+#include "UI/Widget/AO_PauseMenuWidget.h"
+#include "Online/AO_OnlineSessionSubsystem.h"
+#include "Engine/GameInstance.h"
+
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Character/AO_PlayerCharacter.h"
+#include "Game/GameInstance/AO_GameInstance.h"
+#include "Game/GameMode/AO_GameMode_InGameBase.h"
+#include "GameFramework/GameStateBase.h"
+#include "Interfaces/VoiceInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Player/Camera/AO_CameraManagerComponent.h"
+#include "Player/PlayerState/AO_PlayerState.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "LoadingScreenManager.h"
+#include "VoipListenerSynthComponent.h"
+#include "Character/Sound/AO_PlayerSoundDataAsset.h"
+#include "Character/Sound/AO_PlayerSoundSubsystem.h"
+#include "UI/AO_UIActionKeySubsystem.h"
+#include "UI/Widget/AO_ConfirmQuitGameWidget.h"
+
+AAO_PlayerController_InGameBase::AAO_PlayerController_InGameBase()
+{
+	CameraManagerComponent = CreateDefaultSubobject<UAO_CameraManagerComponent>(TEXT("CameraManagerComponent"));
+}
+
+void AAO_PlayerController_InGameBase::AcknowledgePossession(APawn* P)
+{
+	Super::AcknowledgePossession(P);
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	InitCameraManager(P);
+}
+
+void AAO_PlayerController_InGameBase::BeginPlay()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	Super::BeginPlay();
+
+	/*if (IsLocalPlayerController())
+	{
+		Client_StartVoiceChat_Implementation();	// 최초 입장 시 보이스 채팅 입력 활성화
+	}*/
+
+	if (IsLocalPlayerController())
+	{
+		ApplyInGameInputDefaults();
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
+			{
+				if (UInputMappingContext* IMC = Keys->GetUIIMC())
+				{
+					if (ULocalPlayer* LP = GetLocalPlayer())
+					{
+						if (UEnhancedInputLocalPlayerSubsystem* Subsys = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+						{
+							Subsys->AddMappingContext(IMC, 100);
+						}
+					}
+				}
+			}
+		}
+
+		// Client_StartVoiceChat_Implementation();
+	}
+		
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (InputComponent)
+	{
+		AO_LOG(LogJSH, Log, TEXT("InGameBase SetupInputComponent: Binding Test Keys on %s"), *GetName());
+
+		// JM 코드추가 : 테스트용 키 직접 바인딩 (좋지 않음, 나중에 지워야함)
+		/*InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ThisClass::Test_Die);
+		InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &ThisClass::Test_Alive);*/
+	}
+	
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+	if (!EIC)
+	{
+		return;
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIActionKeySubsystem* Keys = GI->GetSubsystem<UAO_UIActionKeySubsystem>())
+		{
+			if (UInputAction* OpenAction = Keys->GetUIOpenAction())
+			{
+				EIC->BindAction(OpenAction, ETriggerEvent::Started, this, &ThisClass::HandleUIOpen);
+			}
+		}
+	}
+}
+
+void AAO_PlayerController_InGameBase::ApplyInGameInputDefaults()
+{
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+
+	bShowMouseCursor = false;
+	bEnableClickEvents = false;
+	bEnableMouseOverEvents = false;
+
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	FlushPressedKeys();
+}
+
+UAO_PauseMenuWidget* AAO_PlayerController_InGameBase::GetOrCreatePauseMenuWidget()
+{
+	if (IsValid(PauseMenu))
+	{
+		return PauseMenu;
+	}
+
+	if (!PauseMenuClass)
+	{
+		AO_LOG(LogJSH, Warning, TEXT("GetOrCreatePauseMenuWidget: PauseMenuClass not set on %s"), *GetName());
+		return nullptr;
+	}
+
+	PauseMenu = CreateWidget<UAO_PauseMenuWidget>(this, PauseMenuClass);
+	if (!PauseMenu)
+	{
+		AO_LOG(LogJSH, Error, TEXT("GetOrCreatePauseMenuWidget: Failed to create PauseMenu"));
+		return nullptr;
+	}
+
+	// 델리게이트 바인딩 1회
+	PauseMenu->OnRequestSettings.AddDynamic(this, &ThisClass::OnPauseMenu_RequestSettings);
+	PauseMenu->OnRequestReturnLobby.AddDynamic(this, &ThisClass::OnPauseMenu_RequestReturnLobby_OpenConfirm);
+	PauseMenu->OnRequestQuitGame.AddDynamic(this, &ThisClass::OnPauseMenu_RequestQuitGame_OpenConfirm);
+	PauseMenu->OnRequestResume.AddDynamic(this, &ThisClass::OnPauseMenu_RequestResume);
+
+	PauseMenu->SetIsFocusable(true);
+
+	return PauseMenu;
+}
+
+void AAO_PlayerController_InGameBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsCheckingVoiceCleanup)
+	{
+		AO_LOG_ROLE(LogJM, Log, TEXT("Inner bIsCheckingVoiceCleanup while Tick"));
+
+		if (IsVoiceFullyCleanedUp())
+		{
+			bIsCheckingVoiceCleanup = false;
+			Server_NotifyReadyForTravel();
+			AO_LOG(LogJM, Log, TEXT("All Voice Resources Cleaned Up."));
+		}
+	}
+}
+
+void AAO_PlayerController_InGameBase::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	BindASCAbilityFailed();
+}
+
+void AAO_PlayerController_InGameBase::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	BindASCAbilityFailed();
+}
+
+void AAO_PlayerController_InGameBase::Client_StartVoiceChat_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (TObjectPtr<UAO_OnlineSessionSubsystem> OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSSManager->StartVoiceChat();
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("OSS Manager is not Valid"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Client_StopVoiceChat_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	if (TObjectPtr<UAO_OnlineSessionSubsystem> OSSManager = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSSManager->StopVoiceChat();
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("OSS Manager is not Valid"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Client_UpdateVoiceMember_Implementation(AAO_PlayerState* ChangedPlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!AO_ENSURE(ChangedPlayerState, TEXT("Dead PS is nullptr")))
+	{
+		return;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is nullptr")))
+	{
+		return;
+	}
+
+	AAO_PlayerState* AO_MyPS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_MyPS, TEXT("Cast Failed PS -> AO_MyPS")))
+	{
+		return;
+	}
+
+	if (ChangedPlayerState == AO_MyPS)	// 변화한 플레이어가 나인 경우
+	{
+		if (ChangedPlayerState->bIsAlive)	// 내가 부활한 경우
+		{
+			OSS->MuteAllDeadRemoteTalker();	// 죽은 사람들만 Mute
+		}
+		else  // 내가 죽은 경우
+		{
+			OSS->UnmuteAllRemoteTalker();	// 모두 unmute
+		}
+	}
+	else    // 변화한 플레이어가 타인인 경우
+	{
+		// 내가 죽은 상태일 때는 따로 변화 X (아래는 내가 살아있는 경우)
+		if (ChangedPlayerState->bIsAlive)	// 타인이 부활한 경우
+		{
+			OSS->UnmuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+		else								// 타인이 사망한 경우
+		{
+			OSS->MuteRemoteTalker(0, ChangedPlayerState, false);
+		}
+	}
+
+	/*
+	if (DeadPlayerState == AO_PS)	// 내가 죽은 경우, 다른 사람 모두 Unmute
+	{
+		TObjectPtr<UWorld> World = GetWorld();
+		if (!AO_ENSURE(World, TEXT("No World")))
+		{
+			return;
+		}
+
+		for (TObjectPtr<APlayerState> OtherPS : World->GetGameState()->PlayerArray)
+		{
+			if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Not Valid")))
+			{
+				continue;
+			}
+
+			TObjectPtr<AAO_PlayerState> AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+			if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
+			{
+				continue;
+			}
+
+			if (OtherPS == AO_PS)	// JM : Ensure 생략, 본인은 unmute 작업을 생략하려는 의도
+			{
+				AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
+				continue;
+			}
+
+			OSS->UnmuteRemoteTalker(0, AO_OtherPS, false);
+		}
+	}
+	else if (AO_PS->bIsAlive)		// 내가 살아있다면, 죽은 사람 소리 Mute
+	{
+		OSS->MuteRemoteTalker(0, DeadPlayerState, false);
+	}*/
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Server_SelfDie_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+	{
+		return;
+	}
+
+	AO_PS->bIsAlive = false;	// 변경을 서버에서 해야함(권한), replicate 설정도 해줘야 함
+
+	if (TObjectPtr<AAO_GameMode_InGameBase> AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+	{
+		AO_GameMode_InGame->LetUpdateVoiceMemberForAllClients(this);
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Cast Failed GM -> AO_GM_InGame"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Server_SelfAlive_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+	{
+		return;
+	}
+
+	AO_PS->bIsAlive = true;	// 변경을 서버에서 해야함(권한), replicate 설정도 해줘야 함
+
+	if (TObjectPtr<AAO_GameMode_InGameBase> AO_GameMode_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+	{
+		AO_GameMode_InGame->Test_LetUnmuteVoiceMemberForSurvivor(this);
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Cast Failed GM -> AO_GM_InGame"));
+	}
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Client_UnmuteVoiceMember_Implementation(AAO_PlayerState* AlivePlayerState)
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (!AO_ENSURE(AlivePlayerState, TEXT("Alive PS is InValid")))
+	{
+		return;
+	}
+
+	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is Nullptr")))
+	{
+		return;
+	}
+
+	OSS->UnmuteRemoteTalker(0, AlivePlayerState, false);
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Die()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	Test_Server_SelfDie();
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Test_Alive()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	TObjectPtr<AAO_PlayerState> AO_PS = Cast<AAO_PlayerState>(PlayerState);
+	if (!AO_ENSURE(AO_PS, TEXT("Cast Failed PS -> AO_PS")))
+	{
+		return;
+	}
+
+	TObjectPtr<UWorld> World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("No World")))
+	{
+		return;
+	}
+
+	TObjectPtr<UAO_OnlineSessionSubsystem> OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	if (!AO_ENSURE(OSS, TEXT("OSS is Null")))
+	{
+		return;
+	}
+
+	// 사망자 모두 뮤트
+	for (TObjectPtr<APlayerState> OtherPS : World->GetGameState()->PlayerArray)
+	{
+		if (!AO_ENSURE(OtherPS->GetUniqueId().IsValid(), TEXT("PSId is Not Valid")))
+		{
+			continue;
+		}
+
+		if (OtherPS == AO_PS)  // JM : Ensure 안씀. 본인은 mute 작업을 생략하려는 의도
+		{
+			AO_LOG(LogJM, Warning, TEXT("OtherPS == AO_PS"));
+			continue;
+		}
+
+		TObjectPtr<AAO_PlayerState> AO_OtherPS = Cast<AAO_PlayerState>(OtherPS);
+		if (!AO_ENSURE(AO_OtherPS, TEXT("Cast Failed PS -> AO_PS")))
+		{
+			continue;
+		}
+
+		if (AO_OtherPS->bIsAlive)	// 사망자만 mute 시킴
+		{
+			AO_LOG(LogJM, Warning, TEXT("AO_OtherPS is Survivor (Skip Mute)"));
+			continue;
+			// JM : Ensure 안씀. 생존자는 mute 작업을 생략하려는 의도
+		}
+
+		OSS->MuteRemoteTalker(0, AO_OtherPS, false);
+	}
+
+	Test_Server_SelfAlive();	// 생존자들이 나를 Unmute 하도록 ServerRPC 보냄
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Client_PrepareForTravel_Implementation(const FString& URL)
+{
+	AO_LOG(LogJM, Log, TEXT("Start (%s)"), *URL);
+
+	UpdateLoadingMapName(URL);	// 로딩화면 맵 이름 지정
+
+	if (ULoadingScreenManager* LoadingScreenManager = GetGameInstance()->GetSubsystem<ULoadingScreenManager>())
+	{
+		LoadingScreenManager->bAOLoadingRequested = true;
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Can't Get Loading Screen Manager"));
+	}
+	
+	CleanupAudioResource();
+	bIsCheckingVoiceCleanup = true;
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::Server_NotifyReadyForTravel_Implementation()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (AAO_GameMode_InGameBase* GM_InGame = Cast<AAO_GameMode_InGameBase>(GetWorld()->GetAuthGameMode()))
+	{
+		GM_InGame->NotifyPlayerCleanupCompleteForTravel(this);
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::CleanupAudioResource()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>())
+	{
+		OSS->MuteAllRemoteTalker();	// JM : 안정성을 위해 Mute도 해주기
+		OSS->StopVoiceChat();
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Can't Get OSS"));
+	}
+	
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::HandleUIOpen()
+{
+	AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): Called"));
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			if (UAO_UserWidget* TopWidget = UIStack->GetTopUserWidget())
+			{
+				AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget=%s -> OnEscapeCloseRequested()"),
+					*TopWidget->GetName());
+
+				TopWidget->OnEscapeCloseRequested();
+				return;
+			}
+
+			AO_LOG(LogJSH, Log, TEXT("HandleUIOpen(InGameBase): TopWidget is null -> TryTogglePauseMenu"));
+			UIStack->TryTogglePauseMenu(this);
+		}
+	}
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestSettings()
+{
+	AO_LOG(LogJSH, Log, TEXT("Settings clicked"));
+	AO_LOG(LogJM, Log, TEXT("Start"));
+
+	if (TObjectPtr<UAO_DelegateManager> DelegateManager = GetGameInstance()->GetSubsystem<UAO_DelegateManager>())
+	{
+		DelegateManager->OnSettingsOpen.Broadcast();
+		AO_LOG(LogJM, Log, TEXT("Broadcast OnSettingsOpen"));
+	}
+	else
+	{
+		AO_ENSURE(false, TEXT("Can't Get Delegate Manager"));
+	}
+
+	AO_LOG(LogJM, Log, TEXT("End"));
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby()
+{
+	if (UAO_OnlineSessionSubsystem* Sub = GetOnlineSessionSub())
+	{
+		// 세션을 떠나기 전에 GameInstance의 세션 데이터 초기화
+		if (UWorld* World = GetWorld())
+		{
+			if (UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+			{
+				AO_GI->ResetSessionData();
+			}
+		}
+
+		Sub->DestroyCurrentSession();
+		return;
+	}
+
+	// 서브시스템 없으면 안전하게 메인 메뉴로
+	if (UWorld* World = GetWorld())
+	{
+		if (UAO_GameInstance* AO_GI = World->GetGameInstance<UAO_GameInstance>())
+		{
+			AO_GI->ResetSessionData();
+		}
+
+		UGameplayStatics::OpenLevel(World, FName(TEXT("/Game/AVaOut/Maps/LV_MainMenu")), true);
+	}
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestQuitGame()
+{
+	UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestResume()
+{
+	// UIStackManager 단일 경로로 Pause 닫기
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	AO_LOG(LogJSH, Warning, TEXT("UIStackManager not found. Resume ignored."));
+	ApplyInGameInputDefaults();
+}
+
+void AAO_PlayerController_InGameBase::OpenConfirmReturnToMenuWidget()
+{
+	if (ConfirmReturnToMenuWidget == nullptr)
+	{
+		if (ConfirmReturnToMenuWidgetClass == nullptr)
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OpenConfirmReturnToMenuWidget: ConfirmReturnToMenuWidgetClass is null"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget = CreateWidget<UAO_ConfirmReturnToMenuWidget>(this, ConfirmReturnToMenuWidgetClass);
+		if (ConfirmReturnToMenuWidget == nullptr)
+		{
+			AO_LOG(LogJSH, Error, TEXT("OpenConfirmReturnToMenuWidget: Failed to create widget"));
+			return;
+		}
+
+		ConfirmReturnToMenuWidget->OnConfirmLeaveToMenu.AddDynamic(this, &ThisClass::OnConfirmReturnToMenu);
+		ConfirmReturnToMenuWidget->OnCancelLeaveToMenu.AddDynamic(this, &ThisClass::OnCancelReturnToMenu);
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			FAOUIStackPolicy Policy;
+			Policy.InputMode = EAOUIStackInputMode::UIOnly;
+			Policy.bShowMouseCursor = true;
+			Policy.MouseLockMode = EMouseLockMode::DoNotLock;
+			Policy.bHideCursorDuringCapture = false;
+			Policy.InitialFocusWidget = ConfirmReturnToMenuWidget;
+
+			UIStack->PushWidgetInstance(this, ConfirmReturnToMenuWidget, Policy);
+			return;
+		}
+	}
+
+	// UIStack 못 찾았을 때 최소 동작용 fallback
+	ConfirmReturnToMenuWidget->AddToViewport(200);
+
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(ConfirmReturnToMenuWidget->TakeWidget());
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestReturnLobby_OpenConfirm()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnPauseMenu_RequestReturnLobby_OpenConfirm: Open confirm dialog"));
+	OpenConfirmReturnToMenuWidget();
+}
+
+void AAO_PlayerController_InGameBase::OpenConfirmQuitGameWidget()
+{
+	if (ConfirmQuitGameWidget == nullptr)
+	{
+		if (ConfirmQuitGameWidgetClass == nullptr)
+		{
+			AO_LOG(LogJSH, Warning, TEXT("OpenConfirmQuitGameWidget: ConfirmQuitGameWidgetClass is null"));
+			return;
+		}
+
+		ConfirmQuitGameWidget = CreateWidget<UAO_ConfirmQuitGameWidget>(this, ConfirmQuitGameWidgetClass);
+		if (ConfirmQuitGameWidget == nullptr)
+		{
+			AO_LOG(LogJSH, Error, TEXT("OpenConfirmQuitGameWidget: Failed to create widget"));
+			return;
+		}
+
+		ConfirmQuitGameWidget->OnConfirmQuitGame.AddDynamic(this, &ThisClass::OnConfirmQuitGame);
+		ConfirmQuitGameWidget->OnCancelQuitGame.AddDynamic(this, &ThisClass::OnCancelQuitGame);
+	}
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			FAOUIStackPolicy Policy;
+			Policy.InputMode = EAOUIStackInputMode::UIOnly;
+			Policy.bShowMouseCursor = true;
+			Policy.MouseLockMode = EMouseLockMode::DoNotLock;
+			Policy.bHideCursorDuringCapture = false;
+			Policy.InitialFocusWidget = ConfirmQuitGameWidget;
+
+			UIStack->PushWidgetInstance(this, ConfirmQuitGameWidget, Policy);
+			return;
+		}
+	}
+
+	// UIStack 못 찾았을 때 최소 동작용 fallback
+	ConfirmQuitGameWidget->AddToViewport(200);
+
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(ConfirmQuitGameWidget->TakeWidget());
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAO_PlayerController_InGameBase::OnConfirmQuitGame()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnConfirmQuitGame: Confirmed, quitting game"));
+
+	// 먼저 팝업을 Stack에서 제거
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+		}
+	}
+	else if (ConfirmQuitGameWidget != nullptr)
+	{
+		ConfirmQuitGameWidget->RemoveFromParent();
+	}
+
+	// 기존 "게임 종료" 실제 로직 실행
+	// (이미 구현되어 있는 OnPauseMenu_RequestQuitGame 재사용)
+	OnPauseMenu_RequestQuitGame();
+}
+
+void AAO_PlayerController_InGameBase::OnCancelQuitGame()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnCancelQuitGame: Cancelled"));
+
+	// 팝업만 닫고 PauseMenu로 포커스 복구
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	if (ConfirmQuitGameWidget != nullptr)
+	{
+		ConfirmQuitGameWidget->RemoveFromParent();
+	}
+}
+
+void AAO_PlayerController_InGameBase::OnPauseMenu_RequestQuitGame_OpenConfirm()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnPauseMenu_RequestQuitGame_OpenConfirm: Open confirm dialog"));
+	OpenConfirmQuitGameWidget();
+}
+
+void AAO_PlayerController_InGameBase::OnConfirmReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnConfirmReturnToMenu: Confirmed, returning to menu"));
+
+	// 먼저 팝업을 Stack에서 제거
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+		}
+	}
+	else if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
+
+	// 기존 "메뉴로 돌아가기" 실제 로직 실행 (세션 정리 + 맵 이동)
+	OnPauseMenu_RequestReturnLobby();
+}
+
+void AAO_PlayerController_InGameBase::OnCancelReturnToMenu()
+{
+	AO_LOG(LogJSH, Log, TEXT("OnCancelReturnToMenu: Cancelled"));
+
+	// 팝업만 닫고 PauseMenu로 포커스 복구
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_UIStackManager* UIStack = GI->GetSubsystem<UAO_UIStackManager>())
+		{
+			UIStack->PopTop(this);
+			return;
+		}
+	}
+
+	if (ConfirmReturnToMenuWidget != nullptr)
+	{
+		ConfirmReturnToMenuWidget->RemoveFromParent();
+	}
+}
+
+UAO_OnlineSessionSubsystem* AAO_PlayerController_InGameBase::GetOnlineSessionSub() const
+{
+	if (const UGameInstance* GI = GetGameInstance())
+	{
+		if (UAO_OnlineSessionSubsystem* Sub = GI->GetSubsystem<UAO_OnlineSessionSubsystem>())
+		{
+			return Sub;
+		}
+	}
+
+	AO_LOG(LogJSH, Warning, TEXT("GetOnlineSessionSub: OnlineSessionSubsystem not found"));
+	return nullptr;
+}
+
+void AAO_PlayerController_InGameBase::InitCameraManager(APawn* InPawn)
+{
+	checkf(CameraManagerComponent, TEXT("CameraManagerComponent not found"));
+	
+	AAO_PlayerCharacter* PlayerCharacter = Cast<AAO_PlayerCharacter>(InPawn);
+	checkf(PlayerCharacter, TEXT("Character not found"));
+
+	CameraManagerComponent->BindCameraComponents(PlayerCharacter->GetSpringArm(), PlayerCharacter->GetCamera());
+	CameraManagerComponent->ResetCameraState();
+	CameraManagerComponent->PushCameraState(FGameplayTag::RequestGameplayTag(FName("Camera.Default")));
+
+	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
+	{
+		CameraManagerComponent->BindToASC(ASC);
+	}
+}
+
+bool AAO_PlayerController_InGameBase::IsVoiceFullyCleanedUp()
+{
+	AO_LOG(LogJM, Log, TEXT("Start"));
+	UWorld* World = GetWorld();
+	if (!AO_ENSURE(World, TEXT("No World")))
+	{
+		return true;
+	}
+
+	UAO_OnlineSessionSubsystem* OSS = GetGameInstance()->GetSubsystem<UAO_OnlineSessionSubsystem>();
+	AGameStateBase* GS_Base = World->GetGameState<AGameStateBase>();
+	if (OSS && GS_Base)
+	{
+		if (IOnlineVoicePtr VoiceInterface = OSS->GetOnlineVoiceInterface(); VoiceInterface.IsValid())
+		{
+			const FUniqueNetIdPtr LocalNetId = PlayerState->GetUniqueId().GetUniqueNetId();
+			for (APlayerState* PS : GS_Base->PlayerArray)
+			{
+				if (!PS || PS == PlayerState)
+				{
+					continue;
+				}
+
+				if (FUniqueNetIdPtr RemoteNetId = PS->GetUniqueId().GetUniqueNetId(); RemoteNetId.IsValid())
+				{
+					if (!VoiceInterface->IsMuted(0, *RemoteNetId))		// NOTE : PlayerController::IsPlayerMuted(*RemoteNetId) 이거로는 체크 안됨 (무한 루프 돎)
+					{
+						AO_LOG(LogJM, Warning, TEXT("Wait: Player(%s) is not muted yet"), *RemoteNetId->ToString())
+						return false;
+					}
+				}
+			}
+		}
+	}
+
+	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
+	{
+		if (IsValid(*It) && It->IsRegistered())
+		{
+			AO_LOG(LogJM, Warning, TEXT("Wait: Engine is still unregistering %s"), *It->GetName());
+			It->UnregisterComponent();
+			return false;
+		}
+	}
+	AO_LOG(LogJM, Log, TEXT("All remoteTalkers Muted & Component Unregistered"));
+	return true;
+}
+
+void AAO_PlayerController_InGameBase::BindASCAbilityFailed()
+{
+	APawn* MyPawn = GetPawn();
+	if (!ensure(MyPawn))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = MyPawn->FindComponentByClass<UAbilitySystemComponent>();
+	if (!ensure(ASC))
+	{
+		return;
+	}
+
+	ASC->AbilityFailedCallbacks.RemoveAll(this);
+	ASC->AbilityFailedCallbacks.AddUObject(this, &AAO_PlayerController_InGameBase::HandleAbilityFailed);
+}
+
+void AAO_PlayerController_InGameBase::HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureTags)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	if (FailureTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fail.NotEnoughStamina"))))
+	{
+		const double Now = GetWorld()->GetTimeSeconds();
+		if (Now - LastNotEnoughStaminaSoundTime >= NotEnoughStaminaSoundInterval)
+		{
+			LastNotEnoughStaminaSoundTime = Now;
+
+			if (UGameInstance* GI = GetGameInstance())
+			{
+				if (UAO_PlayerSoundSubsystem* SoundSubsystem = GI->GetSubsystem<UAO_PlayerSoundSubsystem>())
+				{
+					USoundBase* Sound = SoundSubsystem->GetSoundFromActor(GetPawn(),
+						FGameplayTag::RequestGameplayTag(FName("Sound.Player.NotEnoughStamina")));
+					if (Sound)
+					{
+						UGameplayStatics::PlaySound2D(this, Sound);
+					}
+				}
+			}
+		}
+	}
+}
