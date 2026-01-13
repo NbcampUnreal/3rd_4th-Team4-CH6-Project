@@ -50,8 +50,7 @@ AAO_PlayerCharacter* AAO_AggressiveAICtrl::GetChaseTarget() const
 	}
 	
 	// 타겟이 죽었는지 확인 (시체 타겟팅 불가능한 경우)
-	const AAO_PlayerState* PS = Target->GetPlayerState<AAO_PlayerState>();
-	if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+	if (!IsPlayerAlive(Target) && !bCanTargetDeadPlayer)
 	{
 		return nullptr;
 	}

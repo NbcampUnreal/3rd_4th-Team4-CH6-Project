@@ -429,6 +429,12 @@ TArray<AActor*> AAO_StalkerController::GetAllLookingPlayers(float ToleranceDegre
 
 	for (AActor* PlayerActor : AllPlayers)
 	{
+		AAO_PlayerCharacter* PlayerChar = Cast<AAO_PlayerCharacter>(PlayerActor);
+		if (!PlayerChar || !IsPlayerAlive(PlayerChar))
+		{
+			continue;
+		}
+
 		if (IsPlayerLookingAtMe(PlayerActor, ToleranceDegrees))
 		{
 			LookingPlayers.Add(PlayerActor);
