@@ -74,7 +74,7 @@
 <img width="838" height="872" alt="image" src="https://github.com/user-attachments/assets/c9197f00-3723-40e6-9547-f742f6987a69" />
 
 ### 🧩 퍼즐 시스템
-- **카오스 디스트럭션(Chaos Destruction)** 기반 퍼즐
+- **Tag 기반** 확장 가능한 퍼즐 시스템
 - **협동 퍼즐**: 팀원 간 협력 필수
 - **환경 상호작용** 요소
 </br>
@@ -90,7 +90,7 @@
 <img width="436" height="212" alt="image" src="https://github.com/user-attachments/assets/83355030-d409-4ad4-a051-03835cbab877" />
 
 ### 📄 아이템 및 인벤토리 시스템
-- **다양한 아이템 수집**: 연료, 소모품, 패시브 아이템탐사 기록
+- **다양한 아이템 수집**: 연료, 소모품, 패시브 아이템, 탐사 기록
 - **인벤토리 관리**: UI 기반 직관적인 아이템 관리 시스템
 - **아이템 상호작용**: 팀원간 아이템 공유 및 협력 플레이 유도
 
@@ -119,8 +119,8 @@
 - 메모리 효율적인 커스터마이징 관리
 - 레벨 전환 시에도 커스터마이징 상태 유지
 
-### 음성 채팅 (EOSVoiceChat)
-- Epic Online Services 기반 음성 채팅
+### 음성 채팅 (IOnlineVoice Steam)
+- Online Subsystem Steam, IOnlineVoice 기반 음성 채팅 
 - Mute/Unmute 기능
 - 레벨 전환 시에도 안정적인 음성 채팅 유지
 
@@ -158,7 +158,8 @@
 - Mutable
 - Chaos Destruction
 - Enhanced Input System
-- Epic Online Services (EOS)
+- Online Subsystem Steam
+- IOnlineVoice
 
 ### 네트워킹
 - Listen Server
@@ -175,7 +176,7 @@
 ## 🎥 게임 플레이 영상
 
 ### Game Trailer
-[Youtube - [Trailer] AVaOut : Avatar Out](youtube.com/watch?v=bVIziMrU1Mw&embeds_referring_euri=https%3A%2F%2Fwww.notion.so%2F&source_ve_path=Mjg2NjY)
+[Youtube - [Trailer] AVaOut : Avatar Out](https://www.youtube.com/watch?v=bVIziMrU1Mw)
 
 ### Gameplay
 [Youtube - [Demo] AVaOut : Avatar Out (12min)](https://www.youtube.com/watch?v=vRxYs1qoXhI)
@@ -192,7 +193,7 @@
 
 ## 🔗 참고 링크
 - ​GitHub Repository​: [AVaOut GitHub](https://github.com/NbcampUnreal/3rd_4th-Team4-CH6-Project)
-- ​Notion 프로젝트 페이지​: [AVaOut 노션](https://www.notion.so/teamsparta/3-4-4-AVaOut-2d22dc3ef51480eeb5f0c7309f853a1a?source=copy_link)
+- ​Notion 프로젝트 페이지​: [AVaOut 노션](https://pentagonal-street-989.notion.site/AVaOut-Avatar-Out-2e725419c56b80e18edcee7934e889f5?source=copy_link)
 
 ---
 
