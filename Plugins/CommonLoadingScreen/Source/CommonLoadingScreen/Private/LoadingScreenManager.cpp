@@ -201,11 +201,10 @@ void ULoadingScreenManager::UnregisterLoadingProcessor(TScriptInterface<ILoading
 
 void ULoadingScreenManager::HandlePreLoadMap(const FWorldContext& WorldContext, const FString& MapName)
 {
-	// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("JM : HandlePreLoadMap(%s)"), *MapName), false);	// JM : 디버그용
 	if (WorldContext.OwningGameInstance == GetGameInstance())
 	{
-		bCurrentlyInLoadMap = true;
 		PendingMapName = MapName;	// JM : 로딩하려는 맵 이름 저장
+		bCurrentlyInLoadMap = true;
 
 		// Update the loading screen immediately if the engine is initialized
 		if (GEngine->IsInitialized())
