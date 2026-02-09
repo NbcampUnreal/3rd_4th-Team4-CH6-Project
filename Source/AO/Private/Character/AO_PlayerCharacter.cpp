@@ -470,8 +470,22 @@ void AAO_PlayerCharacter::Look(const FInputActionValue& Value)
 
 	if (GetController())
 	{
-		AddControllerYawInput(InputValue.X);
-		AddControllerPitchInput(InputValue.Y);
+		// JM : 마우스 민감도 설정 추가
+		float MouseSensitivity = 1.0f;
+		bool bInvertYAxis = false;
+		
+		if (const UAO_GameUserSettings* Settings = UAO_GameUserSettings::GetGameUserSettings().Get())
+		{
+			MouseSensitivity = Settings->MouseSensitivity;
+			bInvertYAxis = Settings->bInvertYAxis;
+		}
+		else
+		{
+			AO_ENSURE(false, TEXT("Can't Get AO_GameUserSettings"));
+		}
+		
+		AddControllerYawInput(InputValue.X * MouseSensitivity);
+		AddControllerPitchInput(InputValue.Y * MouseSensitivity * (bInvertYAxis ? -1.f : 1.f));
 	}
 }
 
