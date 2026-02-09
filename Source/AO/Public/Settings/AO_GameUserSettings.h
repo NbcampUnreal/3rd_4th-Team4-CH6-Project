@@ -88,5 +88,12 @@ public:
 
 	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Language")
 	int32 Language = 0;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Input")
+	float MouseSensitivity = 1.0f;
+
+	UPROPERTY(Config, BlueprintReadWrite, Category = "AO|Input")
+	bool bInvertYAxis = false;
+	
 	
 };
