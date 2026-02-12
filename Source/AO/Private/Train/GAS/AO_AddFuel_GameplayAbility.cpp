@@ -1,4 +1,5 @@
 #include "Train/GAS/AO_AddFuel_GameplayAbility.h"
+#include "GameFramework/GameStateBase.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
@@ -39,7 +40,17 @@ void UAO_AddFuel_GameplayAbility::ActivateAbility(
 	float FuelAmount = 0.0f;
 	if (TriggerEventData)
 	{
-		FuelAmount = TriggerEventData->EventMagnitude;
+		float PlayerCountMultiplier = 2.5f;
+		if (UWorld* World = GetWorld())
+		{
+			if (AGameStateBase* GS = World->GetGameState())
+			{
+				int32 CurrentPlayers = GS->PlayerArray.Num();
+				PlayerCountMultiplier = (4-(CurrentPlayers))*0.5+1; 
+			}
+		}
+		
+		FuelAmount = TriggerEventData->EventMagnitude*PlayerCountMultiplier;
 	}
 
 	if (FuelAmount <= 0.0f)
