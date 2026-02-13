@@ -40,13 +40,13 @@ void UAO_AddFuel_GameplayAbility::ActivateAbility(
 	float FuelAmount = 0.0f;
 	if (TriggerEventData)
 	{
-		float PlayerCountMultiplier = 2.5f;
+		float PlayerCountMultiplier = 1.0f;
 		if (UWorld* World = GetWorld())
 		{
 			if (AGameStateBase* GS = World->GetGameState())
 			{
 				int32 CurrentPlayers = GS->PlayerArray.Num();
-				PlayerCountMultiplier = (4-(CurrentPlayers))*0.5+1; 
+				PlayerCountMultiplier = (4-(CurrentPlayers))*0.2+1; 
 			}
 		}
 		
