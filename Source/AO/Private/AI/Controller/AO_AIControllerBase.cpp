@@ -12,6 +12,8 @@
 #include "Components/StateTreeAIComponent.h"
 #include "StateTree.h"
 #include "NavigationSystem.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 
 AAO_AIControllerBase::AAO_AIControllerBase()
 {
@@ -120,6 +122,29 @@ void AAO_AIControllerBase::SetupPerceptionSystem()
 	AIPerceptionComponent->RequestStimuliListenerUpdate();
 }
 
+bool AAO_AIControllerBase::IsPlayerAlive(const AAO_PlayerCharacter* Player) const
+{
+	if (!Player)
+	{
+		return false;
+	}
+
+	// KSJ: GameplayTag를 우선 확인 (게임플레이 태그가 더 신뢰할 수 있는 소스)
+	// Status.Death 태그가 있으면 무조건 죽은 것으로 간주
+	if (const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+	{
+		static const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag(FName("Status.Death"));
+		if (ASC->HasMatchingGameplayTag(DeathTag))
+		{
+			return false; // 죽은 상태 태그가 있으면 즉시 false 반환
+		}
+	}
+
+	// 태그가 없으면 PlayerState를 통한 생존 확인 (보조 검증)
+	const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
+	return PS && PS->GetIsAlive();
+}
+
 void AAO_AIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
 	// Perception 이벤트에서 Actor가 null일 수 있음 (정상적인 상황)
@@ -137,8 +162,7 @@ void AAO_AIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus 
 		if (Player)
 		{
 			// 생존 여부 확인
-			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
-			const bool bIsAlive = PS && PS->GetIsAlive();
+			const bool bIsAlive = IsPlayerAlive(Player);
         
 			// [조건 체크] 죽었고 && 시체를 타겟팅하면 안 되는 경우 -> 무시
 			if (!bIsAlive && !bCanTargetDeadPlayer)
@@ -303,8 +327,7 @@ TArray<AAO_PlayerCharacter*> AAO_AIControllerBase::GetPlayersInSight() const
 		{
 			// 죽은 플레이어 필터링
 			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
-			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
-			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			if (!IsPlayerAlive(Player) && !bCanTargetDeadPlayer)
 			{
 				continue;
 			}
@@ -338,8 +361,7 @@ AAO_PlayerCharacter* AAO_AIControllerBase::GetNearestPlayerInSight() const
 		{
 			// 타겟팅 시점에도 다시 한 번 생존 확인
 			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
-			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
-			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			if (!IsPlayerAlive(Player) && !bCanTargetDeadPlayer)
 			{
 				continue;
 			}
@@ -382,8 +404,7 @@ bool AAO_AIControllerBase::HasPlayerInSight() const
 		{
 			// 죽은 플레이어는 카운트하지 않음
 			const AAO_PlayerCharacter* Player = WeakPlayer.Get();
-			const AAO_PlayerState* PS = Player->GetPlayerState<AAO_PlayerState>();
-			if (PS && !PS->GetIsAlive() && !bCanTargetDeadPlayer)
+			if (!IsPlayerAlive(Player) && !bCanTargetDeadPlayer)
 			{
 				continue;
 			}

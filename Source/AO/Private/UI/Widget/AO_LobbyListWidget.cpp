@@ -200,9 +200,11 @@ void UAO_LobbyListWidget::OnFindSessionsComplete(bool /*bSuccessful*/)
 	{
 		if (NewCount == 0 && !bFirstTime)
 		{
-			const FString Msg =
+			// JM : 멘트 수정
+			/* const FString Msg =
 				TEXT("The Steam matchmaking service is currently unstable, so lobby search results may not be displayed.\n")
-				TEXT("Please join by receiving a Steam invite from the host.");
+				TEXT("Please join by receiving a Steam invite from the host."); */
+			const FString Msg = TEXT("No Result\n");
 
 			Txt_InfoMessage->SetText(FText::FromString(Msg));
 			Txt_InfoMessage->SetVisibility(ESlateVisibility::Visible);
